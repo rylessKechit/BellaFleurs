@@ -5,6 +5,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ShoppingCart, User, LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
 
 const navigation = [
   { name: 'Accueil', href: '/' },
@@ -46,8 +55,8 @@ export default function Header() {
     <header
       className={`fixed top-0 w-full z-50 transition-all duration-300 ${
         isScrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-lg'
-          : 'bg-white/90 backdrop-blur-sm'
+          ? 'bg-background/95 backdrop-blur-md shadow-lg border-b'
+          : 'bg-background/90 backdrop-blur-sm'
       }`}
     >
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -71,12 +80,11 @@ export default function Header() {
                 className={`relative px-3 py-2 text-sm font-medium transition-colors duration-200
                   ${
                     pathname === item.href
-                      ? 'text-primary-600'
-                      : 'text-gray-700 hover:text-primary-600'
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-primary'
                   }
                   after:absolute after:bottom-0 after:left-0 after:h-0.5 
-                  after:bg-gradient-to-r after:from-primary-600 after:to-primary-700
-                  after:transition-all after:duration-300
+                  after:bg-primary after:transition-all after:duration-300
                   ${
                     pathname === item.href
                       ? 'after:w-full'
@@ -91,108 +99,84 @@ export default function Header() {
           {/* Actions desktop */}
           <div className="hidden md:flex items-center space-x-4">
             {/* Panier */}
-            <Link
-              href="/panier"
-              className="relative p-2 text-gray-700 hover:text-primary-600 
-                       transition-colors duration-200"
-            >
-              <ShoppingCart className="w-6 h-6" />
-              {/* Badge du panier (à implémenter avec le contexte panier) */}
-              <span className="absolute -top-1 -right-1 bg-primary-600 text-white 
-                             text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                0
-              </span>
-            </Link>
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/panier" className="relative">
+                <ShoppingCart className="w-5 h-5" />
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                >
+                  0
+                </Badge>
+              </Link>
+            </Button>
 
             {/* Menu utilisateur */}
             {isAuthenticated ? (
-              <div className="relative group">
-                <button className="flex items-center space-x-2 p-2 rounded-lg 
-                                 text-gray-700 hover:text-primary-600 hover:bg-primary-50
-                                 transition-all duration-200">
-                  <User className="w-5 h-5" />
-                  <span className="text-sm font-medium">{user?.name}</span>
-                </button>
-                
-                {/* Menu déroulant */}
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg 
-                              border border-gray-200 opacity-0 invisible group-hover:opacity-100 
-                              group-hover:visible transition-all duration-200 z-50">
-                  <div className="py-1">
-                    <Link
-                      href="/mon-compte"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 
-                               hover:text-primary-600 transition-colors duration-200"
-                    >
-                      Mon compte
-                    </Link>
-                    <Link
-                      href="/mes-commandes"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 
-                               hover:text-primary-600 transition-colors duration-200"
-                    >
-                      Mes commandes
-                    </Link>
-                    {isAdmin && (
-                      <>
-                        <div className="border-t border-gray-200 my-1"></div>
-                        <Link
-                          href="/admin/dashboard"
-                          className="block px-4 py-2 text-sm text-primary-600 hover:bg-primary-50
-                                   font-medium transition-colors duration-200"
-                        >
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center space-x-2">
+                    <User className="w-4 h-4" />
+                    <span className="text-sm font-medium">{user?.name}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link href="/mon-compte">Mon compte</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/mes-commandes">Mes commandes</Link>
+                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/dashboard" className="text-primary font-medium">
                           Administration
                         </Link>
-                      </>
-                    )}
-                    <div className="border-t border-gray-200 my-1"></div>
-                    <button
-                      onClick={logout}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 
-                               hover:bg-red-50 hover:text-red-600 transition-colors duration-200"
-                    >
-                      <LogOut className="w-4 h-4 inline-block mr-2" />
-                      Déconnexion
-                    </button>
-                  </div>
-                </div>
-              </div>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout} className="text-destructive">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Déconnexion
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <div className="flex items-center space-x-2">
-                <Link
-                  href="/auth/signin"
-                  className="btn btn-ghost btn-sm"
-                >
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Connexion
-                </Link>
-                <Link
-                  href="/auth/signup"
-                  className="btn btn-primary btn-sm"
-                >
-                  S'inscrire
-                </Link>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/auth/signin">
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Connexion
+                  </Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link href="/auth/signup">S'inscrire</Link>
+                </Button>
               </div>
             )}
           </div>
 
           {/* Bouton menu mobile */}
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-gray-700 hover:text-primary-600 
-                     transition-colors duration-200"
           >
             {mobileMenuOpen ? (
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             ) : (
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5" />
             )}
-          </button>
+          </Button>
         </div>
 
         {/* Menu mobile */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 py-4 space-y-2">
+          <div className="md:hidden border-t py-4 space-y-2">
             {navigation.map((item) => (
               <Link
                 key={item.name}
@@ -201,20 +185,20 @@ export default function Header() {
                 className={`block px-3 py-2 text-base font-medium rounded-lg transition-colors duration-200
                   ${
                     pathname === item.href
-                      ? 'text-primary-600 bg-primary-50'
-                      : 'text-gray-700 hover:text-primary-600 hover:bg-primary-50'
+                      ? 'text-primary bg-primary/10'
+                      : 'text-muted-foreground hover:text-primary hover:bg-accent'
                   }`}
               >
                 {item.name}
               </Link>
             ))}
             
-            <div className="border-t border-gray-200 mt-4 pt-4">
+            <div className="border-t pt-4 space-y-2">
               <Link
                 href="/panier"
                 onClick={handleMobileNavClick}
                 className="flex items-center px-3 py-2 text-base font-medium 
-                         text-gray-700 hover:text-primary-600 hover:bg-primary-50
+                         text-muted-foreground hover:text-primary hover:bg-accent
                          rounded-lg transition-colors duration-200"
               >
                 <ShoppingCart className="w-5 h-5 mr-3" />
@@ -227,7 +211,7 @@ export default function Header() {
                     href="/mon-compte"
                     onClick={handleMobileNavClick}
                     className="flex items-center px-3 py-2 text-base font-medium 
-                             text-gray-700 hover:text-primary-600 hover:bg-primary-50
+                             text-muted-foreground hover:text-primary hover:bg-accent
                              rounded-lg transition-colors duration-200"
                   >
                     <User className="w-5 h-5 mr-3" />
@@ -237,7 +221,7 @@ export default function Header() {
                     href="/mes-commandes"
                     onClick={handleMobileNavClick}
                     className="flex items-center px-3 py-2 text-base font-medium 
-                             text-gray-700 hover:text-primary-600 hover:bg-primary-50
+                             text-muted-foreground hover:text-primary hover:bg-accent
                              rounded-lg transition-colors duration-200"
                   >
                     Mes commandes
@@ -247,47 +231,37 @@ export default function Header() {
                       href="/admin/dashboard"
                       onClick={handleMobileNavClick}
                       className="flex items-center px-3 py-2 text-base font-medium 
-                               text-primary-600 hover:bg-primary-50
-                               rounded-lg transition-colors duration-200"
+                               text-primary hover:bg-accent rounded-lg transition-colors duration-200"
                     >
                       Administration
                     </Link>
                   )}
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => {
                       logout();
                       handleMobileNavClick();
                     }}
-                    className="flex items-center w-full px-3 py-2 text-base font-medium 
-                             text-gray-700 hover:text-red-600 hover:bg-red-50
-                             rounded-lg transition-colors duration-200"
+                    className="flex items-center w-full justify-start px-3 py-2 text-base font-medium 
+                             text-destructive hover:bg-destructive/10 rounded-lg transition-colors duration-200"
                   >
                     <LogOut className="w-5 h-5 mr-3" />
                     Déconnexion
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <div className="space-y-2">
-                  <Link
-                    href="/auth/signin"
-                    onClick={handleMobileNavClick}
-                    className="flex items-center px-3 py-2 text-base font-medium 
-                             text-gray-700 hover:text-primary-600 hover:bg-primary-50
-                             rounded-lg transition-colors duration-200"
-                  >
-                    <LogIn className="w-5 h-5 mr-3" />
-                    Connexion
-                  </Link>
-                  <Link
-                    href="/auth/signup"
-                    onClick={handleMobileNavClick}
-                    className="block px-3 py-2 text-base font-medium text-center
-                             bg-gradient-to-r from-primary-600 to-primary-700 
-                             text-white rounded-lg hover:from-primary-700 hover:to-primary-800
-                             transition-all duration-200"
-                  >
-                    S'inscrire
-                  </Link>
+                  <Button variant="ghost" className="w-full justify-start" asChild>
+                    <Link href="/auth/signin" onClick={handleMobileNavClick}>
+                      <LogIn className="w-5 h-5 mr-3" />
+                      Connexion
+                    </Link>
+                  </Button>
+                  <Button className="w-full" asChild>
+                    <Link href="/auth/signup" onClick={handleMobileNavClick}>
+                      S'inscrire
+                    </Link>
+                  </Button>
                 </div>
               )}
             </div>
