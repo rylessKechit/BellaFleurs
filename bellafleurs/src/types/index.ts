@@ -22,6 +22,15 @@ export interface IUser extends BaseDocument {
   phone?: string;
   emailVerified?: Date;
   image?: string;
+  
+  // Méthodes d'instance
+  comparePassword(candidatePassword: string): Promise<boolean>;
+  toPublicJSON(): Omit<IUser, 'password'>;
+  
+  // Virtuals
+  fullAddress?: string;
+  isAdmin?: boolean;
+  isEmailVerified?: boolean;
 }
 
 // Types pour les produits
@@ -51,6 +60,20 @@ export interface IProduct extends BaseDocument {
     light: string;
     temperature: string;
   };
+  
+  // Méthodes d'instance
+  updateStock(quantity: number): Promise<IProduct>;
+  reduceStock(quantity: number): Promise<IProduct>;
+  addTag(tag: string): Promise<IProduct>;
+  removeTag(tag: string): Promise<IProduct>;
+  
+  // Virtuals
+  isInStock?: boolean;
+  isLowStock?: boolean;
+  isOutOfStock?: boolean;
+  mainImage?: string;
+  categoryLabel?: string;
+  priceFormatted?: string;
 }
 
 // Types pour les commandes
@@ -79,7 +102,7 @@ export interface IOrder extends BaseDocument {
       country: string;
     };
     date: Date;
-    timeSlot: string;
+    timeSlot: '9h-12h' | '12h-14h' | '14h-17h' | '17h-19h';
     notes?: string;
   };
   customerInfo: {
@@ -93,6 +116,24 @@ export interface IOrder extends BaseDocument {
     date: Date;
     note?: string;
   }[];
+  
+  // Méthodes d'instance
+  updateStatus(newStatus: IOrder['status'], note?: string): Promise<IOrder>;
+  updatePaymentStatus(newStatus: IOrder['paymentStatus']): Promise<IOrder>;
+  cancel(reason?: string): Promise<IOrder>;
+  calculateTotal(): number;
+  
+  // Virtuals
+  itemsCount?: number;
+  totalAmountFormatted?: string;
+  isDelivery?: boolean;
+  isPickup?: boolean;
+  isPaid?: boolean;
+  isCompleted?: boolean;
+  isCancelled?: boolean;
+  canBeCancelled?: boolean;
+  statusLabel?: string;
+  paymentStatusLabel?: string;
 }
 
 // Types pour les catégories
@@ -187,6 +228,21 @@ export interface AuthSession {
     role: 'client' | 'admin';
     image?: string;
   };
+  expires: string;
+}
+
+// Types pour NextAuth étendu
+export interface ExtendedUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'client' | 'admin';
+  image?: string;
+}
+
+export interface ExtendedSession {
+  user: ExtendedUser;
+  expires: string;
 }
 
 // Types pour les webhooks Stripe
@@ -217,4 +273,124 @@ export interface UploadResponse {
   publicId: string;
   width: number;
   height: number;
+}
+
+// Types pour les formulaires
+export interface LoginFormData {
+  email: string;
+  password: string;
+}
+
+export interface RegisterFormData {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  phone?: string;
+  address?: {
+    street: string;
+    city: string;
+    zipCode: string;
+    country: string;
+  };
+}
+
+// Types pour les hooks
+export interface UseAuthReturn {
+  user: ExtendedUser | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  isAdmin: boolean;
+  isClient: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  register: (userData: RegisterFormData) => Promise<boolean>;
+  requireAuth: (callback?: () => void) => void;
+  requireAdmin: (callback?: () => void) => void;
+}
+
+// Types pour les composants
+export interface ComponentWithChildren {
+  children: React.ReactNode;
+}
+
+export interface ComponentWithClassName {
+  className?: string;
+}
+
+// Types pour les formulaires de produits
+export interface ProductFormData {
+  name: string;
+  description: string;
+  price: number;
+  category: IProduct['category'];
+  subcategory: string;
+  images: string[];
+  stock: number;
+  isActive: boolean;
+  tags: string[];
+  seo: {
+    title: string;
+    description: string;
+    keywords: string[];
+  };
+  dimensions?: {
+    height: number;
+    width: number;
+    depth: number;
+  };
+  care?: {
+    difficulty: 'facile' | 'modéré' | 'difficile';
+    watering: string;
+    light: string;
+    temperature: string;
+  };
+}
+
+// Types pour les formulaires de commandes
+export interface OrderFormData {
+  items: IOrderItem[];
+  customerInfo: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  deliveryInfo: {
+    type: 'pickup' | 'delivery';
+    address?: {
+      street: string;
+      city: string;
+      zipCode: string;
+      country: string;
+    };
+    date: Date;
+    timeSlot: IOrder['deliveryInfo']['timeSlot'];
+    notes?: string;
+  };
+}
+
+// Utility types
+export type PartialExcept<T, K extends keyof T> = Partial<T> & Pick<T, K>;
+export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
+
+// Status types
+export type OrderStatus = IOrder['status'];
+export type PaymentStatus = IOrder['paymentStatus'];
+export type UserRole = IUser['role'];
+export type ProductCategory = IProduct['category'];
+export type DeliveryType = IOrder['deliveryInfo']['type'];
+export type TimeSlot = IOrder['deliveryInfo']['timeSlot'];
+
+// Form validation types
+export interface ValidationError {
+  field: string;
+  message: string;
+}
+
+export interface FormState {
+  isSubmitting: boolean;
+  errors: ValidationError[];
+  success: boolean;
+  message?: string;
 }

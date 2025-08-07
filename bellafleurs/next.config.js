@@ -27,7 +27,7 @@ const nextConfig = {
   },
   
   // Webpack configuration pour les imports et alias
-  webpack: (config: any, { isServer }: {isServer: boolean}) => {
+  webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,

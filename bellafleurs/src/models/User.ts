@@ -1,6 +1,40 @@
-import mongoose, { Schema, Model } from 'mongoose';
+import mongoose, { Schema, Model, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { IUser } from '@/types';
+
+// Interface pour le document User (sans les méthodes)
+export interface IUser extends Document {
+  name: string;
+  email: string;
+  password?: string;
+  role: 'client' | 'admin';
+  address?: {
+    street: string;
+    city: string;
+    zipCode: string;
+    country: string;
+  };
+  phone?: string;
+  emailVerified?: Date;
+  image?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Interface pour les méthodes d'instance
+export interface IUserMethods {
+  comparePassword(candidatePassword: string): Promise<boolean>;
+  toPublicJSON(): Omit<IUser, 'password'>;
+}
+
+// Interface pour les méthodes statiques
+export interface IUserModel extends Model<IUser, {}, IUserMethods> {
+  findByEmail(email: string): Promise<IUserDocument | null>;
+  findAdmins(): Promise<IUserDocument[]>;
+  findClients(): Promise<IUserDocument[]>;
+}
+
+// Type combiné pour le document avec méthodes
+export type IUserDocument = IUser & IUserMethods;
 
 // Schéma pour l'adresse
 const AddressSchema = new Schema({
@@ -32,7 +66,7 @@ const AddressSchema = new Schema({
 }, { _id: false });
 
 // Schéma principal User
-const UserSchema = new Schema<IUser>({
+const UserSchema = new Schema<IUser, IUserModel, IUserMethods>({
   name: {
     type: String,
     required: [true, 'Name is required'],
@@ -123,26 +157,16 @@ UserSchema.pre('save', async function(next) {
   }
 });
 
-// Méthode d'instance pour comparer les mots de passe
+// Méthodes d'instance
 UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   if (!this.password) return false;
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Méthode d'instance pour obtenir les infos publiques
 UserSchema.methods.toPublicJSON = function() {
-  return {
-    _id: this._id,
-    name: this.name,
-    email: this.email,
-    role: this.role,
-    address: this.address,
-    phone: this.phone,
-    emailVerified: this.emailVerified,
-    image: this.image,
-    createdAt: this.createdAt,
-    updatedAt: this.updatedAt
-  };
+  const obj = this.toObject();
+  delete obj.password;
+  return obj;
 };
 
 // Méthodes statiques
@@ -172,14 +196,8 @@ UserSchema.virtual('isEmailVerified').get(function() {
   return !!this.emailVerified;
 });
 
-// Interface pour les méthodes statiques
-interface IUserModel extends Model<IUser> {
-  findByEmail(email: string): Promise<IUser | null>;
-  findAdmins(): Promise<IUser[]>;
-  findClients(): Promise<IUser[]>;
-}
-
 // Éviter la recompilation du modèle
-const User = (mongoose.models.User as unknown as IUserModel) || mongoose.model<IUser, IUserModel>('User', UserSchema);
+const User = (mongoose.models.User as IUserModel) || 
+  mongoose.model<IUser, IUserModel>('User', UserSchema);
 
 export default User;

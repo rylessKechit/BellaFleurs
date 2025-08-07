@@ -2,13 +2,18 @@ import { auth } from '@/lib/auth';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export default auth((req: NextRequest & { auth: any }) => {
+// Interface pour étendre NextRequest avec auth
+interface AuthenticatedRequest extends NextRequest {
+  auth: any;
+}
+
+export default auth((req: AuthenticatedRequest) => {
   const { pathname } = req.nextUrl;
-  const token = req.auth;
+  const session = req.auth;
 
   // Protection des routes admin
   if (pathname.startsWith('/admin')) {
-    if (!token || token.user?.role !== 'admin') {
+    if (!session || session.user?.role !== 'admin') {
       // Redirection vers la page de connexion avec un message d'erreur
       const signInUrl = new URL('/auth/signin', req.url);
       signInUrl.searchParams.set('error', 'AccessDenied');
@@ -19,7 +24,7 @@ export default auth((req: NextRequest & { auth: any }) => {
 
   // Protection des routes API admin
   if (pathname.startsWith('/api/admin')) {
-    if (!token || token.user?.role !== 'admin') {
+    if (!session || session.user?.role !== 'admin') {
       return new NextResponse(
         JSON.stringify({
           success: false,
@@ -38,7 +43,7 @@ export default auth((req: NextRequest & { auth: any }) => {
 
   // Protection des routes utilisateur (commandes, profil, etc.)
   if (pathname.startsWith('/mon-compte') || pathname.startsWith('/mes-commandes')) {
-    if (!token) {
+    if (!session) {
       const signInUrl = new URL('/auth/signin', req.url);
       signInUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(signInUrl);
@@ -47,7 +52,7 @@ export default auth((req: NextRequest & { auth: any }) => {
 
   // Protection des API utilisateur
   if (pathname.startsWith('/api/user') || pathname.startsWith('/api/orders')) {
-    if (!token) {
+    if (!session) {
       return new NextResponse(
         JSON.stringify({
           success: false,
@@ -62,6 +67,11 @@ export default auth((req: NextRequest & { auth: any }) => {
         }
       );
     }
+  }
+
+  // Redirection automatique des utilisateurs connectés depuis les pages d'auth
+  if (session && (pathname.startsWith('/auth/signin') || pathname.startsWith('/auth/signup'))) {
+    return NextResponse.redirect(new URL('/', req.url));
   }
 
   return NextResponse.next();
@@ -83,7 +93,11 @@ export const config = {
     '/api/user/:path*',
     '/api/orders/:path*',
     
+    // Pages d'authentification (pour la redirection)
+    '/auth/signin',
+    '/auth/signup',
+    
     // Exclure les routes publiques
-    '/((?!api/auth|api/products|api/public|auth|_next/static|_next/image|favicon.ico|images|$).*)',
+    '/((?!api/auth|api/products|api/public|_next/static|_next/image|favicon.ico|images|$).*)',
   ],
 };

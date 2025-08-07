@@ -3,8 +3,9 @@ import { MongoDBAdapter } from '@auth/mongodb-adapter';
 import { MongoClient } from 'mongodb';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
+import type { Adapter } from 'next-auth/adapters';
 import connectDB from '@/lib/mongodb';
-import User from '@/models/User';
+import User, { type IUserDocument } from '@/models/User';
 import { loginSchema } from '@/lib/validations';
 
 // Client MongoDB pour l'adapter
@@ -32,12 +33,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   // Adapter MongoDB pour stocker les sessions
   adapter: MongoDBAdapter(clientPromise, {
     databaseName: 'bella-fleurs'
-  }),
+  }) as Adapter,
   
   // Providers d'authentification
   providers: [
     // Authentification par email/password
     CredentialsProvider({
+      id: 'credentials',
       name: 'credentials',
       credentials: {
         email: { 
@@ -81,21 +83,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
 
           // Vérification du mot de passe
-          const isPasswordValid = await user.comparePassword(password);
+          const isPasswordValid = await (user as IUserDocument).comparePassword(password);
           
           if (!isPasswordValid) {
             console.log('❌ Invalid password for:', email);
             return null;
           }
 
-          console.log('✅ User authenticated:', user.email);
+          console.log('✅ User authenticated:', (user as IUserDocument).email);
           
           return {
-            id: user._id.toString(),
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            image: user.image,
+            id: ((user as IUserDocument)._id as any).toString(),
+            email: (user as IUserDocument).email,
+            name: (user as IUserDocument).name,
+            role: (user as IUserDocument).role,
+            image: (user as IUserDocument).image,
           };
         } catch (error) {
           console.error('❌ Auth error:', error);
@@ -146,7 +148,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, trigger, session }) {
       // Première connexion - ajouter les infos utilisateur au token
       if (user) {
-        token.role = user.role;
+        token.role = (user as any).role;
         token.id = user.id;
       }
 
@@ -162,8 +164,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     // Callback Session - structure les données envoyées au client
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as 'client' | 'admin';
+        (session.user as any).id = token.id as string;
+        (session.user as any).role = token.role as 'client' | 'admin';
       }
 
       return session;
@@ -182,7 +184,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           await connectDB();
           
           // Vérifier si l'utilisateur existe déjà
-          const existingUser = await User.findByEmail(user.email!);
+          const existingUser = await User.findOne({ email: user.email });
           
           if (!existingUser) {
             // Créer un nouvel utilisateur
@@ -216,8 +218,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
     },
     
-    async signOut({ token }) {
-      console.log(`🔓 User signed out: ${token?.email}`);
+    async signOut() {
+      console.log('🔓 User signed out');
     },
 
     async createUser({ user }) {
