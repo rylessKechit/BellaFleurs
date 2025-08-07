@@ -6,14 +6,6 @@ import { Button } from '@/components/ui/button';
 export default function EventsSection() {
   const events = [
     {
-      icon: Heart,
-      title: "Mariages",
-      description: "Bouquets de mariée, centres de table, décoration d'église",
-      image: "💒",
-      color: "text-red-500",
-      bgColor: "bg-red-50"
-    },
-    {
       icon: Gift,
       title: "Anniversaires",
       description: "Compositions personnalisées pour marquer ce jour spécial",
@@ -22,12 +14,12 @@ export default function EventsSection() {
       bgColor: "bg-purple-50"
     },
     {
-      icon: Star,
-      title: "Naissances",
-      description: "Bouquets tendres pour célébrer l'arrivée d'un nouveau-né",
-      image: "👶",
-      color: "text-pink-500",
-      bgColor: "bg-pink-50"
+      icon: Heart,
+      title: "Deuil",
+      description: "Arrangements respectueux pour accompagner vos moments de recueillement",
+      image: "🤍",
+      color: "text-gray-500",
+      bgColor: "bg-gray-50"
     },
     {
       icon: Calendar,
@@ -55,13 +47,13 @@ export default function EventsSection() {
           </h2>
           
           <p className="text-xl text-gray-600 leading-relaxed">
-            De votre mariage de rêve à la naissance d'un enfant, nous créons 
+            De votre anniversaire spécial aux moments de recueillement, nous créons 
             des arrangements floraux qui subliment tous vos moments importants.
           </p>
         </div>
 
         {/* Grid événements */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
           {events.map((event, index) => {
             const Icon = event.icon;
             return (
@@ -69,7 +61,7 @@ export default function EventsSection() {
                 key={index}
                 className="group bg-gradient-to-br from-white to-gray-50 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border border-gray-100"
               >
-                <div className="flex items-start space-x-6">
+                <div className="flex flex-col items-center text-center space-y-6">
                   <div className={`w-16 h-16 ${event.bgColor} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
                     <Icon className={`w-8 h-8 ${event.color}`} />
                   </div>
@@ -104,7 +96,7 @@ export default function EventsSection() {
             </h3>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded-xl shadow-md">
               <div className="flex text-yellow-400 mb-3">
                 {[...Array(5)].map((_, i) => (
@@ -112,11 +104,11 @@ export default function EventsSection() {
                 ))}
               </div>
               <p className="text-gray-600 text-sm mb-4">
-                "Bouquet de mariée absolument magnifique ! Marie a su comprendre exactement ce que je voulais."
+                "Bouquet d'anniversaire absolument magnifique ! Marie a su comprendre exactement ce que je voulais."
               </p>
               <div className="text-sm">
                 <div className="font-semibold text-gray-900">Sarah M.</div>
-                <div className="text-gray-500">Mariée - Juin 2024</div>
+                <div className="text-gray-500">Anniversaire - Juin 2024</div>
               </div>
             </div>
             
@@ -127,11 +119,11 @@ export default function EventsSection() {
                 ))}
               </div>
               <p className="text-gray-600 text-sm mb-4">
-                "Service impeccable pour l'anniversaire de ma maman. Les fleurs étaient splendides !"
+                "Arrangement très respectueux et apaisant pour les obsèques de papa. Merci pour votre délicatesse."
               </p>
               <div className="text-sm">
-                <div className="font-semibold text-gray-900">Thomas L.</div>
-                <div className="text-gray-500">Anniversaire - Mars 2024</div>
+                <div className="font-semibold text-gray-900">Michel R.</div>
+                <div className="text-gray-500">Deuil - Mars 2024</div>
               </div>
             </div>
             
@@ -145,7 +137,7 @@ export default function EventsSection() {
                 "Décoration florale parfaite pour notre événement d'entreprise. Très professionnel !"
               </p>
               <div className="text-sm">
-                <div className="font-semibold text-gray-900">Julie R.</div>
+                <div className="font-semibold text-gray-900">Julie L.</div>
                 <div className="text-gray-500">Événement pro - Janvier 2024</div>
               </div>
             </div>

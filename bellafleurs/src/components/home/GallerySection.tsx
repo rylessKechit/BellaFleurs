@@ -1,18 +1,48 @@
 'use client';
 
-import { Camera, Eye } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Camera } from 'lucide-react';
 
 export default function GallerySection() {
-  // Données temporaires - à remplacer par vos vraies images
-  const galleryImages = [
-    { id: 1, title: "Bouquet de roses rouges", category: "Bouquets", image: "🌹" },
-    { id: 2, title: "Composition moderne", category: "Compositions", image: "🏺" },
-    { id: 3, title: "Mariage champêtre", category: "Événements", image: "💒" },
-    { id: 4, title: "Bouquet cascade", category: "Mariages", image: "💐" },
-    { id: 5, title: "Centre de table", category: "Compositions", image: "🌸" },
-    { id: 6, title: "Orchidées blanches", category: "Plantes", image: "🌺" },
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Catégories avec leurs images
+  const items = [
+    { name: 'Bouquets', emoji: '💐' },
+    { name: 'Fleurs de saisons', emoji: '🌸' },
+    { name: 'Compositions piquées', emoji: '🏺' },
+    { name: 'Roses', emoji: '🌹' },
+    { name: 'Orchidées', emoji: '🌺' },
+    { name: 'Deuil', emoji: '🤍' },
+    { name: 'Abonnements particuliers', emoji: '🏠' },
+    { name: 'Abonnements professionnels', emoji: '🏢' }
   ];
+
+  // Auto-play fluide
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => {
+        const maxIndex = items.length - 3; // 3 images visibles pour un meilleur affichage
+        return prev >= maxIndex ? 0 : prev + 1;
+      });
+    }, 4000); // Plus lent pour être moins brusque
+    
+    return () => clearInterval(interval);
+  }, [items.length]);
+
+  const nextSlide = () => {
+    setCurrentIndex((prev) => {
+      const maxIndex = items.length - 3; // 3 images visibles
+      return prev >= maxIndex ? 0 : prev + 1;
+    });
+  };
+
+  const prevSlide = () => {
+    setCurrentIndex((prev) => {
+      const maxIndex = items.length - 3;
+      return prev <= 0 ? maxIndex : prev - 1;
+    });
+  };
 
   return (
     <section id="galerie" className="py-20 bg-gray-50">
@@ -28,58 +58,68 @@ export default function GallerySection() {
           <h2 className="text-4xl font-bold text-gray-900 mb-6">
             Mes créations
           </h2>
+        </div>
+
+        {/* Carrousel horizontal */}
+        <div className="relative max-w-6xl mx-auto">
           
-          <p className="text-xl text-gray-600 leading-relaxed">
-            Découvrez quelques-unes de nos réalisations récentes. 
-            Chaque création est unique et reflète la personnalité de nos clients.
-          </p>
-        </div>
-
-        {/* Grille galerie */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {galleryImages.map((item, index) => (
+          {/* Container avec overflow hidden */}
+          <div className="overflow-hidden rounded-2xl">
             <div 
-              key={item.id}
-              className="group relative bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
+              className="flex transition-transform duration-1000 ease-in-out" // Transition plus fluide et lente
+              style={{ transform: `translateX(-${currentIndex * 33.33}%)` }} // 33.33% pour 3 images visibles
             >
-              {/* Image placeholder */}
-              <div className="aspect-[4/3] bg-gradient-to-br from-primary-100 to-pink-100 flex items-center justify-center text-6xl group-hover:scale-105 transition-transform duration-300">
-                {item.image}
-              </div>
-              
-              {/* Overlay au hover */}
-              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="bg-white text-gray-900 opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300"
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  Voir plus
-                </Button>
-              </div>
-              
-              {/* Info */}
-              <div className="p-6">
-                <div className="mb-2">
-                  <span className="inline-block px-3 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded-full">
-                    {item.category}
-                  </span>
-                </div>
-                <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
-                  {item.title}
-                </h3>
-              </div>
-            </div>
-          ))}
-        </div>
+              {items.map((item, index) => (
+                <div key={index} className="flex-none w-1/3 px-3"> {/* w-1/3 pour 3 images visibles, plus d'espace */}
+                  
+                  {/* Bulle glass au-dessus de chaque image */}
+                  <div className="flex justify-center mb-4">
+                    <div className="bg-white/20 backdrop-blur-md rounded-xl px-4 py-2 border border-white/30 shadow-lg">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xl">{item.emoji}</span> {/* Emoji plus grand */}
+                        <span className="text-sm font-medium text-gray-700">{item.name}</span>
+                      </div>
+                    </div>
+                  </div>
 
-        {/* CTA */}
-        <div className="text-center">
-          <Button size="lg" variant="outline" className="border-2">
-            Voir toute la galerie
-            <Camera className="ml-2 w-5 h-5" />
-          </Button>
+                  {/* Image plus grande */}
+                  <div className="aspect-[4/3] rounded-xl overflow-hidden shadow-lg bg-gradient-to-br from-primary-100 to-pink-100 flex items-center justify-center">
+                    <span className="text-7xl opacity-40"> {/* Emoji dans l'image plus grand */}
+                      {item.emoji}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Boutons navigation */}
+          <button
+            onClick={prevSlide}
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-all shadow-lg z-10"
+          >
+            <ChevronLeft className="w-6 h-6 text-gray-600" />
+          </button>
+          
+          <button
+            onClick={nextSlide}
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-all shadow-lg z-10"
+          >
+            <ChevronRight className="w-6 h-6 text-gray-600" />
+          </button>
+
+          {/* Indicateurs */}
+          <div className="flex justify-center mt-6 space-x-2">
+            {Array.from({ length: items.length - 2 }).map((_, index) => ( // Ajusté pour 3 images visibles
+              <button
+                key={index}
+                onClick={() => setCurrentIndex(index)}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  index === currentIndex ? 'bg-primary-600' : 'bg-gray-300'
+                }`}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>
