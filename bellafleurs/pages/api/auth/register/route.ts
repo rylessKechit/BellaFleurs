@@ -1,8 +1,13 @@
+// src/app/api/auth/register/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { registerSchema } from '@/lib/validations';
-import { ApiResponse } from '@/types';
+import { ApiResponse } from 'types';
+
+// IMPORTANT: Forcer l'utilisation du runtime Node.js
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,7 +37,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     // Vérifier si l'utilisateur existe déjà
-    const existingUser = await User.findByEmail(email);
+    const existingUser = await User.findOne({ email });
     
     if (existingUser) {
       return NextResponse.json({
@@ -58,14 +63,13 @@ export async function POST(request: NextRequest) {
     console.log('✅ New user registered:', newUser.email);
 
     // Retourner les données de l'utilisateur (sans le mot de passe)
-    const { _id, name: userName, email: userEmail, phone: userPhone, address: userAddress, role } = newUser;
     const userResponse = {
-      _id,
-      name: userName,
-      email: userEmail,
-      phone: userPhone,
-      address: userAddress,
-      role
+      _id: String(newUser._id),
+      name: newUser.name,
+      email: newUser.email,
+      phone: newUser.phone,
+      address: newUser.address,
+      role: newUser.role
     };
 
     return NextResponse.json({

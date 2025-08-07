@@ -1,13 +1,7 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // App Router activé par défaut dans Next.js 14
-  experimental: {
-    serverActions: {
-      allowedOrigins: ['localhost:3000', 'bellafleurs.fr']
-    }
-  },
-  
-  // Images optimization
   images: {
     remotePatterns: [
       {
@@ -21,80 +15,47 @@ const nextConfig = {
         pathname: '/**'
       }
     ],
-    formats: ['image/webp', 'image/avif'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384]
   },
   
-  // Webpack configuration pour les imports et alias
   webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false
-      };
+    // Configuration pour éviter les erreurs de modules
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push({
+        'utf-8-validate': 'commonjs utf-8-validate',
+        'bufferutil': 'commonjs bufferutil',
+      });
     }
-    
-    // Configuration de l'alias @ pour pointer vers src/
+
+    // Résolution des modules
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
+
+    // Alias
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, 'src'),
     };
-    
+
     return config;
   },
-  
-  // Headers de sécurité
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY'
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff'
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin'
-          }
-        ]
-      }
-    ];
-  },
-  
-  // Redirections
-  async redirects() {
-    return [
-      {
-        source: '/admin',
-        destination: '/admin/dashboard',
-        permanent: true
-      }
-    ];
-  },
-  
-  // Variables d'environnement publiques
-  env: {
-    STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
-    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME
-  },
-  
-  // Compression
-  compress: true,
-  
-  // PoweredBy header
-  poweredByHeader: false,
-  
-  // Génération statique pour les pages publiques
-  output: 'standalone'
-};
 
-// Import nécessaire pour l'alias
-const path = require('path');
+  // Désactiver les warnings pendant le développement
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+
+  // Options de base
+  poweredByHeader: false,
+  compress: true,
+};
 
 module.exports = nextConfig;

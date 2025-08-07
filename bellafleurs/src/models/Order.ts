@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IOrder, IOrderItem } from '@/types';
+import { IOrder, IOrderItem } from 'types';
 
 // Schéma pour les items de commande
 const OrderItemSchema = new Schema({

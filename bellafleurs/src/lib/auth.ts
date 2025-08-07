@@ -1,12 +1,24 @@
 import NextAuth from 'next-auth';
-import { MongoDBAdapter } from '@auth/mongodb-adapter';
+import { MongoDBAdapter } from '@next-auth/mongodb-adapter';
 import { MongoClient } from 'mongodb';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import type { Adapter } from 'next-auth/adapters';
 import connectDB from '@/lib/mongodb';
-import User, { type IUserDocument } from '@/models/User';
+import User from '@/models/User';
 import { loginSchema } from '@/lib/validations';
+import mongoose from 'mongoose';
+
+// Interface pour le user avec les méthodes
+interface AuthUser {
+  _id: mongoose.Types.ObjectId | string;
+  email: string;
+  name: string;
+  role: 'client' | 'admin';
+  image?: string;
+  password?: string;
+  comparePassword(candidatePassword: string): Promise<boolean>;
+}
 
 // Client MongoDB pour l'adapter
 let client: MongoClient;
@@ -75,7 +87,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           await connectDB();
 
           // Recherche de l'utilisateur avec le mot de passe
-          const user = await User.findOne({ email }).select('+password');
+          const user = await User.findOne({ email }).select('+password') as AuthUser | null;
           
           if (!user) {
             console.log('❌ User not found:', email);
@@ -83,21 +95,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
 
           // Vérification du mot de passe
-          const isPasswordValid = await (user as IUserDocument).comparePassword(password);
+          const isPasswordValid = await user.comparePassword(password);
           
           if (!isPasswordValid) {
             console.log('❌ Invalid password for:', email);
             return null;
           }
 
-          console.log('✅ User authenticated:', (user as IUserDocument).email);
+          console.log('✅ User authenticated:', user.email);
+          
+          // Conversion sécurisée de l'ID
+          const userId = user._id instanceof mongoose.Types.ObjectId 
+            ? user._id.toString() 
+            : String(user._id);
           
           return {
-            id: ((user as IUserDocument)._id as any).toString(),
-            email: (user as IUserDocument).email,
-            name: (user as IUserDocument).name,
-            role: (user as IUserDocument).role,
-            image: (user as IUserDocument).image,
+            id: userId,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            image: user.image,
           };
         } catch (error) {
           console.error('❌ Auth error:', error);

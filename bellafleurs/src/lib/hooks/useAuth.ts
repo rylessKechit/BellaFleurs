@@ -4,17 +4,54 @@ import { useSession, signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import type { ExtendedUser, ExtendedSession, UseAuthReturn, RegisterFormData } from '@/types';
+import type { Session } from 'next-auth';
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'client' | 'admin';
+  image?: string;
+}
+
+export interface UseAuthReturn {
+  // État de l'authentification
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  isAdmin: boolean;
+  isClient: boolean;
+  
+  // Actions d'authentification
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  register: (userData: RegisterData) => Promise<boolean>;
+  
+  // Navigation protégée
+  requireAuth: (callback?: () => void) => void;
+  requireAdmin: (callback?: () => void) => void;
+}
+
+export interface RegisterData {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  phone?: string;
+  address?: {
+    street: string;
+    city: string;
+    zipCode: string;
+    country: string;
+  };
+}
 
 export function useAuth(): UseAuthReturn {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Cast de session vers notre type étendu
-  const extendedSession = session as ExtendedSession | null;
-  const user = extendedSession?.user || null;
-  
+  const user = session?.user as AuthUser | null;
   const isLoading = status === 'loading' || isSubmitting;
   const isAuthenticated = !!session && !!user;
   const isAdmin = user?.role === 'admin';
@@ -66,7 +103,7 @@ export function useAuth(): UseAuthReturn {
   };
 
   // Inscription
-  const register = async (userData: RegisterFormData): Promise<boolean> => {
+  const register = async (userData: RegisterData): Promise<boolean> => {
     setIsSubmitting(true);
     
     try {
@@ -165,17 +202,4 @@ export function useUser() {
 export function useAdminAuth() {
   const { isAdmin, isLoading, requireAdmin } = useAuth();
   return { isAdmin, isLoading, requireAdmin };
-}
-
-// Hook pour vérifier un rôle spécifique
-export function useRole(requiredRole: 'client' | 'admin') {
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const hasRequiredRole = user?.role === requiredRole;
-  
-  return {
-    hasRole: hasRequiredRole,
-    isAuthenticated,
-    isLoading,
-    user
-  };
 }

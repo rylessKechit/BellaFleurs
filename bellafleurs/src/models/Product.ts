@@ -1,5 +1,5 @@
 import mongoose, { Schema, Model } from 'mongoose';
-import { IProduct, ProductFilters, PaginationParams } from '@/types';
+import { IProduct, ProductFilters, PaginationParams } from 'types';
 
 // Schéma pour le SEO
 const SEOSchema = new Schema({
