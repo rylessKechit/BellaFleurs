@@ -3,11 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { registerSchema } from '@/lib/validations';
-import { ApiResponse } from 'types';
-
-// IMPORTANT: Forcer l'utilisation du runtime Node.js
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +23,7 @@ export async function POST(request: NextRequest) {
           field,
           message: messages?.[0] || 'Erreur de validation'
         }))
-      } as ApiResponse, { status: 400 });
+      }, { status: 400 });
     }
 
     const { name, email, password, phone, address } = validatedFields.data;
@@ -47,7 +42,7 @@ export async function POST(request: NextRequest) {
           code: 'USER_EXISTS',
           field: 'email'
         }
-      } as ApiResponse, { status: 409 });
+      }, { status: 409 });
     }
 
     // Créer le nouvel utilisateur
@@ -78,7 +73,7 @@ export async function POST(request: NextRequest) {
         user: userResponse,
         message: 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.'
       }
-    } as ApiResponse, { status: 201 });
+    }, { status: 201 });
 
   } catch (error: any) {
     console.error('❌ Registration error:', error);
@@ -97,7 +92,7 @@ export async function POST(request: NextRequest) {
           code: 'MONGODB_VALIDATION_ERROR'
         },
         errors
-      } as ApiResponse, { status: 400 });
+      }, { status: 400 });
     }
 
     // Erreur de duplicata (email unique)
@@ -109,7 +104,7 @@ export async function POST(request: NextRequest) {
           code: 'DUPLICATE_EMAIL',
           field: 'email'
         }
-      } as ApiResponse, { status: 409 });
+      }, { status: 409 });
     }
 
     // Erreur serveur générique
@@ -119,6 +114,6 @@ export async function POST(request: NextRequest) {
         message: 'Erreur serveur lors de la création du compte',
         code: 'INTERNAL_SERVER_ERROR'
       }
-    } as ApiResponse, { status: 500 });
+    }, { status: 500 });
   }
 }

@@ -1,10 +1,10 @@
+// src/lib/hooks/useAuth.ts
 'use client';
 
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import type { Session } from 'next-auth';
 
 export interface AuthUser {
   id: string;
@@ -51,7 +51,14 @@ export function useAuth(): UseAuthReturn {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const user = session?.user as AuthUser | null;
+  const user = session?.user ? {
+    id: (session.user as any).id,
+    name: session.user.name || '',
+    email: session.user.email || '',
+    role: (session.user as any).role || 'client',
+    image: session.user.image || undefined,
+  } : null;
+
   const isLoading = status === 'loading' || isSubmitting;
   const isAuthenticated = !!session && !!user;
   const isAdmin = user?.role === 'admin';

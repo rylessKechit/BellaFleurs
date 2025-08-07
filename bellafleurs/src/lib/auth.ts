@@ -1,9 +1,9 @@
-import NextAuth from 'next-auth';
+// src/lib/auth.ts
+import { NextAuthOptions } from 'next-auth';
 import { MongoDBAdapter } from '@next-auth/mongodb-adapter';
 import { MongoClient } from 'mongodb';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
-import type { Adapter } from 'next-auth/adapters';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { loginSchema } from '@/lib/validations';
@@ -41,12 +41,29 @@ if (process.env.NODE_ENV === 'development') {
   clientPromise = client.connect();
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  // Adapter MongoDB pour stocker les sessions
-  adapter: MongoDBAdapter(clientPromise, {
-    databaseName: 'bella-fleurs'
-  }) as Adapter,
+export const authOptions: NextAuthOptions = {
+  // Adapter MongoDB pour stocker les sessions (optionnel avec JWT)
+  // adapter: MongoDBAdapter(clientPromise, {
+  //   databaseName: 'bella-fleurs'
+  // }),
   
+  // Configuration des sessions
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 jours
+  },
+
+  // Configuration JWT
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60, // 30 jours
+  },
+
+  // Pages personnalisées
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
+
   // Providers d'authentification
   providers: [
     // Authentification par email/password
@@ -128,36 +145,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       ? [GoogleProvider({
           clientId: process.env.GOOGLE_CLIENT_ID,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-          profile(profile) {
-            return {
-              id: profile.sub,
-              name: profile.name,
-              email: profile.email,
-              image: profile.picture,
-              role: 'client', // Par défaut, les utilisateurs Google sont des clients
-            };
-          },
         })]
       : []
     ),
   ],
-
-  // Configuration des sessions
-  session: {
-    strategy: 'jwt', // Utilise JWT au lieu des sessions DB pour de meilleures performances
-    maxAge: 30 * 24 * 60 * 60, // 30 jours
-  },
-
-  // Configuration des JWT
-  jwt: {
-    maxAge: 30 * 24 * 60 * 60, // 30 jours
-  },
-
-  // Pages personnalisées
-  pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
-  },
 
   // Callbacks pour personnaliser l'authentification
   callbacks: {
@@ -189,30 +180,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     // Callback SignIn - contrôle qui peut se connecter
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       // Authentification par identifiants - déjà validée dans authorize()
       if (account?.provider === 'credentials') {
         return true;
       }
 
       // Authentification Google
-      if (account?.provider === 'google') {
+      if (account?.provider === 'google' && profile) {
         try {
           await connectDB();
           
           // Vérifier si l'utilisateur existe déjà
-          const existingUser = await User.findOne({ email: user.email });
+          const existingUser = await User.findOne({ email: profile.email });
           
           if (!existingUser) {
             // Créer un nouvel utilisateur
             await User.create({
-              name: user.name,
-              email: user.email,
+              name: profile.name,
+              email: profile.email,
               role: 'client',
-              image: user.image,
+              image: (profile as any).picture,
               emailVerified: new Date(),
             });
-            console.log('✅ New Google user created:', user.email);
+            console.log('✅ New Google user created:', profile.email);
           }
           
           return true;
@@ -238,10 +229,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async signOut() {
       console.log('🔓 User signed out');
     },
-
-    async createUser({ user }) {
-      console.log(`👤 New user created: ${user.email}`);
-    },
   },
 
   // Configuration debug
@@ -249,37 +236,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   
   // Secret pour signer les JWT
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
 
-// Types étendus pour TypeScript
-declare module 'next-auth' {
-  interface Session {
-    user: {
-      id: string;
-      email: string;
-      name: string;
-      role: 'client' | 'admin';
-      image?: string;
-    };
-  }
+// Fonction helper pour obtenir la session côté serveur
+export { getServerSession } from 'next-auth';
 
-  interface User {
-    id: string;
-    email: string;
-    name: string;
-    role: 'client' | 'admin';
-    image?: string;
-  }
-}
-
-declare module 'next-auth/jwt' {
-  interface JWT {
-    id: string;
-    role: 'client' | 'admin';
-  }
-}
-
-// Fonction helper pour vérifier les rôles
+// Fonctions helper pour vérifier les rôles
 export function hasRole(session: any, role: 'client' | 'admin'): boolean {
   return session?.user?.role === role;
 }
