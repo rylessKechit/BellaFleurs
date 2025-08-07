@@ -10,7 +10,7 @@
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-    --primary: 347 77% 58%;
+    --primary: 142 76% 36%;
     --primary-foreground: 0 0% 98%;
     --secondary: 0 0% 96.1%;
     --secondary-foreground: 0 0% 9%;
@@ -38,7 +38,7 @@
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 347 77% 58%;
+    --primary: 142 76% 36%;
     --primary-foreground: 0 0% 9%;
     --secondary: 0 0% 14.9%;
     --secondary-foreground: 0 0% 98%;
@@ -71,13 +71,13 @@
 /* Variables CSS personnalisées Bella Fleurs */
 :root {
   --font-inter: 'Inter', system-ui, sans-serif;
-  --primary-50: #fef2f4;
-  --primary-100: #fde6e9;
-  --primary-500: #ea4f70;
-  --primary-600: #d63384;
-  --primary-700: #c73650;
-  --primary-800: #a91e3c;
-  --primary-900: #8f1d37;
+  --primary-50: #f0fdf4;
+  --primary-100: #dcfce7;
+  --primary-500: #22c55e;
+  --primary-600: #16a34a;
+  --primary-700: #15803d;
+  --primary-800: #166534;
+  --primary-900: #14532d;
 }
 
 /* Styles de base */

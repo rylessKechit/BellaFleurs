@@ -43,9 +43,9 @@ export default function AboutSection() {
           <div className="space-y-8">
             {/* En-tête */}
             <div className="space-y-4">
-              <div className="inline-flex items-center px-4 py-2 bg-primary-50 rounded-full">
-                <Heart className="w-4 h-4 text-primary-600 mr-2" />
-                <span className="text-sm font-medium text-primary-700">Notre Histoire</span>
+              <div className="inline-flex items-center px-4 py-2 bg-green-50 rounded-full">
+                <Heart className="w-4 h-4 text-green-600 mr-2" />
+                <span className="text-sm font-medium text-green-700">Notre Histoire</span>
               </div>
               
               <h2 className="text-4xl font-bold text-gray-900">
@@ -71,12 +71,12 @@ export default function AboutSection() {
 
             {/* Statistiques */}
             <div className="grid grid-cols-2 gap-6 py-6">
-              <div className="text-center p-4 bg-primary-50 rounded-lg">
-                <div className="text-3xl font-bold text-primary-600 mb-2">500+</div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-3xl font-bold text-green-600 mb-2">500+</div>
                 <div className="text-sm text-gray-600">Créations réalisées</div>
               </div>
-              <div className="text-center p-4 bg-pink-50 rounded-lg">
-                <div className="text-3xl font-bold text-pink-600 mb-2">127</div>
+              <div className="text-center p-4 bg-emerald-50 rounded-lg">
+                <div className="text-3xl font-bold text-emerald-600 mb-2">127</div>
                 <div className="text-sm text-gray-600">Clients satisfaits</div>
               </div>
             </div>
@@ -86,32 +86,32 @@ export default function AboutSection() {
               <h3 className="text-2xl font-semibold text-gray-900">Nos Valeurs</h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-start space-x-3 p-4 border border-gray-100 rounded-lg hover:border-primary-200 transition-colors">
-                  <Award className="w-6 h-6 text-primary-600 mt-0.5" />
+                <div className="flex items-start space-x-3 p-4 border border-gray-100 rounded-lg hover:border-green-200 transition-colors">
+                  <Award className="w-6 h-6 text-green-600 mt-0.5" />
                   <div>
                     <h4 className="font-semibold text-gray-900">Excellence</h4>
                     <p className="text-sm text-gray-600">Qualité premium et fraîcheur garantie</p>
                   </div>
                 </div>
                 
-                <div className="flex items-start space-x-3 p-4 border border-gray-100 rounded-lg hover:border-primary-200 transition-colors">
-                  <Heart className="w-6 h-6 text-pink-600 mt-0.5" />
+                <div className="flex items-start space-x-3 p-4 border border-gray-100 rounded-lg hover:border-green-200 transition-colors">
+                  <Heart className="w-6 h-6 text-emerald-600 mt-0.5" />
                   <div>
                     <h4 className="font-semibold text-gray-900">Émotion</h4>
                     <p className="text-sm text-gray-600">Chaque création raconte votre histoire</p>
                   </div>
                 </div>
                 
-                <div className="flex items-start space-x-3 p-4 border border-gray-100 rounded-lg hover:border-primary-200 transition-colors">
-                  <Sparkles className="w-6 h-6 text-purple-600 mt-0.5" />
+                <div className="flex items-start space-x-3 p-4 border border-gray-100 rounded-lg hover:border-green-200 transition-colors">
+                  <Sparkles className="w-6 h-6 text-lime-600 mt-0.5" />
                   <div>
                     <h4 className="font-semibold text-gray-900">Créativité</h4>
                     <p className="text-sm text-gray-600">Designs uniques et personnalisés</p>
                   </div>
                 </div>
                 
-                <div className="flex items-start space-x-3 p-4 border border-gray-100 rounded-lg hover:border-primary-200 transition-colors">
-                  <Users className="w-6 h-6 text-blue-600 mt-0.5" />
+                <div className="flex items-start space-x-3 p-4 border border-gray-100 rounded-lg hover:border-green-200 transition-colors">
+                  <Users className="w-6 h-6 text-green-600 mt-0.5" />
                   <div>
                     <h4 className="font-semibold text-gray-900">Proximité</h4>
                     <p className="text-sm text-gray-600">Relation client privilégiée</p>
@@ -121,9 +121,9 @@ export default function AboutSection() {
             </div>
 
             {/* Équipe */}
-            <div className="bg-gradient-to-r from-primary-50 to-pink-50 p-6 rounded-xl">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl">
               <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-primary-200 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 bg-green-200 rounded-full flex items-center justify-center">
                   <span className="text-2xl">👩‍🎨</span>
                 </div>
                 <div>

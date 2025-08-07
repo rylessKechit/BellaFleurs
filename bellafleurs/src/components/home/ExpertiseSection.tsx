@@ -10,14 +10,6 @@ export default function ExpertiseSection() {
   const steps = [
     {
       id: 0,
-      icon: Heart,
-      title: "Écoute & Conseil",
-      description: "Nous échangeons sur vos envies, votre budget et l'occasion pour créer le bouquet parfait.",
-      details: "Chaque création commence par un échange personnalisé. Nous prenons le temps de comprendre vos goûts, l'événement et le message que vous souhaitez transmettre.",
-      color: "text-red-500"
-    },
-    {
-      id: 1,
       icon: Palette,
       title: "Sélection des fleurs",
       description: "Choix minutieux des plus belles fleurs fraîches selon la saison et vos préférences.",
@@ -25,10 +17,10 @@ export default function ExpertiseSection() {
       color: "text-purple-500"
     },
     {
-      id: 2,
+      id: 1,
       icon: Scissors,
       title: "Création artisanale",
-      description: "Réalisation de votre bouquet avec technique et passion par notre fleuriste experte.",
+      description: "Techniques transmises au près d'artisans côtoyés au fil des années.",
       details: "Chaque geste est maîtrisé : coupe, conditionnement, assemblage. Nos techniques artisanales préservent la beauté et la longévité de vos fleurs.",
       color: "text-primary-500"
     },
@@ -251,8 +243,8 @@ export default function ExpertiseSection() {
               <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Heart className="w-6 h-6 text-purple-600" />
               </div>
-              <h4 className="font-semibold text-gray-900 mb-2">Satisfaction client</h4>
-              <p className="text-sm text-gray-600">Échange ou remboursement si nécessaire</p>
+              <h4 className="font-semibold text-gray-900 mb-2">Circuit court</h4>
+              <p className="text-sm text-gray-600">Fleurs made in France privilégiés</p>
             </div>
           </div>
         </div>

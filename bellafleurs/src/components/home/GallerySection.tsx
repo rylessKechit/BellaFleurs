@@ -26,7 +26,7 @@ export default function GallerySection() {
           </div>
           
           <h2 className="text-4xl font-bold text-gray-900 mb-6">
-            Nos plus belles créations
+            Mes créations
           </h2>
           
           <p className="text-xl text-gray-600 leading-relaxed">

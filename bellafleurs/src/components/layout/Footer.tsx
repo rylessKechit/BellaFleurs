@@ -169,7 +169,7 @@ export default function Footer() {
           <div className="flex items-center text-sm text-gray-600">
             <span>© 2024 Bella Fleurs. Fait avec</span>
             <Heart className="w-4 h-4 text-red-500 mx-1" fill="currentColor" />
-            <span>à Paris</span>
+            <span>à Brétigny-sur-Orge</span>
           </div>
           
           <div className="flex space-x-6 text-sm">
