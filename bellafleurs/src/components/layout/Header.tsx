@@ -1,10 +1,9 @@
-// src/components/layout/Header.tsx - Version corrigée
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ShoppingCart, LogIn, User } from 'lucide-react';
+import { Menu, X, ShoppingCart, LogIn, User, LogOut, Package, Settings } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +11,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -20,7 +20,7 @@ const navigation = [
   { name: 'Accueil', href: '/' },
   { name: 'À propos', href: '/#apropos' },
   { name: 'Savoir-faire', href: '/#savoir-faire' },
-  { name: 'Mes créations', href: '/produits' }, // Corrigé ici
+  { name: 'Mes créations', href: '/produits' },
   { name: 'Événements', href: '/#evenements' },
   { name: 'Abonnement', href: '/abonnement' },
   { name: 'Contact', href: '/#contact' },
@@ -30,7 +30,6 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(false);
-  const [cartItemsCount, setCartItemsCount] = useState(0); // Mock cart count
   const pathname = usePathname();
   const { isAuthenticated, user, logout } = useAuth();
 
@@ -48,9 +47,7 @@ export default function Header() {
       setIsLargeScreen(window.innerWidth >= 1920);
     };
     
-    // Check initial
     handleResize();
-    
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -59,11 +56,83 @@ export default function Header() {
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  // Mock cart items count - à remplacer par votre logique de panier
-  useEffect(() => {
-    // Simuler un nombre d'articles dans le panier
-    setCartItemsCount(2);
-  }, []);
+  // Fonction pour obtenir les initiales
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .slice(0, 2)
+      .join('');
+  };
+
+  // Composant Avatar utilisateur
+  const UserAvatar = ({ isMobile = false }: { isMobile?: boolean }) => {
+    if (!isAuthenticated || !user) {
+      return (
+        <Button
+          variant="ghost"
+          size={isMobile ? "sm" : "icon"}
+          asChild
+          className={isMobile ? "justify-start" : ""}
+        >
+          <Link href="/auth/signin" className="flex items-center">
+            <User className="w-5 h-5" />
+            {isMobile && <span className="ml-2">Se connecter</span>}
+          </Link>
+        </Button>
+      );
+    }
+
+    const initials = getInitials(user.name);
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className={`relative ${isMobile ? 'justify-start w-full' : 'w-10 h-10'} rounded-full`}
+          >
+            <div className={`${isMobile ? 'w-8 h-8 mr-2' : 'w-8 h-8'} bg-primary-600 rounded-full flex items-center justify-center text-white text-sm font-medium`}>
+              {initials}
+            </div>
+            {isMobile && <span className="ml-1">{user.name}</span>}
+          </Button>
+        </DropdownMenuTrigger>
+        
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium leading-none">{user.name}</p>
+              <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+            </div>
+          </DropdownMenuLabel>
+          
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuItem asChild>
+            <Link href="/mon-compte" className="flex items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              Mon compte
+            </Link>
+          </DropdownMenuItem>
+          
+          <DropdownMenuItem asChild>
+            <Link href="/mes-commandes" className="flex items-center">
+              <Package className="mr-2 h-4 w-4" />
+              Mes commandes
+            </Link>
+          </DropdownMenuItem>
+          
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuItem onClick={logout} className="flex items-center text-red-600">
+            <LogOut className="mr-2 h-4 w-4" />
+            Se déconnecter
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
 
   return (
     <header
@@ -73,7 +142,6 @@ export default function Header() {
           : 'bg-white/90 backdrop-blur-sm'
       }`}
     >
-      {/* Container principal avec largeur maximale */}
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 w-full">
           
@@ -112,7 +180,7 @@ export default function Header() {
             )}
           </div>
 
-          {/* DIV 2: Logo CENTRÉ - Position absolue pour rester au centre */}
+          {/* DIV 2: Logo CENTRÉ */}
           <div className="absolute left-1/2 transform -translate-x-1/2">
             <Link
               href="/"
@@ -123,82 +191,41 @@ export default function Header() {
           </div>
 
           {/* DIV 3: Actions à DROITE */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             {/* Panier - toujours visible */}
             <Button variant="ghost" size="icon" asChild>
               <Link href="/panier" className="relative">
                 <ShoppingCart className="w-5 h-5" />
-                {cartItemsCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-green-500 text-white">
-                    {cartItemsCount}
-                  </Badge>
-                )}
+                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-green-500 text-white">
+                  0
+                </Badge>
               </Link>
             </Button>
 
-            {/* Authentification - affichée seulement si écran >= 1920px */}
-            {isLargeScreen && (
+            {/* Menu utilisateur - Desktop & Mobile */}
+            <div className="hidden sm:block">
+              <UserAvatar />
+            </div>
+
+            {/* Menu utilisateur mobile - affiché seulement sur mobile */}
+            <div className="sm:hidden">
+              <UserAvatar isMobile />
+            </div>
+
+            {/* Authentification desktop - affichée seulement si écran >= 1920px ET non connecté */}
+            {isLargeScreen && !isAuthenticated && (
               <div className="flex items-center space-x-3">
-                {isAuthenticated ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="flex items-center space-x-2">
-                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                          <span className="text-sm font-medium text-green-700">
-                            {user?.name?.charAt(0) || 'U'}
-                          </span>
-                        </div>
-                        <span className="text-sm font-medium text-gray-700">
-                          {user?.name}
-                        </span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem asChild>
-                        <Link href="/mon-compte" className="flex items-center">
-                          <User className="w-4 h-4 mr-2" />
-                          Mon compte
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/mes-commandes" className="flex items-center">
-                          <ShoppingCart className="w-4 h-4 mr-2" />
-                          Mes commandes
-                        </Link>
-                      </DropdownMenuItem>
-                      {user?.role === 'admin' && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem asChild>
-                            <Link href="/admin/dashboard" className="flex items-center">
-                              <User className="w-4 h-4 mr-2" />
-                              Administration
-                            </Link>
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={logout}>
-                        <LogIn className="w-4 h-4 mr-2" />
-                        Se déconnecter
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <>
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href="/auth/signin" className="flex items-center">
-                        <LogIn className="w-4 h-4 mr-2" />
-                        Connexion
-                      </Link>
-                    </Button>
-                    <Button size="sm" asChild>
-                      <Link href="/auth/signup">
-                        S'inscrire
-                      </Link>
-                    </Button>
-                  </>
-                )}
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/auth/signin" className="flex items-center">
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Connexion
+                  </Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link href="/auth/signup">
+                    S'inscrire
+                  </Link>
+                </Button>
               </div>
             )}
           </div>
@@ -208,6 +235,7 @@ export default function Header() {
         {!isLargeScreen && mobileMenuOpen && (
           <div className="border-t border-gray-200 py-4">
             <div className="space-y-2">
+              {/* Navigation links */}
               {navigation.map((item) => (
                 <Link
                   key={item.name}
@@ -223,63 +251,22 @@ export default function Header() {
                 </Link>
               ))}
               
-              {/* Auth mobile */}
-              <div className="border-t border-gray-200 pt-4 space-y-2">
-                {isAuthenticated ? (
-                  <>
-                    <Link
-                      href="/mon-compte"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg"
-                    >
-                      <User className="w-5 h-5 mr-3 inline" />
-                      Mon compte
+              {/* Auth mobile - seulement si non connecté */}
+              {!isAuthenticated && (
+                <div className="border-t border-gray-200 pt-4 space-y-2">
+                  <Button variant="ghost" className="w-full justify-start" asChild>
+                    <Link href="/auth/signin" onClick={() => setMobileMenuOpen(false)}>
+                      <LogIn className="w-5 h-5 mr-3" />
+                      Connexion
                     </Link>
-                    <Link
-                      href="/mes-commandes"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg"
-                    >
-                      <ShoppingCart className="w-5 h-5 mr-3 inline" />
-                      Mes commandes
+                  </Button>
+                  <Button className="w-full" asChild>
+                    <Link href="/auth/signup" onClick={() => setMobileMenuOpen(false)}>
+                      S'inscrire
                     </Link>
-                    {user?.role === 'admin' && (
-                      <Link
-                        href="/admin/dashboard"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg"
-                      >
-                        <User className="w-5 h-5 mr-3 inline" />
-                        Administration
-                      </Link>
-                    )}
-                    <button
-                      onClick={() => {
-                        logout();
-                        setMobileMenuOpen(false);
-                      }}
-                      className="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg"
-                    >
-                      <LogIn className="w-5 h-5 mr-3 inline" />
-                      Se déconnecter
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="ghost" className="w-full justify-start" asChild>
-                      <Link href="/auth/signin" onClick={() => setMobileMenuOpen(false)}>
-                        <LogIn className="w-5 h-5 mr-3" />
-                        Connexion
-                      </Link>
-                    </Button>
-                    <Button className="w-full" asChild>
-                      <Link href="/auth/signup" onClick={() => setMobileMenuOpen(false)}>
-                        S'inscrire
-                      </Link>
-                    </Button>
-                  </>
-                )}
-              </div>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}

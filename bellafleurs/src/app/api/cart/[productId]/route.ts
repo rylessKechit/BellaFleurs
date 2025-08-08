@@ -2,6 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import connectDB from '@/lib/mongodb';
+import Cart from '@/models/Cart';
+import Product from '@/models/Product'; // Importer Product AVANT Cart
 
 interface RouteParams {
   params: {
@@ -15,6 +18,8 @@ export async function PUT(
   { params }: RouteParams
 ) {
   try {
+    await connectDB();
+    
     const session = await getServerSession(authOptions);
     const { quantity } = await request.json();
     const { productId } = params;
@@ -41,8 +46,28 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    const cartItems = cartStore.get(sessionId) || [];
-    const itemIndex = cartItems.findIndex(item => item.productId === productId);
+    // **CORRECTION** : Utiliser le modèle Cart au lieu de cartStore
+    let cart = null;
+    if (session?.user?.id) {
+      cart = await Cart.findByUser(session.user.id);
+    } else if (sessionId) {
+      cart = await Cart.findBySession(sessionId);
+    }
+
+    if (!cart) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          message: 'Panier introuvable',
+          code: 'CART_NOT_FOUND'
+        }
+      }, { status: 404 });
+    }
+
+    // Vérifier si le produit existe dans le panier
+    const itemIndex = cart.items.findIndex(
+      (item: any) => item.product.toString() === productId
+    );
     
     if (itemIndex === -1) {
       return NextResponse.json({
@@ -54,24 +79,43 @@ export async function PUT(
       }, { status: 404 });
     }
 
-    const item = cartItems[itemIndex];
-    
-    if (quantity > item.stock) {
+    // Vérifier le stock disponible du produit
+    const product = await Product.findById(productId);
+    if (!product) {
       return NextResponse.json({
         success: false,
         error: {
-          message: `Stock insuffisant. Stock disponible: ${item.stock}`,
+          message: 'Produit introuvable',
+          code: 'PRODUCT_NOT_FOUND'
+        }
+      }, { status: 404 });
+    }
+
+    if (quantity > product.stock) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          message: `Stock insuffisant. Stock disponible: ${product.stock}`,
           code: 'INSUFFICIENT_STOCK'
         }
       }, { status: 400 });
     }
 
-    cartItems[itemIndex].quantity = quantity;
-    cartStore.set(sessionId, cartItems);
+    // Mettre à jour la quantité via la méthode du modèle
+    await cart.updateQuantity(productId, quantity);
 
     return NextResponse.json({
       success: true,
-      message: 'Quantité mise à jour'
+      data: {
+        cart: {
+          id: cart._id,
+          items: cart.items,
+          totalItems: cart.totalItems,
+          totalAmount: cart.totalAmount,
+          isEmpty: cart.isEmpty
+        },
+        message: 'Quantité mise à jour'
+      }
     });
 
   } catch (error: any) {
@@ -79,7 +123,7 @@ export async function PUT(
     return NextResponse.json({
       success: false,
       error: {
-        message: 'Erreur lors de la mise à jour',
+        message: error.message || 'Erreur lors de la mise à jour',
         code: 'CART_UPDATE_ERROR'
       }
     }, { status: 500 });
@@ -92,6 +136,8 @@ export async function DELETE(
   { params }: RouteParams
 ) {
   try {
+    await connectDB();
+    
     const session = await getServerSession(authOptions);
     const { productId } = params;
 
@@ -107,14 +153,54 @@ export async function DELETE(
       }, { status: 400 });
     }
 
-    const cartItems = cartStore.get(sessionId) || [];
-    const filteredItems = cartItems.filter(item => item.productId !== productId);
-    
-    cartStore.set(sessionId, filteredItems);
+    // **CORRECTION** : Utiliser le modèle Cart au lieu de cartStore
+    let cart = null;
+    if (session?.user?.id) {
+      cart = await Cart.findByUser(session.user.id);
+    } else if (sessionId) {
+      cart = await Cart.findBySession(sessionId);
+    }
+
+    if (!cart) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          message: 'Panier introuvable',
+          code: 'CART_NOT_FOUND'
+        }
+      }, { status: 404 });
+    }
+
+    // Vérifier si le produit existe dans le panier
+    const itemExists = cart.items.some(
+      (item: any) => item.product.toString() === productId
+    );
+
+    if (!itemExists) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          message: 'Produit introuvable dans le panier',
+          code: 'PRODUCT_NOT_IN_CART'
+        }
+      }, { status: 404 });
+    }
+
+    // Supprimer l'article via la méthode du modèle
+    await cart.removeItem(productId);
 
     return NextResponse.json({
       success: true,
-      message: 'Produit supprimé du panier'
+      data: {
+        cart: {
+          id: cart._id,
+          items: cart.items,
+          totalItems: cart.totalItems,
+          totalAmount: cart.totalAmount,
+          isEmpty: cart.isEmpty
+        },
+        message: 'Produit supprimé du panier'
+      }
     });
 
   } catch (error: any) {
@@ -122,7 +208,7 @@ export async function DELETE(
     return NextResponse.json({
       success: false,
       error: {
-        message: 'Erreur lors de la suppression',
+        message: error.message || 'Erreur lors de la suppression',
         code: 'CART_DELETE_ERROR'
       }
     }, { status: 500 });

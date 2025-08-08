@@ -1,4 +1,4 @@
-// src/app/checkout/page.tsx - Version refactorisée avec composants
+// src/app/checkout/page.tsx - Version corrigée
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -80,7 +80,6 @@ function useCheckoutData() {
       } catch (error) {
         console.error('Erreur panier:', error);
         toast.error('Erreur lors du chargement du panier');
-        // Redirection gérée dans le composant parent
       } finally {
         setIsLoadingCart(false);
       }
@@ -92,11 +91,12 @@ function useCheckoutData() {
   return { cartItems, isLoadingCart, user, isAuthenticated };
 }
 
-// Hook pour gérer les infos utilisateur pré-remplies
-function useUserProfile(isAuthenticated: boolean, setCustomerInfo: (info: CustomerInfo) => void, setDeliveryInfo: (info: DeliveryInfo) => void) {
-  useEffect(() => {
-// Hook pour gérer les infos utilisateur pré-remplies
-function useUserProfile(isAuthenticated: boolean, setCustomerInfo: (info: CustomerInfo) => void, setDeliveryInfo: (info: DeliveryInfo) => void) {
+// **CORRECTION 1** : Hook pour gérer les infos utilisateur pré-remplies - Typage corrigé
+function useUserProfile(
+  isAuthenticated: boolean, 
+  setCustomerInfo: React.Dispatch<React.SetStateAction<CustomerInfo>>, 
+  setDeliveryInfo: React.Dispatch<React.SetStateAction<DeliveryInfo>>
+) {
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -119,7 +119,8 @@ function useUserProfile(isAuthenticated: boolean, setCustomerInfo: (info: Custom
           });
           
           if (userProfile.address) {
-            setDeliveryInfo(prev => ({
+            // **CORRECTION 2** : Fonction avec typage correct pour setDeliveryInfo
+            setDeliveryInfo((prev: DeliveryInfo) => ({
               ...prev,
               address: {
                 street: userProfile.address.street || '',
@@ -180,6 +181,28 @@ function useCheckoutValidation() {
 
   return { errors, setErrors, validateStep };
 }
+
+// **CORRECTION 3** : Composant StepIndicator déplacé à l'extérieur
+const StepIndicator = ({ currentStep }: { currentStep: number }) => (
+  <div className="flex items-center justify-center mb-8">
+    {[1, 2, 3].map((step) => (
+      <div key={step} className="flex items-center">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
+          step <= currentStep 
+            ? 'bg-green-600 text-white' 
+            : 'bg-gray-200 text-gray-600'
+        }`}>
+          {step < currentStep ? <Check className="w-5 h-5" /> : step}
+        </div>
+        {step < 3 && (
+          <div className={`w-16 h-1 mx-2 ${
+            step < currentStep ? 'bg-green-600' : 'bg-gray-200'
+          }`} />
+        )}
+      </div>
+    ))}
+  </div>
+);
 
 // Composant principal
 export default function CheckoutPage() {
@@ -350,28 +373,6 @@ export default function CheckoutPage() {
     );
   }
 
-  // Composant indicateur d'étapes
-  const StepIndicator = () => (
-    <div className="flex items-center justify-center mb-8">
-      {[1, 2, 3].map((step) => (
-        <div key={step} className="flex items-center">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
-            step <= currentStep 
-              ? 'bg-green-600 text-white' 
-              : 'bg-gray-200 text-gray-600'
-          }`}>
-            {step < currentStep ? <Check className="w-5 h-5" /> : step}
-          </div>
-          {step < 3 && (
-            <div className={`w-16 h-1 mx-2 ${
-              step < currentStep ? 'bg-green-600' : 'bg-gray-200'
-            }`} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-
   return (
     <>
       <Header />
@@ -403,7 +404,7 @@ export default function CheckoutPage() {
             </p>
           </div>
 
-          <StepIndicator />
+          <StepIndicator currentStep={currentStep} />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
