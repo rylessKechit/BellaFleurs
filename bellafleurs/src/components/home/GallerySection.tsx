@@ -1,48 +1,20 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Camera } from 'lucide-react';
+import React from 'react';
+import { Camera } from 'lucide-react';
 
 export default function GallerySection() {
-  const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Catégories avec leurs images
+  // 7 catégories de services
   const items = [
-    { name: 'Bouquets' },
-    { name: 'Fleurs de saisons' },
-    { name: 'Compositions piquées' },
-    { name: 'Roses' },
-    { name: 'Orchidées' },
-    { name: 'Deuil' },
-    { name: 'Abonnements particuliers' },
-    { name: 'Abonnements professionnels' }
+    { name: 'Bouquets', image: '/images/bouquets.jpg' },
+    { name: 'Fleurs de saisons', image: '/images/fleurs-saisons.jpg' },
+    { name: 'Compositions piquées', image: '/images/compositions.jpg' },
+    { name: 'Roses', image: '/images/roses.jpg' },
+    { name: 'Orchidées', image: '/images/orchidees.jpg' },
+    { name: 'Deuil', image: '/images/deuil.jpg' },
+    { name: 'Abonnements', image: '/images/abonnements.jpg' }
   ];
-
-  // Auto-play fluide
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => {
-        const maxIndex = items.length - 3; // 3 images visibles pour un meilleur affichage
-        return prev >= maxIndex ? 0 : prev + 1;
-      });
-    }, 4000); // Plus lent pour être moins brusque
-    
-    return () => clearInterval(interval);
-  }, [items.length]);
-
-  const nextSlide = () => {
-    setCurrentIndex((prev) => {
-      const maxIndex = items.length - 3; // 3 images visibles
-      return prev >= maxIndex ? 0 : prev + 1;
-    });
-  };
-
-  const prevSlide = () => {
-    setCurrentIndex((prev) => {
-      const maxIndex = items.length - 3;
-      return prev <= 0 ? maxIndex : prev - 1;
-    });
-  };
 
   return (
     <section id="galerie" className="py-20 relative flex justify-center">
@@ -60,63 +32,94 @@ export default function GallerySection() {
           </h2>
         </div>
 
-        {/* Carrousel horizontal */}
-        <div className="relative max-w-6xl mx-auto">
+        {/* Grille responsive - 7 services */}
+        <div className="max-w-6xl mx-auto">
           
-          {/* Container avec overflow hidden */}
-          <div className="overflow-hidden rounded-2xl">
-            <div 
-              className="flex transition-transform duration-1000 ease-in-out" // Transition plus fluide et lente
-              style={{ transform: `translateX(-${currentIndex * 33.33}%)` }} // 33.33% pour 3 images visibles
-            >
-              {items.map((item, index) => (
-                <div key={index} className="flex-none w-1/3 px-3"> {/* w-1/3 pour 3 images visibles, plus d'espace */}
-                  
-                  {/* Bulle white au-dessus de chaque image */}
-                  <div className="flex justify-center mb-4">
-                    <div className="bg-green-50 rounded-xl px-4 py-2 shadow-lg">
-                      <span className="text-sm font-medium text-green-800">{item.name}</span>
+          {/* Mobile : Une colonne */}
+          <div className="grid grid-cols-1 gap-8 md:hidden">
+            {items.map((item, index) => (
+              <div
+                key={index}
+                className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                {/* Image de fond avec overlay */}
+                <div 
+                  className="h-64 bg-cover bg-center relative"
+                  style={{ 
+                    backgroundImage: `linear-gradient(rgba(0,0,0,0.0), rgba(0,0,0,0.1)), url(${item.image})`
+                  }}
+                >
+                  {/* Bulle avec le nom du service */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg group-hover:bg-green-50/90 transition-all duration-300">
+                      <span className="text-sm font-semibold text-green-800">
+                        {item.name}
+                      </span>
                     </div>
                   </div>
+                </div>
+              </div>
+            ))}
+          </div>
 
-                  {/* Image avec fond dégradé */}
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden shadow-lg bg-green-50 flex items-center justify-center">
-                    <span className="text-lg font-medium text-green-700">
-                      {item.name}
-                    </span>
+          {/* Desktop : 2 lignes (4 + 3) */}
+          <div className="hidden md:block space-y-8">
+            
+            {/* Première ligne : 4 photos */}
+            <div className="grid grid-cols-4 gap-8">
+              {items.slice(0, 4).map((item, index) => (
+                <div
+                  key={index}
+                  className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  {/* Image de fond avec overlay */}
+                  <div 
+                    className="h-72 bg-cover bg-center relative"
+                    style={{ 
+                      backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${item.image})`
+                    }}
+                  >
+                    {/* Bulle avec le nom du service */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg group-hover:bg-green-50/90 transition-all duration-300">
+                        <span className="text-base font-semibold text-green-800">
+                          {item.name}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Deuxième ligne : 3 photos centrées */}
+            <div className="grid grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {items.slice(4, 7).map((item, index) => (
+                <div
+                  key={index + 4}
+                  className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  {/* Image de fond avec overlay */}
+                  <div 
+                    className="h-72 bg-cover bg-center relative"
+                    style={{ 
+                      backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${item.image})`
+                    }}
+                  >
+                    {/* Bulle avec le nom du service */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg group-hover:bg-green-50/90 transition-all duration-300">
+                        <span className="text-base font-semibold text-green-800">
+                          {item.name}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Boutons navigation */}
-          <button
-            onClick={prevSlide}
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-green-50 rounded-full flex items-center justify-center hover:shadow-xl transition-all shadow-lg z-10"
-          >
-            <ChevronLeft className="w-6 h-6 text-green-700" />
-          </button>
-          
-          <button
-            onClick={nextSlide}
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-green-50 rounded-full flex items-center justify-center hover:shadow-xl transition-all shadow-lg z-10"
-          >
-            <ChevronRight className="w-6 h-6 text-green-700" />
-          </button>
-
-          {/* Indicateurs */}
-          <div className="flex justify-center mt-6 space-x-2">
-            {Array.from({ length: items.length - 2 }).map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentIndex(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  index === currentIndex ? 'bg-green-600' : 'bg-green-300'
-                }`}
-              />
-            ))}
-          </div>
         </div>
       </div>
     </section>
