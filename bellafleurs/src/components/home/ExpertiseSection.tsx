@@ -1,36 +1,26 @@
 'use client';
 
-import { useState } from 'react';
-import { Scissors, Palette, Truck, Heart, CheckCircle } from 'lucide-react';
-import React from 'react';
+import { Scissors, CheckCircle } from 'lucide-react';
 
 export default function ExpertiseSection() {
-  const [activeStep, setActiveStep] = useState(0);
-
   const steps = [
     {
       id: 0,
-      icon: Palette,
       title: "Sélection des fleurs",
       description: "Choix minutieux des plus belles fleurs fraîches selon la saison et vos préférences.",
-      details: "Nos fleurs sont sélectionnées quotidiennement chez les meilleurs producteurs français. Fraîcheur et qualité garanties.",
-      color: "text-purple-500"
+      index: 1
     },
     {
       id: 1,
-      icon: Scissors,
-      title: "Création artisanale",
+      title: "Création artisanale", 
       description: "Techniques transmises au près d'artisans côtoyés au fil des années.",
-      details: "Chaque geste est maîtrisé : coupe, conditionnement, assemblage. Nos techniques artisanales préservent la beauté et la longévité de vos fleurs.",
-      color: "text-primary-500"
+      index: 2
     },
     {
-      id: 3,
-      icon: Truck,
+      id: 2,
       title: "Livraison soignée",
       description: "Livraison délicate et rapide pour préserver la fraîcheur de votre création.",
-      details: "Emballage protecteur, transport soigné et livraison aux créneaux de votre choix. Vos fleurs arrivent dans un état parfait.",
-      color: "text-blue-500"
+      index: 3
     }
   ];
 
@@ -38,170 +28,99 @@ export default function ExpertiseSection() {
     {
       title: "Bouquets sur mesure",
       description: "Créations uniques adaptées à vos goûts et à l'occasion",
-      image: "🌹",
-      features: ["Consultation personnalisée", "Fleurs de saison", "Emballage élégant"]
+      features: ["Consultation personnalisée", "Fleurs de saison", "Emballage élégant"],
     },
     {
       title: "Événements & mariages",
       description: "Décoration florale complète pour vos moments exceptionnels",
-      image: "💒",
       features: ["Bouquet de mariée", "Centres de table", "Décoration d'église"]
     },
     {
       title: "Compositions modernes",
       description: "Arrangements contemporains pour décorer votre intérieur",
-      image: "🏺",
       features: ["Designs actuels", "Vases inclus", "Entretien facile"]
     },
     {
       title: "Plantes & jardinage",
       description: "Sélection de plantes d'intérieur et conseils d'entretien",
-      image: "🌿",
       features: ["Plantes dépolluantes", "Conseils inclus", "Rempotage offert"]
     }
   ];
 
   return (
-    <section id="savoir-faire" className="py-20 bg-gradient-to-b from-white to-green-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="savoir-faire" className="py-20 relative flex justify-center">
+      {/* Container blanc centré avec plus de largeur */}
+      <div className="w-full max-w-7xl bg-white rounded-3xl shadow-2xl p-12 md:p-16 mx-6">
         
         {/* En-tête */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center px-4 py-2 bg-emerald-50 rounded-full mb-6 border border-emerald-100">
-            <Scissors className="w-4 h-4 text-emerald-600 mr-2" />
-            <span className="text-sm font-medium text-emerald-700">Notre Expertise</span>
+          <div className="inline-flex items-center px-6 py-3 bg-green-50 rounded-full shadow-lg mb-6">
+            <Scissors className="w-5 h-5 text-green-700 mr-3" />
+            <span className="text-base font-semibold text-green-800">Notre Expertise</span>
           </div>
           
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">
+          <h2 className="text-4xl font-bold text-green-800 mb-6">
             Un savoir-faire d'exception
           </h2>
           
-          <p className="text-xl text-gray-600 leading-relaxed">
-            Découvrez notre processus artisanal, de la sélection des fleurs 
-            à la livraison de votre création. Chaque étape est pensée pour 
-            vous offrir une expérience unique.
-          </p>
-        </div>
-
-        {/* Processus de création */}
-        <div className="mb-20">
-          <h3 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            Notre processus de création
-          </h3>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            
-            {/* Steps navigation */}
-            <div className="space-y-4">
-              {steps.map((step, index) => {
-                const Icon = step.icon;
-                return (
-                  <div
-                    key={step.id}
-                    className={`flex items-start space-x-4 p-6 rounded-xl border-2 cursor-pointer transition-all duration-300 ${
-                      activeStep === index
-                        ? 'border-emerald-200 bg-emerald-50 shadow-md'
-                        : 'border-gray-100 bg-white hover:border-emerald-100 hover:bg-emerald-25'
-                    }`}
-                    onClick={() => setActiveStep(index)}
-                  >
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      activeStep === index 
-                        ? 'bg-emerald-100' 
-                        : 'bg-gray-100'
-                    }`}>
-                      <Icon className={`w-6 h-6 ${step.color}`} />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h4 className="font-semibold text-gray-900">{step.title}</h4>
-                        <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
-                          Étape {index + 1}
-                        </span>
-                      </div>
-                      <p className="text-gray-600 text-sm">{step.description}</p>
-                    </div>
-                    
-                    {activeStep === index && (
-                      <CheckCircle className="w-5 h-5 text-emerald-500" />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Step details */}
-            <div className="bg-white p-8 rounded-2xl shadow-xl border border-emerald-100">
-              <div className="text-center mb-6">
-                <div className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center bg-emerald-100">
-                  {React.createElement(steps[activeStep].icon, { 
-                    className: `w-10 h-10 ${steps[activeStep].color}` 
-                  })}
-                </div>
-                <h4 className="text-2xl font-bold text-gray-900 mb-2">
-                  {steps[activeStep].title}
-                </h4>
-              </div>
-              
-              <p className="text-gray-600 text-center leading-relaxed text-lg">
-                {steps[activeStep].details}
-              </p>
-              
-              {/* Progress bar */}
-              <div className="mt-8">
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
-                  <span>Étape {activeStep + 1} sur {steps.length}</span>
-                  <span>{Math.round(((activeStep + 1) / steps.length) * 100)}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-emerald-500 to-green-600 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${((activeStep + 1) / steps.length) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Garanties */}
-        <div className="mt-20 bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 p-8 rounded-2xl border border-emerald-100">
-          <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              Nos garanties qualité
-            </h3>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Votre satisfaction est notre priorité. Nous nous engageons sur la qualité 
-              et la fraîcheur de nos créations.
+          <div className="p-8">
+            <p className="text-xl text-green-800 leading-relaxed">
+              Découvrez notre processus artisanal, de la sélection des fleurs 
+              à la livraison de votre création. Chaque étape est pensée pour 
+              vous offrir une expérience unique.
             </p>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-4">
-              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <CheckCircle className="w-6 h-6 text-emerald-600" />
+        </div>
+
+        {/* Processus simplifié */}
+        <div className="mb-20">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+            {steps.map((step, index) => (
+              <div
+                key={step.id}
+                className="bg-green-50 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 text-center"
+              >
+                <h2 className="text-3xl font-bold text-green-800 mb-4">
+                  {step.index}
+                </h2>
+                <h3 className="text-xl font-semibold text-green-800 mb-3">
+                  {step.title}
+                </h3>
+                
+                <p className="text-green-700">
+                  {step.description}
+                </p>
               </div>
-              <h4 className="font-semibold text-gray-900 mb-2">Fraîcheur garantie</h4>
-              <p className="text-sm text-gray-600">Fleurs sélectionnées le matin même</p>
-            </div>
-            
-            <div className="text-center p-4">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Truck className="w-6 h-6 text-green-600" />
-              </div>
-              <h4 className="font-semibold text-gray-900 mb-2">Livraison soignée</h4>
-              <p className="text-sm text-gray-600">Transport sécurisé et ponctuel</p>
-            </div>
-            
-            <div className="text-center p-4">
-              <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Heart className="w-6 h-6 text-teal-600" />
-              </div>
-              <h4 className="font-semibold text-gray-900 mb-2">Circuit court</h4>
-              <p className="text-sm text-gray-600">Fleurs made in France privilégiés</p>
-            </div>
+            ))}
           </div>
+        </div>
+
+        {/* Services */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {services.map((service, index) => (
+            <div
+              key={index}
+              className="p-6 group text-center"
+            >
+              <div className="mb-6">
+                <h3 className="text-xl font-semibold text-green-800 mb-3">
+                  {service.title}
+                </h3>
+                <p className="text-green-700 text-sm">
+                  {service.description}
+                </p>
+              </div>
+              
+              <ul className="space-y-2">
+                {service.features.map((feature, featureIndex) => (
+                  <li key={featureIndex} className="flex items-center justify-center text-sm text-green-700">
+                    <CheckCircle className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       </div>
     </section>

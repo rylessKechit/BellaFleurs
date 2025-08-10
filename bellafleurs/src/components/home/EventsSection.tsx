@@ -6,81 +6,65 @@ import { Button } from '@/components/ui/button';
 export default function EventsSection() {
   const events = [
     {
-      icon: Gift,
       title: "Anniversaires",
-      description: "Compositions personnalisées pour marquer ce jour spécial",
-      image: "🎂",
-      color: "text-purple-500",
-      bgColor: "bg-purple-50"
+      description: "Compositions personnalisées pour marquer ce jour spécial"
     },
     {
-      icon: Heart,
       title: "Deuil",
-      description: "Arrangements respectueux pour accompagner vos moments de recueillement",
-      image: "🤍",
-      color: "text-gray-500",
-      bgColor: "bg-gray-50"
+      description: "Arrangements respectueux pour accompagner vos moments de recueillement"
     },
     {
-      icon: Calendar,
       title: "Entreprises",
-      description: "Décorations florales pour vos événements professionnels",
-      image: "🏢",
-      color: "text-blue-500",
-      bgColor: "bg-blue-50"
+      description: "Décorations florales pour vos événements professionnels"
     }
   ];
 
   return (
-    <section id="evenements" className="py-20 bg-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="evenements" className="py-20 relative flex justify-center">
+      <div className="w-full max-w-7xl bg-white rounded-3xl shadow-2xl p-12 md:p-16 mx-6">
         
         {/* En-tête */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center px-4 py-2 bg-primary-50 rounded-full mb-6">
-            <Calendar className="w-4 h-4 text-primary-600 mr-2" />
-            <span className="text-sm font-medium text-primary-700">Nos Événements</span>
+          <div className="inline-flex items-center px-6 py-3 bg-green-50 rounded-full shadow-lg mb-6">
+            <Calendar className="w-5 h-5 text-green-700 mr-3" />
+            <span className="text-base font-semibold text-green-800">Nos Événements</span>
           </div>
           
-          <h2 className="text-4xl font-bold text-gray-900 mb-6">
+          <h2 className="text-4xl font-bold text-green-800 mb-6">
             Chaque occasion mérite ses fleurs
           </h2>
           
-          <p className="text-xl text-gray-600 leading-relaxed">
-            De votre anniversaire spécial aux moments de recueillement, nous créons 
-            des arrangements floraux qui subliment tous vos moments importants.
-          </p>
+          <div className="p-8">
+            <p className="text-xl text-green-800 leading-relaxed">
+              De votre anniversaire spécial aux moments de recueillement, nous créons 
+              des arrangements floraux qui subliment tous vos moments importants.
+            </p>
+          </div>
         </div>
 
-        {/* Grid événements */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+        {/* Grille d'événements */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 text-center">
           {events.map((event, index) => {
-            const Icon = event.icon;
             return (
-              <div 
+              <div
                 key={index}
-                className="group bg-gradient-to-br from-white to-gray-50 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border border-gray-100"
+                className="group relative"
               >
-                <div className="flex flex-col items-center text-center space-y-6">
-                  <div className={`w-16 h-16 ${event.bgColor} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                    <Icon className={`w-8 h-8 ${event.color}`} />
-                  </div>
+                {/* Carte principale */}
+                <div className="bg-green-50 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 h-full">
                   
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-primary-600 transition-colors">
-                      {event.title}
-                    </h3>
-                    <p className="text-gray-600 leading-relaxed mb-6">
-                      {event.description}
-                    </p>
-                    
-                    <Button variant="ghost" className="p-0 h-auto text-primary-600 hover:text-primary-700">
-                      Découvrir nos créations →
-                    </Button>
-                  </div>
+                  {/* Contenu */}
+                  <h3 className="text-2xl font-semibold text-green-800 mb-4">
+                    {event.title}
+                  </h3>
                   
-                  <div className="text-4xl group-hover:scale-110 transition-transform duration-300">
-                    {event.image}
+                  <p className="text-green-700 leading-relaxed mb-6">
+                    {event.description}
+                  </p>
+                  
+                  {/* Call to action subtil */}
+                  <div className="text-sm text-green-600 group-hover:text-green-800 transition-colors">
+                    En savoir plus →
                   </div>
                 </div>
               </div>
@@ -88,60 +72,36 @@ export default function EventsSection() {
           })}
         </div>
 
-        {/* Section témoignages */}
-        <div className="bg-gradient-to-r from-primary-50 to-pink-50 p-8 rounded-2xl">
-          <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              Ils nous ont fait confiance
-            </h3>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-xl shadow-md">
-              <div className="flex text-yellow-400 mb-3">
+        {/* Section testimonial */}
+        <div className="bg-white rounded-2xl p-8 shadow-lg text-center">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex justify-center mb-6">
+              <div className="flex space-x-1">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-current" />
+                  <Star key={i} className="w-6 h-6 text-yellow-500 fill-current" />
                 ))}
-              </div>
-              <p className="text-gray-600 text-sm mb-4">
-                "Bouquet d'anniversaire absolument magnifique ! Marie a su comprendre exactement ce que je voulais."
-              </p>
-              <div className="text-sm">
-                <div className="font-semibold text-gray-900">Sarah M.</div>
-                <div className="text-gray-500">Anniversaire - Juin 2024</div>
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-xl shadow-md">
-              <div className="flex text-yellow-400 mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-current" />
-                ))}
-              </div>
-              <p className="text-gray-600 text-sm mb-4">
-                "Arrangement très respectueux et apaisant pour les obsèques de papa. Merci pour votre délicatesse."
-              </p>
-              <div className="text-sm">
-                <div className="font-semibold text-gray-900">Michel R.</div>
-                <div className="text-gray-500">Deuil - Mars 2024</div>
-              </div>
-            </div>
+            <blockquote className="text-xl text-green-800 mb-6 leading-relaxed">
+              "Bella Fleurs a sublimé notre mariage avec des compositions d'une beauté 
+              exceptionnelle. Un service impeccable et une créativité sans limite."
+            </blockquote>
             
-            <div className="bg-white p-6 rounded-xl shadow-md">
-              <div className="flex text-yellow-400 mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-current" />
-                ))}
-              </div>
-              <p className="text-gray-600 text-sm mb-4">
-                "Décoration florale parfaite pour notre événement d'entreprise. Très professionnel !"
-              </p>
-              <div className="text-sm">
-                <div className="font-semibold text-gray-900">Julie L.</div>
-                <div className="text-gray-500">Événement pro - Janvier 2024</div>
-              </div>
-            </div>
+            <cite className="text-green-700 font-medium">
+              — Sarah & Thomas, Mariage 2024
+            </cite>
           </div>
+        </div>
+
+        {/* Call to action final */}
+        <div className="text-center mt-12">
+          <Button 
+            size="lg" 
+            className="bg-green-100 text-green-700 hover:bg-green-200 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold px-8 py-6 text-lg h-auto rounded-xl"
+          >
+            Discuter de votre projet
+          </Button>
         </div>
       </div>
     </section>

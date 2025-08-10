@@ -1,34 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <Image
-          src="/images/hero-background.png"
-          alt="Bella Fleurs - Créations florales d'exception"
-          fill
-          className="object-cover"
-          priority
-          quality={90}
-          sizes="100vw"
-        />
-        
-        {/* Overlay pour la lisibilité */}
-        <div className="absolute inset-0 bg-black/50 z-10"></div>
-      </div>
-      
-      {/* Fallback background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 -z-10"></div>
-
       {/* Contenu principal */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-20">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-30">
         <div className="flex items-center justify-center min-h-screen">
           
           {/* Container centré simple */}
