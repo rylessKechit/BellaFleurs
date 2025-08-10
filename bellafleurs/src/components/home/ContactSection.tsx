@@ -19,7 +19,7 @@ export default function ContactSection() {
             Parlons de votre projet floral
           </h2>
           
-          <div className="bg-green-50 rounded-2xl p-8 shadow-lg">
+          <div className="bg-whitep-8">
             <p className="text-xl text-green-800 leading-relaxed">
               Une question ? Un projet spécial ? N'hésitez pas à nous contacter. 
               Nous serons ravis de discuter de vos envies florales !
@@ -31,20 +31,12 @@ export default function ContactSection() {
           
           {/* Section Venez nous rendre visite */}
           <div>
-            <div className="bg-green-50 shadow-lg rounded-2xl">
+            <div className="bg-white border-2 border-green-700 shadow-lg rounded-2xl">
               <div className="p-6">
                 <h3 className="text-xl font-bold text-green-800 mb-4 text-center">
-                  Venez nous rendre visite
+                  Contactez nous !
                 </h3>
                 <div className="space-y-3 text-sm">
-                  <div className="flex items-start space-x-3">
-                    <MapPin className="w-5 h-5 text-green-700 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <div className="font-medium text-green-800">123 Avenue des Fleurs</div>
-                      <div className="text-green-700">75015 Paris, France</div>
-                    </div>
-                  </div>
-                  
                   <div className="flex items-center space-x-3">
                     <Phone className="w-5 h-5 text-green-700 flex-shrink-0" />
                     <a href="tel:+33123456789" className="text-green-700 hover:text-green-800 transition-colors">
@@ -59,50 +51,13 @@ export default function ContactSection() {
                     </a>
                   </div>
                 </div>
-                
-                <div className="mt-6 p-4 bg-green-50 rounded-lg">
-                  <h4 className="font-semibold text-green-800 mb-3 flex items-center">
-                    <Clock className="w-4 h-4 mr-2 text-green-700" />
-                    Horaires d'ouverture
-                  </h4>
-                  <div className="space-y-1 text-sm text-green-700">
-                    <div className="flex justify-between">
-                      <span>Lundi - Vendredi</span>
-                      <span>9h00 - 19h00</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Samedi</span>
-                      <span>9h00 - 17h00</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Dimanche</span>
-                      <span className="text-orange-600">Fermé</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-6 text-center">
-                  <Button 
-                    className="bg-green-100 text-green-800 hover:bg-green-200 transition-all"
-                    asChild
-                  >
-                    <a 
-                      href="https://maps.google.com/?q=123+Avenue+des+Fleurs,+75015+Paris" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                    >
-                      <MapPin className="w-4 h-4 mr-2" />
-                      Voir sur la carte
-                    </a>
-                  </Button>
-                </div>
               </div>
             </div>
           </div>
 
           {/* Formulaire de contact */}
           <div>
-            <div className="bg-green-50 shadow-lg rounded-2xl">
+            <div className="bg-white border-2 border-green-700 shadow-lg rounded-2xl">
               <div className="p-8">
                 <h3 className="text-2xl font-bold text-green-800 mb-6">
                   Envoyez-nous un message
@@ -118,7 +73,7 @@ export default function ContactSection() {
                         id="firstName"
                         type="text"
                         placeholder="Votre prénom"
-                        className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-green-800 placeholder-green-600"
+                        className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-green-800 placeholder-green-600"
                         required
                       />
                     </div>
@@ -131,7 +86,7 @@ export default function ContactSection() {
                         id="lastName"
                         type="text"
                         placeholder="Votre nom"
-                        className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-green-800 placeholder-green-600"
+                        className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-green-800 placeholder-green-600"
                         required
                       />
                     </div>
@@ -145,7 +100,7 @@ export default function ContactSection() {
                       id="email"
                       type="email"
                       placeholder="votre@email.com"
-                      className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-green-800 placeholder-green-600"
+                      className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-green-800 placeholder-green-600"
                       required
                     />
                   </div>
@@ -158,7 +113,7 @@ export default function ContactSection() {
                       id="phone"
                       type="tel"
                       placeholder="01 23 45 67 89"
-                      className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-green-800 placeholder-green-600"
+                      className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-green-800 placeholder-green-600"
                     />
                   </div>
                   
@@ -168,7 +123,7 @@ export default function ContactSection() {
                     </label>
                     <select 
                       id="occasion"
-                      className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-green-800"
+                      className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-green-800"
                       required
                     >
                       <option value="" className="bg-white">Sélectionnez une occasion</option>
@@ -187,7 +142,7 @@ export default function ContactSection() {
                       id="message"
                       rows={4}
                       placeholder="Décrivez-nous votre projet, vos goûts, votre budget..."
-                      className="w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none transition-colors text-green-800 placeholder-green-600"
+                      className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none transition-colors text-green-800 placeholder-green-600"
                       required
                     ></textarea>
                   </div>

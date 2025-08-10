@@ -20,7 +20,7 @@ export default function EventsSection() {
   ];
 
   return (
-    <section id="evenements" className="py-20 relative flex justify-center">
+    <section id="evenements" className="py-30 relative flex justify-center">
       <div className="w-full max-w-7xl bg-white rounded-3xl shadow-2xl p-12 md:p-16 mx-6">
         
         {/* En-tête */}
@@ -92,16 +92,6 @@ export default function EventsSection() {
               — Sarah & Thomas, Mariage 2024
             </cite>
           </div>
-        </div>
-
-        {/* Call to action final */}
-        <div className="text-center mt-12">
-          <Button 
-            size="lg" 
-            className="bg-green-100 text-green-700 hover:bg-green-200 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold px-8 py-6 text-lg h-auto rounded-xl"
-          >
-            Discuter de votre projet
-          </Button>
         </div>
       </div>
     </section>

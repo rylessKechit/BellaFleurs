@@ -90,9 +90,9 @@ export default function Header() {
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            className={`relative ${isMobile ? 'justify-start w-full' : 'w-10 h-10'} rounded-full`}
+            className={`relative ${isMobile ? 'justify-start w-full h-10' : 'w-10 h-10'} rounded-full p-0`}
           >
-            <div className={`${isMobile ? 'w-8 h-8 mr-2' : 'w-8 h-8'} bg-primary-600 rounded-full flex items-center justify-center text-white text-sm font-medium`}>
+            <div className={`${isMobile ? 'w-8 h-8 mr-2' : 'w-8 h-8'} bg-green-100 rounded-full flex items-center justify-center text-green-700 text-sm font-medium`}>
               {initials}
             </div>
             {isMobile && <span className="ml-1">{user.name}</span>}

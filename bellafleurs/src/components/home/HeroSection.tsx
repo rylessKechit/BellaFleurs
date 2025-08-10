@@ -20,11 +20,11 @@ export default function HeroSection() {
               livrées en 24 heures
             </h1>
             
-            {/* CTA */}
+            {/* CTA avec hover inversé */}
             <div className="pt-6">
               <Button 
                 size="lg" 
-                className="bg-white text-green-700 hover:bg-white/90 shadow-2xl hover:shadow-3xl transition-all duration-300 font-semibold px-12 py-6 text-xl h-auto rounded-2xl transform hover:scale-105"
+                className="bg-white text-green-700 hover:bg-green-500 hover:text-white shadow-2xl hover:shadow-3xl transition-all duration-300 font-semibold px-12 py-6 text-xl h-auto rounded-2xl transform hover:scale-105"
                 asChild
               >
                 <Link href="/produits">
