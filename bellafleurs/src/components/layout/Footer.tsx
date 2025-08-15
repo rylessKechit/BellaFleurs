@@ -18,7 +18,6 @@ export default function Footer() {
               Bella Fleurs
             </h3>
             <p className="text-gray-600 text-sm leading-relaxed">
-              Créateur de moments magiques depuis 2020. 
               Nous transformons vos émotions en créations florales uniques, 
               avec passion et savoir-faire artisanal.
             </p>
@@ -72,15 +71,16 @@ export default function Footer() {
 
           {/* Services */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900">Nos services</h4>
+            <h4 className="font-semibold text-gray-900">Mes créations</h4>
             <ul className="space-y-2 text-sm">
               {[
-                'Bouquets sur mesure',
-                'Compositions florales',
-                'Mariages & événements',
-                'Livraison express',
-                'Abonnements floraux',
-                'Conseils d\'entretien'
+                'Bouquets',
+                'Fleurs de saisons',
+                'Compositions piquées',
+                'Roses',
+                'Orchidées',
+                'Deuil',
+                'Abonnements'
               ].map((service) => (
                 <li key={service} className="text-gray-600 flex items-start">
                   <span className="text-primary-500 mr-2 mt-0.5">•</span>
@@ -167,7 +167,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="py-6 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
           <div className="flex items-center text-sm text-gray-600">
-            <span>© 2024 Bella Fleurs. Fait avec</span>
+            <span>© 2025 Bella Fleurs. Fait avec</span>
             <Heart className="w-4 h-4 text-red-500 mx-1" fill="currentColor" />
             <span>à Brétigny-sur-Orge</span>
           </div>

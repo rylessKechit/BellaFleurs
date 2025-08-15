@@ -24,29 +24,6 @@ export default function ExpertiseSection() {
     }
   ];
 
-  const services = [
-    {
-      title: "Bouquets sur mesure",
-      description: "Créations uniques adaptées à vos goûts et à l'occasion",
-      features: ["Consultation personnalisée", "Fleurs de saison", "Emballage élégant"],
-    },
-    {
-      title: "Événements & mariages",
-      description: "Décoration florale complète pour vos moments exceptionnels",
-      features: ["Bouquet de mariée", "Centres de table", "Décoration d'église"]
-    },
-    {
-      title: "Compositions modernes",
-      description: "Arrangements contemporains pour décorer votre intérieur",
-      features: ["Designs actuels", "Vases inclus", "Entretien facile"]
-    },
-    {
-      title: "Plantes & jardinage",
-      description: "Sélection de plantes d'intérieur et conseils d'entretien",
-      features: ["Plantes dépolluantes", "Conseils inclus", "Rempotage offert"]
-    }
-  ];
-
   return (
     <section id="savoir-faire" className="py-20 relative flex justify-center">
       {/* Container blanc centré avec plus de largeur */}
@@ -93,34 +70,6 @@ export default function ExpertiseSection() {
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Services */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {services.map((service, index) => (
-            <div
-              key={index}
-              className="p-6 group text-center"
-            >
-              <div className="mb-6">
-                <h3 className="text-xl font-semibold text-green-800 mb-3">
-                  {service.title}
-                </h3>
-                <p className="text-green-700 text-sm">
-                  {service.description}
-                </p>
-              </div>
-              
-              <ul className="space-y-2">
-                {service.features.map((feature, featureIndex) => (
-                  <li key={featureIndex} className="flex items-center justify-center text-sm text-green-700">
-                    <CheckCircle className="w-4 h-4 text-green-600 mr-2 flex-shrink-0" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
         </div>
       </div>
     </section>

@@ -77,7 +77,8 @@ export default function Header() {
         >
           <Link href="/auth/signin" className="flex items-center">
             <User className="w-5 h-5" />
-            {isMobile && <span className="ml-2">Se connecter</span>}
+            {/* Masquer le texte sur très petits écrans (< 400px) pour éviter la superposition */}
+            {isMobile && <span className="ml-2 hidden xs:inline">Se connecter</span>}
           </Link>
         </Button>
       );
@@ -95,7 +96,8 @@ export default function Header() {
             <div className={`${isMobile ? 'w-8 h-8 mr-2' : 'w-8 h-8'} bg-green-100 rounded-full flex items-center justify-center text-green-700 text-sm font-medium`}>
               {initials}
             </div>
-            {isMobile && <span className="ml-1">{user.name}</span>}
+            {/* Masquer le nom d'utilisateur sur très petits écrans */}
+            {isMobile && <span className="ml-1 hidden xs:inline">{user.name}</span>}
           </Button>
         </DropdownMenuTrigger>
         
@@ -180,13 +182,13 @@ export default function Header() {
             )}
           </div>
 
-          {/* DIV 2: Logo CENTRÉ */}
           <div className="absolute left-1/2 transform -translate-x-1/2">
             <Link
               href="/"
-              className="text-2xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent hover:from-green-700 hover:to-green-800 transition-all duration-300 whitespace-nowrap"
+              className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent hover:from-green-700 hover:to-green-800 transition-all duration-300 whitespace-nowrap"
+              style={{ fontFamily: "'Lucida Calligraphy', cursive" }}
             >
-              Bella Fleurs
+              BellaFleurs
             </Link>
           </div>
 

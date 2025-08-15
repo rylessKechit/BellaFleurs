@@ -85,7 +85,7 @@ export default function AboutSection() {
                   <h4 className="font-semibold text-green-800">Aurélie</h4>
                   <p className="text-green-700">Fleuriste passionnée & Fondatrice</p>
                   <p className="text-sm text-green-600 mt-1">
-                    Diplômée en art floral, 15 ans d'expérience
+                    Diplômée en art floral, 23 ans d'expérience
                   </p>
                 </div>
               </div>
