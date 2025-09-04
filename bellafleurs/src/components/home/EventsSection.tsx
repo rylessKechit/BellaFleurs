@@ -71,28 +71,6 @@ export default function EventsSection() {
             );
           })}
         </div>
-
-        {/* Section testimonial */}
-        <div className="bg-white rounded-2xl p-8 shadow-lg text-center">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex justify-center mb-6">
-              <div className="flex space-x-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-6 h-6 text-yellow-500 fill-current" />
-                ))}
-              </div>
-            </div>
-            
-            <blockquote className="text-xl text-green-800 mb-6 leading-relaxed">
-              "Bella Fleurs a sublimé notre mariage avec des compositions d'une beauté 
-              exceptionnelle. Un service impeccable et une créativité sans limite."
-            </blockquote>
-            
-            <cite className="text-green-700 font-medium">
-              — Sarah & Thomas, Mariage 2024
-            </cite>
-          </div>
-        </div>
       </div>
     </section>
   );

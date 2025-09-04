@@ -18,8 +18,8 @@ import {
 
 const navigation = [
   { name: 'Accueil', href: '/' },
-  { name: 'À propos', href: '/#apropos' },
-  { name: 'Savoir-faire', href: '/#savoir-faire' },
+  { name: 'À propos', href: '/a-propos' },
+  { name: 'Savoir-faire', href: '/savoir-faire' },
   { name: 'Mes créations', href: '/produits' },
   { name: 'Événements', href: '/#evenements' },
   { name: 'Abonnement', href: '/abonnement' },

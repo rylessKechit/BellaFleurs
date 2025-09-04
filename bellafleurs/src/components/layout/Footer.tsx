@@ -97,8 +97,7 @@ export default function Footer() {
               <div className="flex items-start space-x-3">
                 <MapPin className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
                 <div className="text-gray-600">
-                  <p>123 Avenue des Fleurs</p>
-                  <p>75015 Paris, France</p>
+                  <p>91120 Brétigny-sur-Orge</p>
                 </div>
               </div>
               
@@ -125,8 +124,7 @@ export default function Footer() {
               <div className="flex items-start space-x-3">
                 <Clock className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
                 <div className="text-gray-600">
-                  <p>Lun-Sam: 9h-19h</p>
-                  <p>Dimanche: 9h-13h</p>
+                  <p>Lundi - Samedi : 9h - 13h / 14h - 19h</p>
                 </div>
               </div>
             </div>

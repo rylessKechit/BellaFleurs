@@ -22,9 +22,16 @@ export default function AboutSection() {
               
               <div className="p-8">
                 <p className="text-xl text-green-800 leading-relaxed">
-                  Depuis 2019, Bella Fleurs crée des moments magiques à travers l'art floral. 
-                  Installés au cœur du 15ème arrondissement, nous mettons notre passion et notre 
-                  savoir-faire au service de vos plus beaux souvenirs.
+                  Fleuriste passionnée depuis plus de 20 ans, j’ai commencé mon apprentissage à 17 ans sur le bassin d’Arcachon.
+                </p>
+                <p className="text-xl text-green-800 leading-relaxed mt-4">
+                  Par la suite, je suis allée d’expérience en expérience. J’ai eu la chance d’apprendre différentes techniques dans plusieurs boutiques (MIN, fleuriste traditionnel, fleuriste de luxe, fleuriste franchisé.
+                </p>
+                <p className="text-xl text-green-800 leading-relaxed mt-4">
+                  Puis j’ai ouvert ma propre boutique de fleurs à Cagnes-sur-Mer, sur les bords de la Méditerranée. Je l’ai gérée pendant six ans avec mon mari. Ce fut une très belle histoire de fleurs et de rencontres humaines. Notre amour a grandi et une nouvelle fleur a éclos : notre fille Bella.
+                </p>
+                <p className="text-xl text-green-800 leading-relaxed mt-4">
+                  Aujourd’hui, nous avons posé nos valises à Bretigny-sur-Orge. Me voilà prête pour vivre une nouvelle aventure avec mon site internet www.bellafleurs.com . Cela fait 20 ans que les fleurs, les compositions et les bouquets font partie de ma vie. Avec www.bellafleurs.com, mon savoir-faire et ma passion, je vous propose des créations florales originales et de saison pour accompagner vos plus beaux instants de vie et créer des souvenirs inoubliables.
                 </p>
               </div>
             </div>
