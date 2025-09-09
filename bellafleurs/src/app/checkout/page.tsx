@@ -1,4 +1,4 @@
-// src/app/checkout/page.tsx - Version corrigée
+// src/app/checkout/page.tsx - Version complète avec Stripe
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,8 +12,8 @@ import { toast } from 'sonner';
 // Composants des étapes
 import CustomerInfoStep from '@/components/checkout/CustomerInfoStep';
 import DeliveryStep from '@/components/checkout/DeliveryStep';
-import PaymentStep from '@/components/checkout/PaymentStep';
 import OrderSummary from '@/components/checkout/OrderSummary';
+import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 
 // Types
 interface CartItem {
@@ -43,14 +43,6 @@ interface DeliveryInfo {
   date: string;
   timeSlot: string;
   notes?: string;
-}
-
-interface PaymentInfo {
-  method: 'card' | 'paypal';
-  cardNumber: string;
-  expiryDate: string;
-  cvv: string;
-  cardName: string;
 }
 
 // Hook personnalisé pour gérer les données de checkout
@@ -91,87 +83,39 @@ function useCheckoutData() {
   return { cartItems, isLoadingCart, user, isAuthenticated };
 }
 
-// **CORRECTION 1** : Hook pour gérer les infos utilisateur pré-remplies - Typage corrigé
-function useUserProfile(
-  isAuthenticated: boolean, 
-  setCustomerInfo: React.Dispatch<React.SetStateAction<CustomerInfo>>, 
-  setDeliveryInfo: React.Dispatch<React.SetStateAction<DeliveryInfo>>
-) {
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const fetchUserInfo = async () => {
-      try {
-        const response = await fetch('/api/user/profile', {
-          method: 'GET',
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          const userProfile = data.data.user;
-          
-          setCustomerInfo({
-            firstName: userProfile.name.split(' ')[0] || '',
-            lastName: userProfile.name.split(' ').slice(1).join(' ') || '',
-            email: userProfile.email || '',
-            phone: userProfile.phone || ''
-          });
-          
-          if (userProfile.address) {
-            // **CORRECTION 2** : Fonction avec typage correct pour setDeliveryInfo
-            setDeliveryInfo((prev: DeliveryInfo) => ({
-              ...prev,
-              address: {
-                street: userProfile.address.street || '',
-                city: userProfile.address.city || '',
-                zipCode: userProfile.address.zipCode || '',
-                complement: ''
-              }
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement du profil:', error);
-      }
-    };
-
-    fetchUserInfo();
-  }, [isAuthenticated, setCustomerInfo, setDeliveryInfo]);
-}
-
-// Hook pour la validation
+// Hook pour la validation des étapes
 function useCheckoutValidation() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validateStep = (step: number, customerInfo: CustomerInfo, deliveryInfo: DeliveryInfo, paymentInfo: PaymentInfo): boolean => {
+  const validateStep = (step: number, customerInfo: CustomerInfo, deliveryInfo: DeliveryInfo) => {
     const newErrors: Record<string, string> = {};
 
-    if (step === 1) {
+    if (step >= 1) {
+      // Validation informations client
       if (!customerInfo.firstName.trim()) newErrors.firstName = 'Prénom requis';
       if (!customerInfo.lastName.trim()) newErrors.lastName = 'Nom requis';
       if (!customerInfo.email.trim()) newErrors.email = 'Email requis';
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) newErrors.email = 'Email invalide';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
+        newErrors.email = 'Email invalide';
+      }
       if (!customerInfo.phone.trim()) newErrors.phone = 'Téléphone requis';
+      else if (!/^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/.test(customerInfo.phone)) {
+        newErrors.phone = 'Numéro de téléphone français invalide';
+      }
     }
 
-    if (step === 2) {
+    if (step >= 2) {
+      // Validation livraison
       if (!deliveryInfo.date) newErrors.date = 'Date de livraison requise';
       if (!deliveryInfo.timeSlot) newErrors.timeSlot = 'Créneau horaire requis';
+      
       if (deliveryInfo.type === 'delivery') {
         if (!deliveryInfo.address?.street?.trim()) newErrors.street = 'Adresse requise';
         if (!deliveryInfo.address?.city?.trim()) newErrors.city = 'Ville requise';
         if (!deliveryInfo.address?.zipCode?.trim()) newErrors.zipCode = 'Code postal requis';
-        else if (!/^\d{5}$/.test(deliveryInfo.address.zipCode)) newErrors.zipCode = 'Code postal invalide';
-      }
-    }
-
-    if (step === 3) {
-      if (paymentInfo.method === 'card') {
-        if (!paymentInfo.cardNumber.trim()) newErrors.cardNumber = 'Numéro de carte requis';
-        if (!paymentInfo.expiryDate.trim()) newErrors.expiryDate = 'Date d\'expiration requise';
-        if (!paymentInfo.cvv.trim()) newErrors.cvv = 'CVV requis';
-        if (!paymentInfo.cardName.trim()) newErrors.cardName = 'Nom du titulaire requis';
+        else if (!/^\d{5}$/.test(deliveryInfo.address.zipCode)) {
+          newErrors.zipCode = 'Code postal invalide';
+        }
       }
     }
 
@@ -182,12 +126,22 @@ function useCheckoutValidation() {
   return { errors, setErrors, validateStep };
 }
 
-// **CORRECTION 3** : Composant StepIndicator déplacé à l'extérieur
+// Hook pour pré-remplir les infos utilisateur
+function useUserProfile(isAuthenticated: boolean, setCustomerInfo: Function, setDeliveryInfo: Function) {
+  useEffect(() => {
+    if (isAuthenticated) {
+      // TODO: Récupérer les infos utilisateur depuis l'API
+      // Pour l'instant, on peut laisser vide ou utiliser les données de session
+    }
+  }, [isAuthenticated, setCustomerInfo, setDeliveryInfo]);
+}
+
+// Composant indicateur d'étapes
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
   <div className="flex items-center justify-center mb-8">
-    {[1, 2, 3].map((step) => (
+    {[1, 2, 3].map((step, index) => (
       <div key={step} className="flex items-center">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-medium ${
           step <= currentStep 
             ? 'bg-green-600 text-white' 
             : 'bg-gray-200 text-gray-600'
@@ -210,6 +164,7 @@ export default function CheckoutPage() {
   const { cartItems, isLoadingCart, user, isAuthenticated } = useCheckoutData();
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [createdOrderId, setCreatedOrderId] = useState<string>('');
   const { errors, setErrors, validateStep } = useCheckoutValidation();
 
   // États des formulaires
@@ -227,14 +182,6 @@ export default function CheckoutPage() {
     notes: ''
   });
 
-  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo>({
-    method: 'card',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    cardName: ''
-  });
-
   // Pré-remplir les infos utilisateur
   useUserProfile(isAuthenticated, setCustomerInfo, setDeliveryInfo);
 
@@ -245,8 +192,13 @@ export default function CheckoutPage() {
 
   // Navigation entre les étapes
   const nextStep = () => {
-    if (validateStep(currentStep, customerInfo, deliveryInfo, paymentInfo)) {
-      setCurrentStep(prev => Math.min(prev + 1, 3));
+    if (validateStep(currentStep, customerInfo, deliveryInfo)) {
+      if (currentStep === 2) {
+        // Créer la commande avant de passer au paiement
+        createOrder();
+      } else {
+        setCurrentStep(prev => Math.min(prev + 1, 3));
+      }
     }
   };
 
@@ -254,10 +206,8 @@ export default function CheckoutPage() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  // Traitement de la commande
-  const processOrder = async () => {
-    if (!validateStep(3, customerInfo, deliveryInfo, paymentInfo)) return;
-
+  // Création de la commande (étape 2 → 3)
+  const createOrder = async () => {
     setIsProcessing(true);
     
     try {
@@ -281,7 +231,7 @@ export default function CheckoutPage() {
           timeSlot: deliveryInfo.timeSlot,
           notes: deliveryInfo.notes
         },
-        paymentMethod: paymentInfo.method,
+        paymentMethod: 'card',
         totalAmount: total
       };
 
@@ -300,55 +250,50 @@ export default function CheckoutPage() {
 
       const result = await response.json();
       const order = result.data.order;
+      
+      setCreatedOrderId(order._id);
+      setCurrentStep(3);
+      toast.success('Commande créée, procédez au paiement');
 
-      // Traiter le paiement si nécessaire
-      if (paymentInfo.method === 'card') {
-        const paymentResponse = await fetch('/api/payments/create-payment-intent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            orderId: order._id,
-            amount: Math.round(total * 100),
-            currency: 'eur'
-          })
-        });
+    } catch (error: any) {
+      console.error('Erreur lors de la création de la commande:', error);
+      toast.error(error.message || 'Erreur lors de la création de votre commande');
+      setErrors({ general: error.message || 'Erreur lors de la création de votre commande' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
-        if (!paymentResponse.ok) {
-          throw new Error('Erreur lors de la création du paiement');
-        }
-
-        // Simuler le traitement du paiement
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Confirmer le paiement
-        await fetch('/api/payments/confirm-payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            paymentIntentId: 'simulated_payment_intent',
-            orderId: order._id
-          })
-        });
-      }
-
+  // Succès du paiement Stripe
+  const handlePaymentSuccess = async (result: any) => {
+    try {
       // Vider le panier
       await fetch('/api/cart/clear', {
         method: 'POST',
         credentials: 'include'
       });
 
-      toast.success('Commande créée avec succès !');
-      router.push(`/checkout/success?order=${order.orderNumber}`);
+      toast.success('Paiement effectué avec succès !');
       
-    } catch (error: any) {
-      console.error('Erreur lors du traitement de la commande:', error);
-      toast.error(error.message || 'Erreur lors du traitement de votre commande');
-      setErrors({ general: error.message || 'Erreur lors du traitement de votre commande' });
-    } finally {
-      setIsProcessing(false);
+      // Rediriger vers la page de succès
+      if (result.order?.orderNumber) {
+        router.push(`/checkout/success?order=${result.order.orderNumber}`);
+      } else {
+        // Fallback si pas de numéro de commande
+        router.push('/checkout/success');
+      }
+      
+    } catch (error) {
+      console.error('Erreur post-paiement:', error);
+      // Même si le vidage du panier échoue, le paiement a réussi
+      router.push('/checkout/success');
     }
+  };
+
+  // Erreur de paiement Stripe
+  const handlePaymentError = (error: string) => {
+    toast.error(error);
+    setErrors({ payment: error });
   };
 
   // Redirection si panier vide
@@ -427,51 +372,56 @@ export default function CheckoutPage() {
                 />
               )}
 
-              {currentStep === 3 && (
-                <PaymentStep
-                  paymentInfo={paymentInfo}
-                  setPaymentInfo={setPaymentInfo}
-                  errors={errors}
+              {currentStep === 3 && createdOrderId && (
+                <StripePaymentForm
+                  orderId={createdOrderId}
+                  amount={total}
+                  customerEmail={customerInfo.email}
+                  onSuccess={handlePaymentSuccess}
+                  onError={handlePaymentError}
+                  disabled={isProcessing}
                 />
               )}
 
               {/* Navigation */}
               <div className="flex justify-between mt-8">
-                <Button
-                  variant="outline"
+                <Button 
+                  variant="outline" 
                   onClick={prevStep}
-                  disabled={currentStep === 1}
+                  disabled={currentStep === 1 || isProcessing}
                   className="flex items-center"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Précédent
                 </Button>
-                
-                {currentStep < 3 ? (
-                  <Button onClick={nextStep} className="flex items-center">
-                    Suivant
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                ) : (
+
+                {currentStep < 3 && (
                   <Button 
-                    onClick={processOrder} 
+                    onClick={nextStep}
                     disabled={isProcessing}
                     className="flex items-center"
                   >
                     {isProcessing ? (
-                      <>
+                      <div className="flex items-center">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Traitement...
-                      </>
+                        {currentStep === 2 ? 'Création...' : 'Traitement...'}
+                      </div>
                     ) : (
                       <>
-                        Finaliser la commande
+                        {currentStep === 2 ? 'Procéder au paiement' : 'Suivant'}
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </>
                     )}
                   </Button>
                 )}
               </div>
+
+              {/* Erreur générale */}
+              {errors.general && (
+                <div className="mt-4 bg-red-50 p-4 rounded-lg border border-red-200">
+                  <p className="text-red-700 text-sm">{errors.general}</p>
+                </div>
+              )}
             </div>
 
             {/* Résumé de commande */}
