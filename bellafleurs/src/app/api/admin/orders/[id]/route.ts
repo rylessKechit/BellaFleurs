@@ -1,11 +1,12 @@
 // src/app/api/admin/orders/[id]/route.ts
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 
-// GET - Récupérer une commande spécifique
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -55,7 +56,6 @@ export async function GET(
   }
 }
 
-// PATCH - Modifier les notes admin
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }

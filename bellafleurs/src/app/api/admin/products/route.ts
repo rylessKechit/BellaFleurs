@@ -1,4 +1,6 @@
 // src/app/api/admin/products/route.ts
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -22,10 +24,8 @@ const productSchema = z.object({
   }).default({})
 });
 
-// GET - Récupérer tous les produits (admin)
 export async function GET(req: NextRequest) {
   try {
-    // Vérifier les droits admin
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== 'admin') {
       return NextResponse.json({
@@ -39,15 +39,13 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    // Paramètres de pagination et filtres
-    const url = new URL(req.url);
-    const page = parseInt(url.searchParams.get('page') || '1');
-    const limit = parseInt(url.searchParams.get('limit') || '50');
-    const category = url.searchParams.get('category');
-    const isActive = url.searchParams.get('isActive');
-    const search = url.searchParams.get('search');
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const category = searchParams.get('category');
+    const isActive = searchParams.get('isActive');
+    const search = searchParams.get('search');
 
-    // Construction de la requête
     const query: any = {};
     
     if (category && category !== 'all') {
@@ -68,7 +66,6 @@ export async function GET(req: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    // Récupération des produits
     const [products, total] = await Promise.all([
       Product.find(query)
         .sort({ createdAt: -1 })
@@ -103,10 +100,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - Créer un nouveau produit
 export async function POST(req: NextRequest) {
   try {
-    // Vérifier les droits admin
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== 'admin') {
       return NextResponse.json({
@@ -122,17 +117,14 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     
-    // Validation des données
     const validatedData = productSchema.parse(body);
 
-    // Générer un slug unique
     const slug = validatedData.name
       .toLowerCase()
       .replace(/[^\w\s-]/g, '')
       .replace(/\s+/g, '-')
       .trim();
 
-    // Vérifier l'unicité du slug
     let finalSlug = slug;
     let counter = 1;
     while (await Product.findOne({ slug: finalSlug })) {
@@ -140,7 +132,6 @@ export async function POST(req: NextRequest) {
       counter++;
     }
 
-    // Créer le produit
     const product = new Product({
       ...validatedData,
       slug: finalSlug,

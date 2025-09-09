@@ -1,14 +1,14 @@
-// src/app/api/admin/orders/route.ts - Version corrigée
+// src/app/api/admin/orders/route.ts
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 
-// GET - Récupérer toutes les commandes (admin)
 export async function GET(req: NextRequest) {
   try {
-    // Vérifier les droits admin
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== 'admin') {
       return NextResponse.json({
@@ -22,16 +22,14 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    // Paramètres de pagination et filtres
-    const url = new URL(req.url);
-    const page = parseInt(url.searchParams.get('page') || '1');
-    const limit = parseInt(url.searchParams.get('limit') || '50');
-    const status = url.searchParams.get('status');
-    const search = url.searchParams.get('search');
-    const dateFrom = url.searchParams.get('dateFrom');
-    const dateTo = url.searchParams.get('dateTo');
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const status = searchParams.get('status');
+    const search = searchParams.get('search');
+    const dateFrom = searchParams.get('dateFrom');
+    const dateTo = searchParams.get('dateTo');
 
-    // Construction de la requête
     const query: any = {};
     
     if (status && status !== 'all') {
@@ -54,7 +52,6 @@ export async function GET(req: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    // Récupération des commandes
     const [orders, total] = await Promise.all([
       Order.find(query)
         .sort({ createdAt: -1 })
