@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     // Préparer les métadonnées pour Stripe
     const stripeMetadata = validateStripeMetadata({
-      orderId: order._id.toString(),
+      orderId: order.id.toString(),
       orderNumber: order.orderNumber,
       customerName: order.customerInfo.name,
       customerEmail: order.customerInfo.email,

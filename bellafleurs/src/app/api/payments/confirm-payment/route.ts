@@ -134,11 +134,11 @@ export async function POST(req: NextRequest) {
           success: true,
           data: {
             order: {
-              id: updatedOrder._id,
-              orderNumber: updatedOrder.orderNumber,
-              status: updatedOrder.status,
-              paymentStatus: updatedOrder.paymentStatus,
-              totalAmount: updatedOrder.totalAmount
+              id: updatedOrder?._id,
+              orderNumber: updatedOrder?.orderNumber,
+              status: updatedOrder?.status,
+              paymentStatus: updatedOrder?.paymentStatus,
+              totalAmount: updatedOrder?.totalAmount
             },
             payment: {
               id: paymentIntent.id,

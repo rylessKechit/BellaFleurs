@@ -94,7 +94,7 @@ export async function PATCH(
     }
 
     // Log pour suivi
-    console.log(`✅ Statut commande ${updatedOrder.orderNumber} changé: ${currentStatus} → ${newStatus}`);
+    console.log(`✅ Statut commande ${updatedOrder?.orderNumber} changé: ${currentStatus} → ${newStatus}`);
 
     return NextResponse.json({
       success: true,

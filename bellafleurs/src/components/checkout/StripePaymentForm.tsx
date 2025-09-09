@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 // Configuration Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
+const stripePromise = loadStripe(process.env.STRIPE_PUBLIC_KEY!);
 
 // Styles pour CardElement
 const cardElementOptions = {
@@ -331,7 +331,7 @@ export default function StripePaymentForm(props: StripePaymentFormProps) {
 
   // Vérifier que Stripe est configuré
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY) {
+    if (!process.env.STRIPE_PUBLIC_KEY) {
       setStripeError('Configuration Stripe manquante');
     }
   }, []);
