@@ -1,221 +1,248 @@
-import mongoose, { Schema, Model } from 'mongoose';
-import { IOrder, IOrderItem } from 'types';
+// src/models/Order.ts - Modèle complet
+import mongoose, { Schema, Document } from 'mongoose';
 
-// Schéma pour les items de commande
+// Interface pour les articles de commande
+export interface IOrderItem {
+  _id?: string;
+  product: string; // ObjectId du produit
+  name: string;
+  price: number;
+  quantity: number;
+  image: string;
+}
+
+// Interface pour l'adresse de livraison
+export interface IDeliveryAddress {
+  street: string;
+  city: string;
+  zipCode: string;
+  complement?: string;
+}
+
+// Interface pour les informations de livraison
+export interface IDeliveryInfo {
+  type: 'delivery' | 'pickup';
+  address?: IDeliveryAddress;
+  date: Date;
+  timeSlot: string;
+  notes?: string;
+}
+
+// Interface pour les informations client
+export interface ICustomerInfo {
+  name: string;
+  email: string;
+  phone: string;
+}
+
+// Interface pour la timeline
+export interface ITimelineEntry {
+  status: 'validé' | 'en_cours_creation' | 'prête' | 'en_livraison' | 'livré';
+  date: Date;
+  note?: string;
+}
+
+// Interface principale pour le document Order
+export interface IOrder extends Document {
+  orderNumber: string;
+  user?: string; // ObjectId de l'utilisateur (optionnel pour les invités)
+  items: IOrderItem[];
+  totalAmount: number;
+  status: 'validé' | 'en_cours_creation' | 'prête' | 'en_livraison' | 'livré';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  stripePaymentIntentId?: string;
+  deliveryInfo: IDeliveryInfo;
+  customerInfo: ICustomerInfo;
+  adminNotes?: string;
+  timeline: ITimelineEntry[];
+  estimatedDelivery?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  
+  // Méthodes d'instance
+  updateStatus(newStatus: IOrder['status'], note?: string): Promise<IOrder>;
+  updatePaymentStatus(newStatus: IOrder['paymentStatus']): Promise<IOrder>;
+  cancel(reason?: string): Promise<IOrder>;
+  calculateTotal(): number;
+  
+  // Virtuals
+  itemsCount: number;
+  isCompleted: boolean;
+  isPaid: boolean;
+  canBeCancelled: boolean;
+}
+
+// Schéma pour les articles
 const OrderItemSchema = new Schema({
   product: {
     type: Schema.Types.ObjectId,
     ref: 'Product',
-    required: [true, 'Product reference is required']
+    required: true
   },
   name: {
     type: String,
-    required: [true, 'Product name is required'],
-    trim: true
+    required: true
   },
   price: {
     type: Number,
-    required: [true, 'Product price is required'],
-    min: [0, 'Price must be positive']
+    required: true,
+    min: 0
   },
   quantity: {
     type: Number,
-    required: [true, 'Quantity is required'],
-    min: [1, 'Quantity must be at least 1'],
-    max: [100, 'Quantity cannot exceed 100']
+    required: true,
+    min: 1
   },
   image: {
     type: String,
-    required: [true, 'Product image is required']
+    required: true
   }
-}, { _id: false });
+});
 
-// Schéma pour l'adresse de livraison
-const DeliveryAddressSchema = new Schema({
+// Schéma pour l'adresse
+const AddressSchema = new Schema({
   street: {
     type: String,
-    required: true,
-    trim: true,
-    maxlength: [200, 'Street address cannot exceed 200 characters']
+    required: true
   },
   city: {
     type: String,
-    required: true,
-    trim: true,
-    maxlength: [100, 'City name cannot exceed 100 characters']
+    required: true
   },
   zipCode: {
     type: String,
     required: true,
-    trim: true,
-    match: [/^\d{5}$/, 'Please enter a valid 5-digit zip code']
+    match: /^\d{5}$/
   },
-  country: {
-    type: String,
-    required: true,
-    trim: true,
-    default: 'France'
-  }
+  complement: String
 }, { _id: false });
 
 // Schéma pour les informations de livraison
 const DeliveryInfoSchema = new Schema({
   type: {
     type: String,
-    enum: ['pickup', 'delivery'],
-    required: [true, 'Delivery type is required']
+    enum: ['delivery', 'pickup'],
+    required: true
   },
   address: {
-    type: DeliveryAddressSchema,
+    type: AddressSchema,
     required: function(this: any) {
       return this.type === 'delivery';
     }
   },
   date: {
     type: Date,
-    required: [true, 'Delivery date is required'],
-    validate: {
-      validator: function(date: Date) {
-        return date > new Date();
-      },
-      message: 'Delivery date must be in the future'
-    }
+    required: true
   },
   timeSlot: {
     type: String,
-    required: [true, 'Time slot is required'],
-    enum: {
-      values: ['9h-12h', '12h-14h', '14h-17h', '17h-19h'],
-      message: 'Time slot must be one of: 9h-12h, 12h-14h, 14h-17h, 17h-19h'
-    }
+    required: true,
+    enum: ['9h-12h', '12h-14h', '14h-17h', '17h-19h']
   },
-  notes: {
-    type: String,
-    trim: true,
-    maxlength: [500, 'Delivery notes cannot exceed 500 characters']
-  }
+  notes: String
 }, { _id: false });
 
 // Schéma pour les informations client
 const CustomerInfoSchema = new Schema({
   name: {
     type: String,
-    required: [true, 'Customer name is required'],
-    trim: true,
-    minlength: [2, 'Name must be at least 2 characters'],
-    maxlength: [100, 'Name cannot exceed 100 characters']
+    required: true
   },
   email: {
     type: String,
-    required: [true, 'Customer email is required'],
-    trim: true,
-    lowercase: true,
-    match: [
-      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-      'Please enter a valid email address'
-    ]
+    required: true,
+    match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   },
   phone: {
     type: String,
-    required: [true, 'Customer phone is required'],
-    trim: true,
-    match: [
-      /^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/,
-      'Please enter a valid French phone number'
-    ]
+    required: true
   }
 }, { _id: false });
 
-// Schéma pour la timeline des statuts
+// Schéma pour la timeline
 const TimelineSchema = new Schema({
   status: {
     type: String,
-    required: true,
-    enum: ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled']
+    enum: ['validé', 'en_cours_creation', 'prête', 'en_livraison', 'livré'],
+    required: true
   },
   date: {
     type: Date,
-    required: true,
-    default: Date.now
+    default: Date.now,
+    required: true
   },
-  note: {
-    type: String,
-    trim: true,
-    maxlength: [200, 'Timeline note cannot exceed 200 characters']
-  }
+  note: String
 }, { _id: false });
 
-// Schéma principal Order
+// Schéma principal de la commande
 const OrderSchema = new Schema({
   orderNumber: {
     type: String,
-    required: [true, 'Order number is required'],
+    required: true,
     unique: true,
-    match: [/^BF-\d{8}-\d{4}$/, 'Invalid order number format']
+    match: /^BF-\d{8}-\d{4}$/
   },
   user: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: false // Optionnel pour les commandes sans compte
+    required: false // Optionnel pour les commandes d'invités
   },
   items: {
     type: [OrderItemSchema],
-    required: [true, 'Order items are required'],
+    required: true,
     validate: {
-      validator: function(items: any[]) {
+      validator: function(items: IOrderItem[]) {
         return items && items.length > 0;
       },
-      message: 'Order must contain at least one item'
+      message: 'Au moins un article est requis'
     }
   },
   totalAmount: {
     type: Number,
-    required: [true, 'Total amount is required'],
-    min: [0.01, 'Total amount must be greater than 0']
+    required: true,
+    min: 0
   },
   status: {
     type: String,
-    enum: {
-      values: ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'],
-      message: 'Status must be one of: pending, confirmed, preparing, ready, delivered, cancelled'
-    },
-    default: 'pending'
+    enum: ['validé', 'en_cours_creation', 'prête', 'en_livraison', 'livré'],
+    default: 'validé',
+    required: true
   },
   paymentStatus: {
     type: String,
-    enum: {
-      values: ['pending', 'paid', 'failed', 'refunded'],
-      message: 'Payment status must be one of: pending, paid, failed, refunded'
-    },
-    default: 'pending'
+    enum: ['pending', 'paid', 'failed', 'refunded'],
+    default: 'pending',
+    required: true
   },
   stripePaymentIntentId: {
     type: String,
-    required: false,
-    sparse: true
+    sparse: true // Permet les valeurs null sans conflit d'unicité
   },
   deliveryInfo: {
     type: DeliveryInfoSchema,
-    required: [true, 'Delivery information is required']
+    required: true
   },
   customerInfo: {
     type: CustomerInfoSchema,
-    required: [true, 'Customer information is required']
+    required: true
   },
   adminNotes: {
     type: String,
-    trim: true,
-    maxlength: [1000, 'Admin notes cannot exceed 1000 characters']
+    maxlength: 1000
   },
   timeline: {
     type: [TimelineSchema],
-    default: function() {
+    default: function(this: any) {
       return [{
-        status: 'pending',
+        status: this.status || 'validé',
         date: new Date(),
         note: 'Commande créée'
       }];
     }
+  },
+  estimatedDelivery: {
+    type: Date,
+    required: false
   }
 }, {
   timestamps: true,
@@ -224,158 +251,28 @@ const OrderSchema = new Schema({
 });
 
 // Index pour les performances
-OrderSchema.index({ orderNumber: 1 }, { unique: true });
-OrderSchema.index({ user: 1 });
+OrderSchema.index({ user: 1, createdAt: -1 });
+OrderSchema.index({ 'customerInfo.email': 1, createdAt: -1 });
+OrderSchema.index({ orderNumber: 1 });
 OrderSchema.index({ status: 1 });
-OrderSchema.index({ paymentStatus: 1 });
-OrderSchema.index({ 'customerInfo.email': 1 });
 OrderSchema.index({ createdAt: -1 });
-OrderSchema.index({ 'deliveryInfo.date': 1 });
-OrderSchema.index({ stripePaymentIntentId: 1 }, { sparse: true });
-
-// Index composés pour les requêtes admin
-OrderSchema.index({ status: 1, createdAt: -1 });
-OrderSchema.index({ paymentStatus: 1, status: 1 });
-
-// Middleware pre-save pour générer le numéro de commande
-OrderSchema.pre('save', async function(next) {
-  if (this.isNew && !this.orderNumber) {
-    const date = new Date();
-    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-    
-    // Utiliser mongoose.model pour éviter les problèmes de typage
-    const OrderModel = mongoose.model('Order');
-    const lastOrder = await OrderModel.findOne(
-      { orderNumber: new RegExp(`^BF-${dateStr}-`) }
-    ).sort({ orderNumber: -1 });
-    
-    let sequence = 1;
-    if (lastOrder && lastOrder.orderNumber) {
-      const lastSequence = parseInt((lastOrder as any).orderNumber.split('-')[2]);
-      sequence = lastSequence + 1;
-    }
-    
-    this.orderNumber = `BF-${dateStr}-${sequence.toString().padStart(4, '0')}`;
-  }
-  next();
-});
-
-// Middleware pour mettre à jour la timeline lors du changement de statut
-OrderSchema.pre('save', function(next) {
-  if (this.isModified('status') && !this.isNew) {
-    this.timeline.push({
-      status: this.status,
-      date: new Date(),
-      note: `Statut changé vers: ${this.status}`
-    });
-  }
-  next();
-});
 
 // Virtuals
-OrderSchema.virtual('itemsCount').get(function() {
-  return this.items.reduce((total, item) => total + item.quantity, 0);
+OrderSchema.virtual('itemsCount').get(function(this: IOrder) {
+  return this.items ? this.items.length : 0;
 });
 
-OrderSchema.virtual('totalAmountFormatted').get(function() {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR'
-  }).format(this.totalAmount);
+OrderSchema.virtual('isCompleted').get(function(this: IOrder) {
+  return this.status === 'livré';
 });
 
-OrderSchema.virtual('isDelivery').get(function() {
-  return this.deliveryInfo.type === 'delivery';
-});
-
-OrderSchema.virtual('isPickup').get(function() {
-  return this.deliveryInfo.type === 'pickup';
-});
-
-OrderSchema.virtual('isPaid').get(function() {
+OrderSchema.virtual('isPaid').get(function(this: IOrder) {
   return this.paymentStatus === 'paid';
 });
 
-OrderSchema.virtual('isCompleted').get(function() {
-  return this.status === 'delivered';
+OrderSchema.virtual('canBeCancelled').get(function(this: IOrder) {
+  return ['validé', 'en_cours_creation'].includes(this.status);
 });
-
-OrderSchema.virtual('isCancelled').get(function() {
-  return this.status === 'cancelled';
-});
-
-OrderSchema.virtual('canBeCancelled').get(function() {
-  return ['pending', 'confirmed'].includes(this.status);
-});
-
-OrderSchema.virtual('statusLabel').get(function() {
-  const labels: Record<string, string> = {
-    'pending': 'En attente',
-    'confirmed': 'Confirmée',
-    'preparing': 'En préparation',
-    'ready': 'Prête',
-    'delivered': 'Livrée',
-    'cancelled': 'Annulée'
-  };
-  return labels[this.status] || this.status;
-});
-
-OrderSchema.virtual('paymentStatusLabel').get(function() {
-  const labels: Record<string, string> = {
-    'pending': 'En attente',
-    'paid': 'Payée',
-    'failed': 'Échouée',
-    'refunded': 'Remboursée'
-  };
-  return labels[this.paymentStatus] || this.paymentStatus;
-});
-
-// Méthodes statiques
-OrderSchema.statics.findByOrderNumber = function(orderNumber: string) {
-  return this.findOne({ orderNumber }).populate('user items.product');
-};
-
-OrderSchema.statics.findByUser = function(userId: string) {
-  return this.find({ user: userId }).sort({ createdAt: -1 }).populate('items.product');
-};
-
-OrderSchema.statics.findByEmail = function(email: string) {
-  return this.find({ 'customerInfo.email': email.toLowerCase() })
-    .sort({ createdAt: -1 })
-    .populate('items.product');
-};
-
-OrderSchema.statics.findByStatus = function(status: string) {
-  return this.find({ status }).sort({ createdAt: -1 }).populate('user items.product');
-};
-
-OrderSchema.statics.findByDateRange = function(startDate: Date, endDate: Date) {
-  return this.find({
-    createdAt: {
-      $gte: startDate,
-      $lte: endDate
-    }
-  }).sort({ createdAt: -1 });
-};
-
-OrderSchema.statics.getRevenueStats = function(startDate?: Date, endDate?: Date) {
-  const match: any = { paymentStatus: 'paid' };
-  if (startDate && endDate) {
-    match.createdAt = { $gte: startDate, $lte: endDate };
-  }
-  
-  return this.aggregate([
-    { $match: match },
-    {
-      $group: {
-        _id: null,
-        totalRevenue: { $sum: '$totalAmount' },
-        totalOrders: { $sum: 1 },
-        averageOrderValue: { $avg: '$totalAmount' }
-      }
-    }
-  ]);
-};
 
 // Méthodes d'instance
 OrderSchema.methods.updateStatus = function(newStatus: IOrder['status'], note?: string) {
@@ -383,39 +280,81 @@ OrderSchema.methods.updateStatus = function(newStatus: IOrder['status'], note?: 
   this.timeline.push({
     status: newStatus,
     date: new Date(),
-    note: note || `Statut changé vers: ${newStatus}`
+    note: note || `Statut changé vers ${newStatus}`
   });
+  this.updatedAt = new Date();
   return this.save();
 };
 
 OrderSchema.methods.updatePaymentStatus = function(newStatus: IOrder['paymentStatus']) {
   this.paymentStatus = newStatus;
+  this.updatedAt = new Date();
   return this.save();
 };
 
 OrderSchema.methods.cancel = function(reason?: string) {
   if (!this.canBeCancelled) {
-    throw new Error('Cette commande ne peut pas être annulée');
+    throw new Error('Cette commande ne peut plus être annulée');
   }
-  return this.updateStatus('cancelled', reason || 'Commande annulée');
+  
+  this.status = 'livré'; // Pas de statut 'cancelled' dans votre enum
+  this.timeline.push({
+    status: this.status,
+    date: new Date(),
+    note: reason || 'Commande annulée'
+  });
+  this.updatedAt = new Date();
+  return this.save();
 };
 
 OrderSchema.methods.calculateTotal = function() {
-  return this.items.reduce((total: any, item: any) => total + (item.price * item.quantity), 0);
+  return this.items.reduce((total: number, item: IOrderItem) => {
+    return total + (item.price * item.quantity);
+  }, 0);
 };
 
-// Interface pour les méthodes statiques
-interface IOrderModel extends Model<IOrder> {
-  findByOrderNumber(orderNumber: string): Promise<IOrder | null>;
-  findByUser(userId: string): Promise<IOrder[]>;
-  findByEmail(email: string): Promise<IOrder[]>;
-  findByStatus(status: string): Promise<IOrder[]>;
-  findByDateRange(startDate: Date, endDate: Date): Promise<IOrder[]>;
-  getRevenueStats(startDate?: Date, endDate?: Date): Promise<any[]>;
-}
+// Middleware pre-save pour valider le total
+OrderSchema.pre('save', function(this: IOrder, next) {
+  if (this.isModified('items')) {
+    const calculatedTotal = this.calculateTotal();
+    if (Math.abs(this.totalAmount - calculatedTotal) > 0.01) {
+      this.totalAmount = calculatedTotal;
+    }
+  }
+  next();
+});
 
-// Éviter la recompilation du modèle
-const Order = (mongoose.models.Order as unknown as IOrderModel) || 
-  mongoose.model<IOrder, IOrderModel>('Order', OrderSchema);
+// Méthodes statiques
+OrderSchema.statics.generateOrderNumber = async function() {
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+  
+  // Compter les commandes du jour
+  const count = await this.countDocuments({
+    orderNumber: { $regex: `^BF-${dateStr}-` }
+  });
+  
+  const orderNum = (count + 1).toString().padStart(4, '0');
+  return `BF-${dateStr}-${orderNum}`;
+};
+
+OrderSchema.statics.findByOrderNumber = function(orderNumber: string) {
+  return this.findOne({ orderNumber });
+};
+
+OrderSchema.statics.findByUser = function(userId: string) {
+  return this.find({ user: userId }).sort({ createdAt: -1 });
+};
+
+OrderSchema.statics.findByEmail = function(email: string) {
+  return this.find({ 'customerInfo.email': email }).sort({ createdAt: -1 });
+};
+
+OrderSchema.statics.findByStatus = function(status: IOrder['status']) {
+  return this.find({ status }).sort({ createdAt: -1 });
+};
+
+// Export du modèle
+const Order = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
 
 export default Order;

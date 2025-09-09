@@ -122,3 +122,5 @@ temp/
 *.njsproj
 *.sln
 *.sw?
+
+/scripts/*

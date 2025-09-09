@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ShoppingCart, LogIn, User, LogOut, Package, Settings } from 'lucide-react';
+import { Menu, X, ShoppingCart, LogIn, User, LogOut, Package, Settings, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -65,7 +65,7 @@ export default function Header() {
       .join('');
   };
 
-  // Composant Avatar utilisateur
+  // Composant Avatar utilisateur - AVEC LOGIQUE ADMIN AJOUTÉE
   const UserAvatar = ({ isMobile = false }: { isMobile?: boolean }) => {
     if (!isAuthenticated || !user) {
       return (
@@ -85,6 +85,7 @@ export default function Header() {
     }
 
     const initials = getInitials(user.name);
+    const isAdmin = user.role === 'admin';
 
     return (
       <DropdownMenu>
@@ -93,8 +94,8 @@ export default function Header() {
             variant="ghost"
             className={`relative ${isMobile ? 'justify-start w-full h-10' : 'w-10 h-10'} rounded-full p-0`}
           >
-            <div className={`${isMobile ? 'w-8 h-8 mr-2' : 'w-8 h-8'} bg-green-100 rounded-full flex items-center justify-center text-green-700 text-sm font-medium`}>
-              {initials}
+            <div className={`${isMobile ? 'w-8 h-8 mr-2' : 'w-8 h-8'} ${isAdmin ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700'} rounded-full flex items-center justify-center text-sm font-medium`}>
+              {isAdmin ? <Settings className="w-4 h-4" /> : initials}
             </div>
             {/* Masquer le nom d'utilisateur sur très petits écrans */}
             {isMobile && <span className="ml-1 hidden xs:inline">{user.name}</span>}
@@ -106,24 +107,63 @@ export default function Header() {
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">{user.name}</p>
               <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+              {isAdmin && <p className="text-xs leading-none text-green-600">Administrateur</p>}
             </div>
           </DropdownMenuLabel>
           
           <DropdownMenuSeparator />
           
-          <DropdownMenuItem asChild>
-            <Link href="/mon-compte" className="flex items-center">
-              <Settings className="mr-2 h-4 w-4" />
-              Mon compte
-            </Link>
-          </DropdownMenuItem>
-          
-          <DropdownMenuItem asChild>
-            <Link href="/mes-commandes" className="flex items-center">
-              <Package className="mr-2 h-4 w-4" />
-              Mes commandes
-            </Link>
-          </DropdownMenuItem>
+          {/* MENU ADMIN */}
+          {isAdmin ? (
+            <>
+              <DropdownMenuItem asChild>
+                <Link href="/admin/dashboard" className="flex items-center">
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Dashboard Admin
+                </Link>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem asChild>
+                <Link href="/admin/produits" className="flex items-center">
+                  <Package className="mr-2 h-4 w-4" />
+                  Gestion Produits
+                </Link>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem asChild>
+                <Link href="/admin/commandes" className="flex items-center">
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Gestion Commandes
+                </Link>
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator />
+              
+              <DropdownMenuItem asChild>
+                <Link href="/" className="flex items-center">
+                  <User className="mr-2 h-4 w-4" />
+                  Voir le site client
+                </Link>
+              </DropdownMenuItem>
+            </>
+          ) : (
+            /* MENU CLIENT */
+            <>
+              <DropdownMenuItem asChild>
+                <Link href="/mon-compte" className="flex items-center">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Mon compte
+                </Link>
+              </DropdownMenuItem>
+              
+              <DropdownMenuItem asChild>
+                <Link href="/mes-commandes" className="flex items-center">
+                  <Package className="mr-2 h-4 w-4" />
+                  Mes commandes
+                </Link>
+              </DropdownMenuItem>
+            </>
+          )}
           
           <DropdownMenuSeparator />
           
@@ -194,15 +234,17 @@ export default function Header() {
 
           {/* DIV 3: Actions à DROITE */}
           <div className="flex items-center space-x-3">
-            {/* Panier - toujours visible */}
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/panier" className="relative">
-                <ShoppingCart className="w-5 h-5" />
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-green-500 text-white">
-                  0
-                </Badge>
-              </Link>
-            </Button>
+            {/* Panier - toujours visible SAUF pour les admins */}
+            {user?.role !== 'admin' && (
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/panier" className="relative">
+                  <ShoppingCart className="w-5 h-5" />
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-green-500 text-white">
+                    0
+                  </Badge>
+                </Link>
+              </Button>
+            )}
 
             {/* Menu utilisateur - Desktop & Mobile */}
             <div className="hidden sm:block">
