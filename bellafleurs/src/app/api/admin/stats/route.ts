@@ -1,4 +1,6 @@
 // src/app/api/admin/stats/route.ts
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -9,7 +11,6 @@ import User from '@/models/User';
 
 export async function GET(req: NextRequest) {
   try {
-    // Vérifier les droits admin
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== 'admin') {
       return NextResponse.json({
@@ -23,201 +24,122 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    // Calculer les dates pour les comparaisons
-    const now = new Date();
-    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-
-    // Récupérer les statistiques en parallèle
+    // Calculer les statistiques de base
     const [
-      // Statistiques du mois en cours
-      currentMonthOrders,
-      currentMonthRevenue,
-      currentMonthCustomers,
-      currentMonthProducts,
-      
-      // Statistiques du mois précédent
-      lastMonthOrders,
-      lastMonthRevenue,
-      lastMonthCustomers,
-      lastMonthProducts,
-      
-      // Totaux généraux
       totalOrders,
-      totalCustomers,
-      totalProducts
+      totalRevenue,
+      totalProducts,
+      totalUsers,
+      pendingOrders,
+      paidOrders
     ] = await Promise.all([
-      // Mois en cours
-      Order.countDocuments({
-        createdAt: { $gte: thisMonth, $lte: now }
-      }),
-      Order.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: thisMonth, $lte: now },
-            paymentStatus: 'paid'
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: '$totalAmount' }
-          }
-        }
-      ]),
-      User.countDocuments({
-        role: 'client',
-        createdAt: { $gte: thisMonth, $lte: now }
-      }),
-      Product.countDocuments({
-        createdAt: { $gte: thisMonth, $lte: now }
-      }),
-      
-      // Mois précédent
-      Order.countDocuments({
-        createdAt: { $gte: lastMonth, $lte: lastMonthEnd }
-      }),
-      Order.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: lastMonth, $lte: lastMonthEnd },
-            paymentStatus: 'paid'
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: '$totalAmount' }
-          }
-        }
-      ]),
-      User.countDocuments({
-        role: 'client',
-        createdAt: { $gte: lastMonth, $lte: lastMonthEnd }
-      }),
-      Product.countDocuments({
-        createdAt: { $gte: lastMonth, $lte: lastMonthEnd }
-      }),
-      
-      // Totaux
       Order.countDocuments(),
+      Order.aggregate([
+        { $match: { paymentStatus: 'paid' } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+      ]),
+      Product.countDocuments({ isActive: true }),
       User.countDocuments({ role: 'client' }),
-      Product.countDocuments({ isActive: true })
+      Order.countDocuments({ status: { $in: ['pending', 'confirmed'] } }),
+      Order.countDocuments({ paymentStatus: 'paid' })
     ]);
 
-    // Calculer les revenus
-    const currentRevenue = currentMonthRevenue[0]?.total || 0;
-    const lastRevenue = lastMonthRevenue[0]?.total || 0;
-    
-    // Calculer le chiffre d'affaires total
-    const totalRevenueResult = await Order.aggregate([
+    // Statistiques des 30 derniers jours
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [
+      ordersLast30Days,
+      revenueLast30Days,
+      newUsersLast30Days
+    ] = await Promise.all([
+      Order.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+      Order.aggregate([
+        { 
+          $match: { 
+            paymentStatus: 'paid',
+            createdAt: { $gte: thirtyDaysAgo }
+          } 
+        },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+      ]),
+      User.countDocuments({ 
+        role: 'client',
+        createdAt: { $gte: thirtyDaysAgo }
+      })
+    ]);
+
+    // Statistiques par jour (7 derniers jours)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const dailyStats = await Order.aggregate([
       {
         $match: {
+          createdAt: { $gte: sevenDaysAgo },
           paymentStatus: 'paid'
         }
       },
       {
         $group: {
-          _id: null,
-          total: { $sum: '$totalAmount' }
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+            day: { $dayOfMonth: '$createdAt' }
+          },
+          orders: { $sum: 1 },
+          revenue: { $sum: '$totalAmount' }
         }
-      }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
     ]);
-    
-    const totalRevenue = totalRevenueResult[0]?.total || 0;
 
-    // Calculer les taux de croissance
-    const calculateGrowth = (current: number, previous: number): number => {
-      if (previous === 0) return current > 0 ? 100 : 0;
-      return Math.round(((current - previous) / previous) * 100 * 10) / 10;
-    };
+    // Top produits
+    const topProducts = await Order.aggregate([
+      { $match: { paymentStatus: 'paid' } },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.product',
+          name: { $first: '$items.name' },
+          totalSold: { $sum: '$items.quantity' },
+          totalRevenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } }
+        }
+      },
+      { $sort: { totalSold: -1 } },
+      { $limit: 5 }
+    ]);
 
     const stats = {
-      totalRevenue: Math.round(totalRevenue * 100) / 100,
-      totalOrders,
-      totalCustomers,
-      totalProducts,
-      revenueGrowth: calculateGrowth(currentRevenue, lastRevenue),
-      ordersGrowth: calculateGrowth(currentMonthOrders, lastMonthOrders),
-      customersGrowth: calculateGrowth(currentMonthCustomers, lastMonthCustomers),
-      productsGrowth: calculateGrowth(currentMonthProducts, lastMonthProducts)
+      overview: {
+        totalOrders,
+        totalRevenue: totalRevenue[0]?.total || 0,
+        totalProducts,
+        totalUsers,
+        pendingOrders,
+        paidOrders,
+        averageOrderValue: totalRevenue[0]?.total ? (totalRevenue[0].total / paidOrders) : 0
+      },
+      trends: {
+        ordersLast30Days,
+        revenueLast30Days: revenueLast30Days[0]?.total || 0,
+        newUsersLast30Days,
+        orderGrowth: ordersLast30Days > 0 ? ((ordersLast30Days / totalOrders) * 100) : 0,
+        revenueGrowth: revenueLast30Days[0]?.total > 0 ? ((revenueLast30Days[0].total / (totalRevenue[0]?.total || 1)) * 100) : 0
+      },
+      charts: {
+        dailyStats: dailyStats.map(stat => ({
+          date: `${stat._id.year}-${String(stat._id.month).padStart(2, '0')}-${String(stat._id.day).padStart(2, '0')}`,
+          orders: stat.orders,
+          revenue: stat.revenue
+        })),
+        topProducts
+      }
     };
-
-    // Statistiques supplémentaires
-    const additionalStats = await Promise.all([
-      // Commandes par statut
-      Order.aggregate([
-        {
-          $group: {
-            _id: '$status',
-            count: { $sum: 1 }
-          }
-        }
-      ]),
-      
-      // Revenus par mois (6 derniers mois)
-      Order.aggregate([
-        {
-          $match: {
-            paymentStatus: 'paid',
-            createdAt: {
-              $gte: new Date(now.getFullYear(), now.getMonth() - 5, 1)
-            }
-          }
-        },
-        {
-          $group: {
-            _id: {
-              year: { $year: '$createdAt' },
-              month: { $month: '$createdAt' }
-            },
-            revenue: { $sum: '$totalAmount' },
-            orders: { $sum: 1 }
-          }
-        },
-        {
-          $sort: { '_id.year': 1, '_id.month': 1 }
-        }
-      ]),
-      
-      // Top 5 des créations les plus commandées
-      Order.aggregate([
-        { $unwind: '$items' },
-        {
-          $group: {
-            _id: '$items.product',
-            name: { $first: '$items.name' },
-            totalQuantity: { $sum: '$items.quantity' },
-            totalRevenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } }
-          }
-        },
-        { $sort: { totalQuantity: -1 } },
-        { $limit: 5 }
-      ])
-    ]);
-
-    const [ordersByStatus, monthlyRevenue, topProducts] = additionalStats;
 
     return NextResponse.json({
       success: true,
-      data: {
-        stats,
-        ordersByStatus,
-        monthlyRevenue,
-        topProducts,
-        period: {
-          currentMonth: {
-            start: thisMonth.toISOString(),
-            end: now.toISOString()
-          },
-          lastMonth: {
-            start: lastMonth.toISOString(),
-            end: lastMonthEnd.toISOString()
-          }
-        }
-      }
+      data: { stats }
     });
 
   } catch (error: any) {

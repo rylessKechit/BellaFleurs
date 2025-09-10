@@ -1,10 +1,12 @@
-// src/app/api/cart/[productId]/route.ts
+// src/app/api/cart/[productId]/route.ts - Version MongoDB complète
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Cart from '@/models/Cart';
-import Product from '@/models/Product'; // Importer Product AVANT Cart
+import Product from '@/models/Product';
 
 interface RouteParams {
   params: {
@@ -46,7 +48,7 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    // **CORRECTION** : Utiliser le modèle Cart au lieu de cartStore
+    // Trouver le panier
     let cart = null;
     if (session?.user?.id) {
       cart = await Cart.findByUser(session.user.id);
@@ -153,7 +155,7 @@ export async function DELETE(
       }, { status: 400 });
     }
 
-    // **CORRECTION** : Utiliser le modèle Cart au lieu de cartStore
+    // Trouver le panier
     let cart = null;
     if (session?.user?.id) {
       cart = await Cart.findByUser(session.user.id);

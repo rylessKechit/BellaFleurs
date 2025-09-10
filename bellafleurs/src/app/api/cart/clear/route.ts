@@ -1,4 +1,6 @@
-// src/app/api/cart/clear/route.ts
+// src/app/api/cart/clear/route.ts - Vider le panier
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -10,7 +12,6 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     
-    // Récupérer la session utilisateur
     const session = await getServerSession(authOptions);
     const sessionId = session?.user?.id || request.cookies.get('cart_session')?.value;
 
