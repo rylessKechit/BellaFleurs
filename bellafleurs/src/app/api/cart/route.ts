@@ -1,4 +1,4 @@
-// src/app/api/cart/route.ts - Version MongoDB complète
+// src/app/api/cart/route.ts - Version MongoDB sans logique stock avec DELETE corrigé
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Populer les informations des produits
-    await cart.populate('items.product', 'name images price stock isActive');
+    await cart.populate('items.product', 'name images price isActive');
 
     // Formatter les données pour le frontend
     const formattedItems = cart.items.map((item: any) => ({
@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
       price: item.price,
       quantity: item.quantity,
       image: item.image,
-      stock: item.product?.stock || 0,
       isActive: item.product?.isActive || false
     }));
 
@@ -81,7 +80,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/cart - Ajouter un article au panier
+// POST /api/cart - Ajouter un article au panier (sans vérification stock)
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
@@ -112,7 +111,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Vérifier que le produit existe
+    // Vérifier que le produit existe et est actif
     const product = await Product.findById(productId);
     if (!product || !product.isActive) {
       return NextResponse.json({
@@ -122,17 +121,6 @@ export async function POST(request: NextRequest) {
           code: 'PRODUCT_NOT_FOUND'
         }
       }, { status: 404 });
-    }
-
-    // Vérifier le stock
-    if (product.stock < quantity) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: `Stock insuffisant. Stock disponible: ${product.stock}`,
-          code: 'INSUFFICIENT_STOCK'
-        }
-      }, { status: 400 });
     }
 
     // Gérer la session
@@ -184,6 +172,54 @@ export async function POST(request: NextRequest) {
       error: {
         message: error.message || 'Erreur lors de l\'ajout au panier',
         code: 'CART_ADD_ERROR'
+      }
+    }, { status: 500 });
+  }
+}
+
+// DELETE /api/cart - Vider le panier
+export async function DELETE(request: NextRequest) {
+  try {
+    await connectDB();
+    
+    const session = await getServerSession(authOptions);
+    const sessionId = session?.user?.id || request.cookies.get('cart_session')?.value;
+    
+    if (!sessionId) {
+      return NextResponse.json({
+        success: true,
+        message: 'Panier déjà vide'
+      });
+    }
+
+    // Trouver le panier
+    let cart = null;
+    if (session?.user?.id) {
+      cart = await Cart.findByUser(session.user.id);
+    } else if (sessionId) {
+      cart = await Cart.findBySession(sessionId);
+    }
+
+    if (cart) {
+      // Vider le panier manuellement au lieu d'utiliser une méthode qui n'existe pas
+      cart.items = [];
+      cart.totalItems = 0;
+      cart.totalAmount = 0;
+      await cart.save();
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Panier vidé avec succès'
+    });
+
+  } catch (error: any) {
+    console.error('❌ Cart CLEAR error:', error);
+    return NextResponse.json({
+      success: false,
+      error: {
+        message: error.message || 'Erreur lors du vidage du panier',
+        code: 'CART_CLEAR_ERROR'
       }
     }, { status: 500 });
   }

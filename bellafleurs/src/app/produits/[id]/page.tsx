@@ -1,160 +1,170 @@
-// src/app/produits/[id]/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { 
-  Star, 
   ShoppingCart, 
   Heart, 
   Share2, 
-  Minus, 
+  Star, 
   Plus, 
-  Truck, 
-  Shield, 
+  Minus,
+  Truck,
+  Shield,
   Award,
   ChevronLeft,
   ChevronRight,
-  Info
+  Package,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { toast } from 'sonner';
 
 interface Product {
   _id: string;
   name: string;
   description: string;
   price: number;
-  category: string;
-  subcategory: string;
   images: string[];
-  stock: number;
+  category: string;
   isActive: boolean;
   tags: string[];
-  seo: {
-    title: string;
-    description: string;
-    keywords: string[];
-  };
-  dimensions?: {
-    height: number;
-    width: number;
-    depth: number;
-  };
-  care?: {
-    difficulty: 'facile' | 'modéré' | 'difficile';
-    watering: string;
-    light: string;
-    temperature: string;
-  };
+  slug?: string;
+  careInstructions?: string;
+  difficulty?: 'facile' | 'modéré' | 'difficile';
+  dimensions?: string;
+  composition?: string;
+  entretien?: string;
   averageRating?: number;
-  reviewCount?: number;
+  reviewsCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
-
-interface Review {
-  _id: string;
-  author: string;
-  rating: number;
-  comment: string;
-  date: string;
-  verified: boolean;
-}
-
-// Mock data
-const mockProduct: Product = {
-  _id: '1',
-  name: 'Bouquet Romantique Éternel',
-  description: 'Un magnifique bouquet composé de roses rouges premium, de roses blanches délicates et de verdure fraîche. Parfait pour exprimer vos sentiments les plus profonds. Chaque rose est soigneusement sélectionnée pour sa beauté et sa fraîcheur exceptionnelle.',
-  price: 45.90,
-  category: 'bouquets',
-  subcategory: 'romantique',
-  images: [
-    '/api/placeholder/600/400',
-    '/api/placeholder/600/400',
-    '/api/placeholder/600/400',
-    '/api/placeholder/600/400'
-  ],
-  stock: 8,
-  isActive: true,
-  tags: ['roses', 'romantique', 'rouge', 'blanc', 'saint-valentin'],
-  seo: {
-    title: 'Bouquet Romantique Éternel - Roses Premium',
-    description: 'Bouquet de roses rouges et blanches pour vos moments romantiques',
-    keywords: ['bouquet', 'roses', 'romantique', 'saint-valentin', 'amour']
-  },
-  dimensions: {
-    height: 35,
-    width: 25,
-    depth: 25
-  },
-  care: {
-    difficulty: 'facile',
-    watering: 'Changer l\'eau tous les 2-3 jours',
-    light: 'Éviter la lumière directe du soleil',
-    temperature: 'Conserver à température ambiante (18-22°C)'
-  },
-  averageRating: 4.8,
-  reviewCount: 23
-};
-
-const mockReviews: Review[] = [
-  {
-    _id: '1',
-    author: 'Marie L.',
-    rating: 5,
-    comment: 'Absolument magnifique ! Les roses étaient fraîches et le bouquet parfaitement arrangé. Ma femme était aux anges.',
-    date: '2024-01-15',
-    verified: true
-  },
-  {
-    _id: '2',
-    author: 'Pierre M.',
-    rating: 4,
-    comment: 'Très beau bouquet, livraison rapide. Une rose avait quelques pétales abîmés mais l\'ensemble était très bien.',
-    date: '2024-01-10',
-    verified: true
-  },
-  {
-    _id: '3',
-    author: 'Sophie R.',
-    rating: 5,
-    comment: 'Service impeccable ! Le bouquet a duré plus d\'une semaine en suivant les conseils d\'entretien.',
-    date: '2024-01-08',
-    verified: false
-  }
-];
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const [product, setProduct] = useState<Product>(mockProduct);
-  const [reviews, setReviews] = useState<Review[]>(mockReviews);
+  const router = useRouter();
+  
+  // États
+  const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isInWishlist, setIsInWishlist] = useState(false);
-  const [activeTab, setActiveTab] = useState<'description' | 'care' | 'reviews'>('description');
+  const [activeTab, setActiveTab] = useState<'description' | 'care'>('description');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addToCart = () => {
-    // Logic to add to cart
-    console.log(`Added ${quantity} x ${product.name} to cart`);
+  // Charger les données du produit depuis l'API
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!params.id) return;
+      
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch(`/api/products/${params.id}`, {
+          method: 'GET',
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data.product) {
+            setProduct(data.data.product);
+          } else {
+            throw new Error('Produit non trouvé');
+          }
+        } else if (response.status === 404) {
+          setError('Produit non trouvé');
+        } else {
+          throw new Error('Erreur lors du chargement du produit');
+        }
+      } catch (error: any) {
+        console.error('Erreur chargement produit:', error);
+        setError(error.message || 'Erreur lors du chargement du produit');
+        toast.error('Erreur lors du chargement du produit');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [params.id]);
+
+  // Fonction pour ajouter au panier (sans vérification de stock)
+  const addToCart = async () => {
+    if (!product || isAddingToCart) return;
+    
+    try {
+      setIsAddingToCart(true);
+
+      // Appel API pour ajouter au panier
+      const response = await fetch('/api/cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          productId: product._id,
+          quantity: quantity
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(data.message || 'Produit ajouté au panier');
+        
+        // Réinitialiser la quantité à 1
+        setQuantity(1);
+        
+      } else {
+        throw new Error(data.error?.message || 'Erreur lors de l\'ajout au panier');
+      }
+
+    } catch (error: any) {
+      console.error('Erreur addToCart:', error);
+      toast.error(error.message || 'Erreur lors de l\'ajout au panier');
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
 
   const toggleWishlist = () => {
     setIsInWishlist(!isInWishlist);
+    toast.success(isInWishlist ? 'Retiré des favoris' : 'Ajouté aux favoris');
   };
 
-  const shareProduct = () => {
+  const shareProduct = async () => {
+    if (!product) return;
+
     if (navigator.share) {
-      navigator.share({
-        title: product.name,
-        text: product.description,
-        url: window.location.href,
-      });
+      try {
+        await navigator.share({
+          title: product.name,
+          text: product.description,
+          url: window.location.href,
+        });
+      } catch (error) {
+        console.log('Partage annulé');
+      }
     } else {
       // Fallback pour copier le lien
-      navigator.clipboard.writeText(window.location.href);
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success('Lien copié dans le presse-papiers');
+      } catch (error) {
+        toast.error('Impossible de copier le lien');
+      }
     }
   };
 
@@ -163,6 +173,52 @@ export default function ProductDetailPage() {
     'modéré': 'text-yellow-600 bg-yellow-50',
     'difficile': 'text-red-600 bg-red-50'
   };
+
+  // États de chargement et d'erreur
+  if (isLoading) {
+    return (
+      <>
+        <Header />
+        <main className="min-h-screen bg-gray-50 pt-16 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Chargement du produit...</p>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <>
+        <Header />
+        <main className="min-h-screen bg-gray-50 pt-16">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <Card>
+              <CardContent className="text-center py-16">
+                <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                  {error || 'Produit non trouvé'}
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Le produit que vous recherchez n'existe pas ou n'est plus disponible.
+                </p>
+                <div className="space-x-4">
+                  <Button onClick={() => router.back()} variant="outline">
+                    Retour
+                  </Button>
+                  <Button onClick={() => router.push('/produits')}>
+                    Voir tous les produits
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
@@ -173,9 +229,13 @@ export default function ProductDetailPage() {
           {/* Breadcrumb */}
           <nav className="mb-8">
             <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <a href="/" className="hover:text-primary-600">Accueil</a>
+              <button onClick={() => router.push('/')} className="hover:text-primary-600">
+                Accueil
+              </button>
               <span>/</span>
-              <a href="/produits" className="hover:text-primary-600">Produits</a>
+              <button onClick={() => router.push('/produits')} className="hover:text-primary-600">
+                Produits
+              </button>
               <span>/</span>
               <span className="text-gray-900">{product.name}</span>
             </div>
@@ -186,134 +246,144 @@ export default function ProductDetailPage() {
             {/* Images */}
             <div className="space-y-4">
               {/* Image principale */}
-              <div className="aspect-square bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="w-full h-full bg-gradient-to-br from-primary-100 to-pink-100 flex items-center justify-center">
-                  <span className="text-8xl opacity-40">🌹</span>
-                </div>
+              <div className="aspect-square bg-white rounded-2xl shadow-lg overflow-hidden relative">
+                {product.images && product.images.length > 0 ? (
+                  <Image
+                    src={product.images[selectedImage] || '/placeholder-product.jpg'}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-primary-100 to-pink-100 flex items-center justify-center">
+                    <Package className="w-24 h-24 text-primary-300" />
+                  </div>
+                )}
+                
+                {/* Navigation images */}
+                {product.images && product.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedImage(prev => prev === 0 ? product.images.length - 1 : prev - 1)}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg transition-all"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setSelectedImage(prev => prev === product.images.length - 1 ? 0 : prev + 1)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-lg transition-all"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
               </div>
               
               {/* Miniatures */}
-              <div className="grid grid-cols-4 gap-2">
-                {product.images.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                      selectedImage === index 
-                        ? 'border-primary-500 shadow-md' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="w-full h-full bg-gradient-to-br from-primary-100 to-pink-100 flex items-center justify-center">
-                      <span className="text-2xl opacity-60">🌹</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              {product.images && product.images.length > 1 && (
+                <div className="grid grid-cols-4 gap-2">
+                  {product.images.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                        selectedImage === index 
+                          ? 'border-primary-500 ring-2 ring-primary-200' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <Image
+                        src={image}
+                        alt={`${product.name} - vue ${index + 1}`}
+                        width={100}
+                        height={100}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Informations produit */}
             <div className="space-y-6">
               
-              {/* En-tête */}
+              {/* Header produit */}
               <div>
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">
                       {product.name}
                     </h1>
-                    
-                    {/* Rating */}
-                    {product.averageRating && (
-                      <div className="flex items-center space-x-2 mb-4">
-                        <div className="flex text-yellow-400">
-                          {[...Array(5)].map((_, i) => (
-                            <Star 
-                              key={i} 
-                              className={`w-5 h-5 ${i < Math.floor(product.averageRating!) ? 'fill-current' : ''}`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-sm text-gray-600">
-                          {product.averageRating} ({product.reviewCount} avis)
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex items-center space-x-4">
+                      <Badge variant="secondary">{product.category}</Badge>
+                      {product.difficulty && (
+                        <Badge className={difficultyColors[product.difficulty]}>
+                          Entretien {product.difficulty}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   
-                  {/* Actions rapides */}
-                  <div className="flex space-x-2">
+                  <div className="flex items-center space-x-2">
                     <Button
                       variant="outline"
-                      size="icon"
+                      size="sm"
                       onClick={toggleWishlist}
                       className={isInWishlist ? 'text-red-500 border-red-200' : ''}
                     >
-                      <Heart className={`w-5 h-5 ${isInWishlist ? 'fill-current' : ''}`} />
+                      <Heart className={`w-4 h-4 ${isInWishlist ? 'fill-current' : ''}`} />
                     </Button>
-                    <Button variant="outline" size="icon" onClick={shareProduct}>
-                      <Share2 className="w-5 h-5" />
+                    <Button variant="outline" size="sm" onClick={shareProduct}>
+                      <Share2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
 
                 {/* Prix */}
-                <div className="flex items-baseline space-x-2 mb-4">
-                  <span className="text-4xl font-bold text-primary-600">
+                <div className="mb-6">
+                  <div className="text-3xl font-bold text-green-600">
                     {product.price.toFixed(2)}€
-                  </span>
-                  <span className="text-lg text-gray-500">TTC</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Prix TTC • Livraison incluse
+                  </p>
                 </div>
 
-                {/* Stock */}
-                <div className="flex items-center space-x-2 mb-6">
-                  {product.stock > 0 ? (
-                    <>
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-green-700 font-medium">
-                        En stock ({product.stock} disponibles)
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                      <span className="text-sm text-red-700 font-medium">
-                        Rupture de stock
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {product.tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
+                {/* Toujours disponible */}
+                <div className="mb-6">
+                  <p className="text-sm text-green-600">
+                    ✓ Création sur mesure - Toujours disponible
+                  </p>
                 </div>
               </div>
 
-              {/* Sélection quantité */}
-              <div className="bg-white p-6 rounded-xl shadow-lg">
-                <div className="flex items-center justify-between mb-4">
-                  <label className="text-sm font-medium text-gray-700">Quantité</label>
-                  <div className="flex items-center border border-gray-300 rounded-lg">
+              {/* Sélecteur de quantité */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Quantité
+                  </label>
+                  <div className="flex items-center space-x-3">
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant="outline"
+                      size="sm"
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
                       disabled={quantity <= 1}
                       className="h-10 w-10"
                     >
                       <Minus className="w-4 h-4" />
                     </Button>
-                    <span className="px-4 py-2 text-center min-w-[3rem]">{quantity}</span>
+                    
+                    <span className="font-medium text-lg min-w-[3rem] text-center">
+                      {quantity}
+                    </span>
+                    
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                      disabled={quantity >= product.stock}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setQuantity(quantity + 1)}
                       className="h-10 w-10"
                     >
                       <Plus className="w-4 h-4" />
@@ -325,14 +395,27 @@ export default function ProductDetailPage() {
                 <div className="space-y-3">
                   <Button 
                     onClick={addToCart} 
-                    disabled={product.stock === 0}
+                    disabled={!product.isActive || isAddingToCart}
                     className="w-full h-12 text-lg"
                   >
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    Ajouter au panier
+                    {isAddingToCart ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Ajout en cours...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-5 h-5 mr-2" />
+                        Ajouter au panier
+                      </>
+                    )}
                   </Button>
                   
-                  <Button variant="outline" className="w-full h-12">
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-12"
+                    disabled={!product.isActive}
+                  >
                     Acheter maintenant
                   </Button>
                 </div>
@@ -362,7 +445,7 @@ export default function ProductDetailPage() {
                   <Shield className="w-6 h-6 text-primary-600 flex-shrink-0" />
                   <div>
                     <div className="font-medium text-sm text-gray-900">Fraîcheur garantie</div>
-                    <div className="text-xs text-gray-600">Fleurs du jour</div>
+                    <div className="text-xs text-gray-600">Créations fraîches</div>
                   </div>
                 </div>
                 
@@ -370,264 +453,123 @@ export default function ProductDetailPage() {
                   <Award className="w-6 h-6 text-primary-600 flex-shrink-0" />
                   <div>
                     <div className="font-medium text-sm text-gray-900">Savoir-faire</div>
-                    <div className="text-xs text-gray-600">Artisan fleuriste</div>
+                    <div className="text-xs text-gray-600">Créations d'expert</div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Onglets détails */}
+          {/* Onglets d'informations */}
           <div className="mt-16">
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <Tabs value={activeTab} onValueChange={(value: any) => setActiveTab(value)}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="care">Entretien</TabsTrigger>
+              </TabsList>
               
-              {/* Navigation onglets */}
-              <div className="border-b border-gray-200">
-                <nav className="flex space-x-8 px-6">
-                  {[
-                    { id: 'description', label: 'Description', icon: Info },
-                    { id: 'care', label: 'Entretien', icon: Heart },
-                    { id: 'reviews', label: 'Avis clients', icon: Star }
-                  ].map((tab) => {
-                    const Icon = tab.icon;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                          activeTab === tab.id
-                            ? 'border-primary-500 text-primary-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4" />
-                        <span>{tab.label}</span>
-                        {tab.id === 'reviews' && (
-                          <Badge variant="secondary" className="ml-1">
-                            {product.reviewCount}
-                          </Badge>
-                        )}
-                      </button>
-                    );
-                  })}
-                </nav>
-              </div>
-
-              {/* Contenu onglets */}
-              <div className="p-6">
-                {activeTab === 'description' && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-4">Description</h3>
-                      <p className="text-gray-600 leading-relaxed text-lg">
+              <TabsContent value="description" className="mt-8">
+                <Card>
+                  <CardContent className="p-8">
+                    <div className="prose max-w-none">
+                      <p className="text-gray-700 leading-relaxed text-lg">
                         {product.description}
                       </p>
-                    </div>
-
-                    {product.dimensions && (
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-3">Dimensions</h4>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="text-center p-4 bg-gray-50 rounded-lg">
-                            <div className="text-2xl font-bold text-primary-600">
-                              {product.dimensions.height}cm
-                            </div>
-                            <div className="text-sm text-gray-600">Hauteur</div>
-                          </div>
-                          <div className="text-center p-4 bg-gray-50 rounded-lg">
-                            <div className="text-2xl font-bold text-primary-600">
-                              {product.dimensions.width}cm
-                            </div>
-                            <div className="text-sm text-gray-600">Largeur</div>
-                          </div>
-                          <div className="text-center p-4 bg-gray-50 rounded-lg">
-                            <div className="text-2xl font-bold text-primary-600">
-                              {product.dimensions.depth}cm
-                            </div>
-                            <div className="text-sm text-gray-600">Profondeur</div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {activeTab === 'care' && product.care && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                        Conseils d'entretien
-                      </h3>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <div className="flex items-center space-x-3">
-                            <span className="text-lg">💧</span>
-                            <div>
-                              <h4 className="font-medium text-gray-900">Arrosage</h4>
-                              <p className="text-sm text-gray-600">{product.care.watering}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-3">
-                            <span className="text-lg">☀️</span>
-                            <div>
-                              <h4 className="font-medium text-gray-900">Exposition</h4>
-                              <p className="text-sm text-gray-600">{product.care.light}</p>
-                            </div>
-                          </div>
+                      {product.composition && (
+                        <div className="mt-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Composition</h3>
+                          <p className="text-gray-700">{product.composition}</p>
                         </div>
-                        
-                        <div className="space-y-4">
-                          <div className="flex items-center space-x-3">
-                            <span className="text-lg">🌡️</span>
-                            <div>
-                              <h4 className="font-medium text-gray-900">Température</h4>
-                              <p className="text-sm text-gray-600">{product.care.temperature}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-3">
-                            <span className="text-lg">📊</span>
-                            <div>
-                              <h4 className="font-medium text-gray-900">Difficulté</h4>
-                              <Badge className={difficultyColors[product.care.difficulty]}>
-                                {product.care.difficulty}
+                      )}
+                      
+                      {product.dimensions && (
+                        <div className="mt-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Dimensions</h3>
+                          <p className="text-gray-700">{product.dimensions}</p>
+                        </div>
+                      )}
+
+                      {product.tags && product.tags.length > 0 && (
+                        <div className="mt-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3">Tags</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {product.tags.map((tag, index) => (
+                              <Badge key={index} variant="outline">
+                                {tag}
                               </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'reviews' && (
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-semibold text-gray-900">
-                        Avis clients ({reviews.length})
-                      </h3>
-                      <Button variant="outline" size="sm">
-                        Écrire un avis
-                      </Button>
-                    </div>
-
-                    {/* Résumé des notes */}
-                    <div className="bg-gray-50 p-6 rounded-xl">
-                      <div className="flex items-center space-x-6">
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-gray-900">
-                            {product.averageRating}
-                          </div>
-                          <div className="flex text-yellow-400 mb-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star 
-                                key={i} 
-                                className={`w-4 h-4 ${i < Math.floor(product.averageRating!) ? 'fill-current' : ''}`}
-                              />
                             ))}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            {product.reviewCount} avis
-                          </div>
+                        </div>
+                      )}
+
+                      {/* Informations produit supplémentaires */}
+                      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-gray-200">
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Catégorie</h4>
+                          <p className="text-gray-600">{product.category}</p>
                         </div>
                         
-                        <div className="flex-1">
-                          {[5, 4, 3, 2, 1].map((rating) => {
-                            const count = reviews.filter(r => Math.floor(r.rating) === rating).length;
-                            const percentage = (count / reviews.length) * 100;
-                            
-                            return (
-                              <div key={rating} className="flex items-center space-x-3 mb-1">
-                                <span className="text-sm text-gray-600 w-6">{rating}</span>
-                                <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                                <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                  <div 
-                                    className="bg-yellow-400 h-2 rounded-full"
-                                    style={{ width: `${percentage}%` }}
-                                  ></div>
-                                </div>
-                                <span className="text-sm text-gray-600 w-8">{count}</span>
-                              </div>
-                            );
-                          })}
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Référence</h4>
+                          <p className="text-gray-600 font-mono text-sm">{product._id}</p>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Disponibilité</h4>
+                          <p className="text-gray-600">Création sur mesure</p>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Délai</h4>
+                          <p className="text-gray-600">24-48h</p>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Liste des avis */}
-                    <div className="space-y-6">
-                      {reviews.map((review) => (
-                        <div key={review._id} className="border-b border-gray-200 pb-6 last:border-b-0">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <div className="flex items-center space-x-2 mb-1">
-                                <span className="font-medium text-gray-900">
-                                  {review.author}
-                                </span>
-                                {review.verified && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    ✓ Achat vérifié
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className="flex text-yellow-400">
-                                  {[...Array(5)].map((_, i) => (
-                                    <Star 
-                                      key={i} 
-                                      className={`w-4 h-4 ${i < review.rating ? 'fill-current' : ''}`}
-                                    />
-                                  ))}
-                                </div>
-                                <span className="text-sm text-gray-500">
-                                  {new Date(review.date).toLocaleDateString('fr-FR')}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <p className="text-gray-600 leading-relaxed">
-                            {review.comment}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Produits similaires */}
-          <div className="mt-16">
-            <h2 className="text-2xl font-bold text-gray-900 mb-8">
-              Vous pourriez aussi aimer
-            </h2>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Mock related products */}
-              {[1, 2, 3, 4].map((i) => (
-                <Card key={i} className="group hover:shadow-lg transition-all duration-300">
-                  <div className="aspect-square bg-gradient-to-br from-primary-100 to-pink-100 flex items-center justify-center">
-                    <span className="text-4xl opacity-40">🌺</span>
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-medium text-gray-900 mb-2">
-                      Composition {i}
-                    </h3>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-primary-600">
-                        {(29.90 + i * 10).toFixed(2)}€
-                      </span>
-                      <Button size="sm" variant="outline">
-                        Voir
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+              </TabsContent>
+              
+              <TabsContent value="care" className="mt-8">
+                <Card>
+                  <CardContent className="p-8">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                          Instructions d'entretien
+                        </h3>
+                        <p className="text-gray-700 leading-relaxed">
+                          {product.entretien || product.careInstructions || 'Instructions d\'entretien spécifiques non renseignées pour ce produit.'}
+                        </p>
+                      </div>
+                      
+                      {product.difficulty && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                            Niveau de difficulté
+                          </h3>
+                          <Badge className={difficultyColors[product.difficulty]}>
+                            {product.difficulty.charAt(0).toUpperCase() + product.difficulty.slice(1)}
+                          </Badge>
+                        </div>
+                      )}
+                      
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                          Conseils généraux
+                        </h3>
+                        <ul className="space-y-2 text-gray-700">
+                          <li>• Manipulez avec précaution lors de la réception</li>
+                          <li>• Respectez les conditions de conservation recommandées</li>
+                          <li>• Suivez les instructions spécifiques au produit</li>
+                          <li>• Contactez-nous en cas de questions</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </main>

@@ -1,4 +1,3 @@
-// src/app/admin/produits/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -45,22 +44,29 @@ import {
 import AdminLayout from '@/components/admin/AdminLayout';
 import { toast } from 'sonner';
 
+// Catégories fixes - bonnes catégories
+const CATEGORIES = [
+  'Bouquets',
+  'Fleurs de saisons',
+  'Compositions piquées', 
+  'Roses',
+  'Orchidées',
+  'Deuil',
+  'Abonnement'
+];
+
 // Types
 interface Product {
   _id: string;
   name: string;
   description: string;
   price: number;
-  category: 'bouquets' | 'compositions' | 'plantes' | 'evenements';
-  subcategory: string;
+  category: string;
   images: string[];
   isActive: boolean;
   tags: string[];
-  seo: {
-    title: string;
-    description: string;
-    keywords: string[];
-  };
+  entretien?: string;
+  motsClesSEO?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -69,37 +75,22 @@ interface ProductForm {
   name: string;
   description: string;
   price: number;
-  category: Product['category'];
-  subcategory: string;
+  category: string;
   tags: string[];
   isActive: boolean;
-  seo: {
-    title: string;
-    description: string;
-    keywords: string[];
-  };
+  entretien: string;
+  motsClesSEO: string[];
 }
-
-const categories = {
-  bouquets: ['romantique', 'anniversaire', 'deuil', 'naissance', 'félicitations'],
-  compositions: ['moderne', 'classique', 'zen', 'colorée', 'exotique'],
-  plantes: ['intérieur', 'extérieur', 'dépolluante', 'grasse', 'fleurie'],
-  evenements: ['mariage', 'baptême', 'communion', 'anniversaire', 'entreprise']
-};
 
 const initialForm: ProductForm = {
   name: '',
   description: '',
   price: 0,
-  category: 'bouquets',
-  subcategory: '',
+  category: 'Bouquets',
   tags: [],
   isActive: true,
-  seo: {
-    title: '',
-    description: '',
-    keywords: []
-  }
+  entretien: '',
+  motsClesSEO: []
 };
 
 // Composant d'upload d'images
@@ -220,14 +211,18 @@ function ProductForm({
       description: product.description,
       price: product.price,
       category: product.category,
-      subcategory: product.subcategory,
       tags: product.tags,
       isActive: product.isActive,
-      seo: product.seo
+      entretien: product.entretien || '',
+      motsClesSEO: product.motsClesSEO || []
     } : initialForm
   );
   const [images, setImages] = useState<string[]>(product?.images || []);
   const [isSaving, setIsSaving] = useState(false);
+
+  // États pour les inputs de tags et mots-clés
+  const [tagInput, setTagInput] = useState('');
+  const [motsClesInput, setMotsClesInput] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,155 +245,251 @@ function ProductForm({
     }
   };
 
+  // Gestion des tags
+  const addTag = () => {
+    if (tagInput.trim() && !form.tags.includes(tagInput.trim())) {
+      setForm(prev => ({
+        ...prev,
+        tags: [...prev.tags, tagInput.trim()]
+      }));
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setForm(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
+    } else if (e.key === ',' || e.key === ';') {
+      e.preventDefault();
+      // Traiter les tags séparés par virgule
+      const newTags = tagInput.split(/[,;]/).map(tag => tag.trim()).filter(tag => tag && !form.tags.includes(tag));
+      setForm(prev => ({
+        ...prev,
+        tags: [...prev.tags, ...newTags]
+      }));
+      setTagInput('');
+    }
+  };
+
+  // Gestion des mots-clés SEO
+  const addMotCle = () => {
+    if (motsClesInput.trim() && !form.motsClesSEO.includes(motsClesInput.trim())) {
+      setForm(prev => ({
+        ...prev,
+        motsClesSEO: [...prev.motsClesSEO, motsClesInput.trim()]
+      }));
+      setMotsClesInput('');
+    }
+  };
+
+  const removeMotCle = (motCleToRemove: string) => {
+    setForm(prev => ({
+      ...prev,
+      motsClesSEO: prev.motsClesSEO.filter(motCle => motCle !== motCleToRemove)
+    }));
+  };
+
+  const handleMotCleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addMotCle();
+    } else if (e.key === ',' || e.key === ';') {
+      e.preventDefault();
+      // Traiter les mots-clés séparés par virgule
+      const newMotsCles = motsClesInput.split(/[,;]/).map(motCle => motCle.trim()).filter(motCle => motCle && !form.motsClesSEO.includes(motCle));
+      setForm(prev => ({
+        ...prev,
+        motsClesSEO: [...prev.motsClesSEO, ...newMotsCles]
+      }));
+      setMotsClesInput('');
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Informations de base */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="name">Nom du produit *</Label>
-          <Input
-            id="name"
-            value={form.name}
-            onChange={(e) => setForm({...form, name: e.target.value})}
-            placeholder="Ex: Bouquet Romantique Rose"
-          />
-        </div>
-        <div>
-          <Label htmlFor="price">Prix (€) *</Label>
-          <Input
-            id="price"
-            type="number"
-            step="0.01"
-            min="0"
-            value={form.price}
-            onChange={(e) => setForm({...form, price: parseFloat(e.target.value) || 0})}
-            placeholder="45.90"
-          />
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Informations de base</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="name">Nom du produit *</Label>
+              <Input
+                id="name"
+                value={form.name}
+                onChange={(e) => setForm({...form, name: e.target.value})}
+                placeholder="Ex: Bouquet de roses rouges"
+              />
+            </div>
+            <div>
+              <Label htmlFor="price">Prix (€) *</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.price}
+                onChange={(e) => setForm({...form, price: parseFloat(e.target.value) || 0})}
+                placeholder="45.90"
+              />
+            </div>
+          </div>
 
-      <div>
-        <Label htmlFor="description">Description *</Label>
-        <Textarea
-          id="description"
-          value={form.description}
-          onChange={(e: any) => setForm({...form, description: e.target.value})}
-          placeholder="Décrivez votre création florale..."
-          rows={4}
-        />
-      </div>
+          <div>
+            <Label htmlFor="description">Description *</Label>
+            <Textarea
+              id="description"
+              value={form.description}
+              onChange={(e) => setForm({...form, description: e.target.value})}
+              placeholder="Décrivez votre création florale..."
+              rows={4}
+            />
+          </div>
 
-      {/* Catégorie et sous-catégorie */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Catégorie *</Label>
-          <Select 
-            value={form.category} 
-            onValueChange={(value: Product['category']) => setForm({
-              ...form, 
-              category: value,
-              subcategory: '' // Reset subcategory
-            })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="bouquets">Bouquets</SelectItem>
-              <SelectItem value="compositions">Compositions</SelectItem>
-              <SelectItem value="plantes">Plantes</SelectItem>
-              <SelectItem value="evenements">Événements</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Sous-catégorie</Label>
-          <Select 
-            value={form.subcategory} 
-            onValueChange={(value: any) => setForm({...form, subcategory: value})}
-            disabled={!form.category}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choisir une sous-catégorie" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories[form.category]?.map(sub => (
-                <SelectItem key={sub} value={sub}>
-                  {sub.charAt(0).toUpperCase() + sub.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+          {/* Catégorie uniquement */}
+          <div>
+            <Label>Catégorie *</Label>
+            <Select 
+              value={form.category} 
+              onValueChange={(value) => setForm({...form, category: value})}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map(category => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Tags */}
-      <div>
-        <Label htmlFor="tags">Tags (séparés par des virgules)</Label>
-        <Input
-          id="tags"
-          value={form.tags.join(', ')}
-          onChange={(e) => setForm({
-            ...form, 
-            tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean)
-          })}
-          placeholder="rose, romantique, rouge"
-        />
-      </div>
+      {/* Tags et SEO */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tags et SEO</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          
+          {/* Tags */}
+          <div>
+            <Label htmlFor="tags">Tags</Label>
+            <div className="space-y-2">
+              <div className="flex space-x-2">
+                <Input
+                  id="tags"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  placeholder="Tapez un tag et appuyez sur Entrée ou virgule"
+                />
+                <Button type="button" onClick={addTag} variant="outline" size="sm">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Séparez les tags par une virgule (,) ou appuyez sur Entrée
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {form.tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(tag)}
+                      className="hover:text-red-500"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Mots-clés SEO */}
+          <div>
+            <Label htmlFor="motsClesSEO">Mots-clés SEO</Label>
+            <div className="space-y-2">
+              <div className="flex space-x-2">
+                <Input
+                  id="motsClesSEO"
+                  value={motsClesInput}
+                  onChange={(e) => setMotsClesInput(e.target.value)}
+                  onKeyDown={handleMotCleKeyDown}
+                  placeholder="Tapez un mot-clé et appuyez sur Entrée ou virgule"
+                />
+                <Button type="button" onClick={addMotCle} variant="outline" size="sm">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Séparez les mots-clés par une virgule (,) ou appuyez sur Entrée
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {form.motsClesSEO.map((motCle, index) => (
+                  <Badge key={index} variant="outline" className="flex items-center gap-1">
+                    {motCle}
+                    <button
+                      type="button"
+                      onClick={() => removeMotCle(motCle)}
+                      className="hover:text-red-500"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Images */}
-      <div>
-        <Label>Images *</Label>
-        <ImageUpload images={images} onImagesChange={setImages} />
-        <p className="text-sm text-gray-500 mt-1">
-          La première image sera utilisée comme image principale
-        </p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Images *</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ImageUpload images={images} onImagesChange={setImages} />
+          <p className="text-sm text-gray-500 mt-2">
+            La première image sera utilisée comme image principale
+          </p>
+        </CardContent>
+      </Card>
 
-      {/* SEO */}
-      <div className="space-y-4 border-t pt-4">
-        <h3 className="font-medium text-gray-900">Référencement (SEO)</h3>
-        <div>
-          <Label htmlFor="seoTitle">Titre SEO</Label>
-          <Input
-            id="seoTitle"
-            value={form.seo.title}
-            onChange={(e) => setForm({
-              ...form, 
-              seo: {...form.seo, title: e.target.value}
-            })}
-            placeholder="Titre optimisé pour les moteurs de recherche"
-          />
-        </div>
-        <div>
-          <Label htmlFor="seoDescription">Description SEO</Label>
-          <Textarea
-            id="seoDescription"
-            value={form.seo.description}
-            onChange={(e: any) => setForm({
-              ...form, 
-              seo: {...form.seo, description: e.target.value}
-            })}
-            placeholder="Description pour les moteurs de recherche"
-            rows={2}
-          />
-        </div>
-        <div>
-          <Label htmlFor="seoKeywords">Mots-clés SEO</Label>
-          <Input
-            id="seoKeywords"
-            value={form.seo.keywords.join(', ')}
-            onChange={(e) => setForm({
-              ...form, 
-              seo: {
-                ...form.seo, 
-                keywords: e.target.value.split(',').map(kw => kw.trim()).filter(Boolean)
-              }
-            })}
-            placeholder="bouquet, fleurs, livraison"
-          />
-        </div>
-      </div>
+      {/* Détails optionnels */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Détails optionnels</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div>
+            <Label htmlFor="entretien">Instructions d'entretien</Label>
+            <Textarea
+              id="entretien"
+              value={form.entretien}
+              onChange={(e) => setForm({...form, entretien: e.target.value})}
+              placeholder="Comment entretenir ce produit..."
+              rows={3}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Actions */}
       <DialogFooter>
@@ -427,7 +518,7 @@ export default function AdminProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/admin/products', {
+      const response = await fetch('/api/products', {
         method: 'GET',
         credentials: 'include'
       });
@@ -454,8 +545,8 @@ export default function AdminProductsPage() {
       };
 
       const url = editingProduct 
-        ? `/api/admin/products/${editingProduct._id}`
-        : '/api/admin/products';
+        ? `/api/products/${editingProduct._id}`
+        : '/api/products';
       
       const method = editingProduct ? 'PUT' : 'POST';
 
@@ -485,7 +576,7 @@ export default function AdminProductsPage() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
 
     try {
-      const response = await fetch(`/api/admin/products/${productId}`, {
+      const response = await fetch(`/api/products/${productId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -504,7 +595,7 @@ export default function AdminProductsPage() {
 
   const handleToggleActive = async (productId: string, isActive: boolean) => {
     try {
-      const response = await fetch(`/api/admin/products/${productId}`, {
+      const response = await fetch(`/api/products/${productId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -599,10 +690,11 @@ export default function AdminProductsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Toutes catégories</SelectItem>
-                    <SelectItem value="bouquets">Bouquets</SelectItem>
-                    <SelectItem value="compositions">Compositions</SelectItem>
-                    <SelectItem value="plantes">Plantes</SelectItem>
-                    <SelectItem value="evenements">Événements</SelectItem>
+                    {CATEGORIES.map(category => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
