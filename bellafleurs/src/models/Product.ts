@@ -20,25 +20,6 @@ const SEOSchema = new Schema({
   }]
 }, { _id: false });
 
-// Schéma pour les dimensions
-const DimensionsSchema = new Schema({
-  height: {
-    type: Number,
-    min: [0, 'Height must be positive'],
-    max: [500, 'Height cannot exceed 500cm']
-  },
-  width: {
-    type: Number,
-    min: [0, 'Width must be positive'],
-    max: [500, 'Width cannot exceed 500cm']
-  },
-  depth: {
-    type: Number,
-    min: [0, 'Depth must be positive'],
-    max: [500, 'Depth cannot exceed 500cm']
-  }
-}, { _id: false });
-
 // Schéma pour les conseils d'entretien
 const CareSchema = new Schema({
   difficulty: {
@@ -90,27 +71,15 @@ const ProductSchema = new Schema({
     type: String,
     required: [true, 'Category is required'],
     enum: {
-      values: ['bouquets', 'compositions', 'plantes', 'evenements'],
+      values: ['Bouquets', 'Fleurs de saisons', 'Compositions piquées', 'Roses', 'Orchidées', 'Deuil', 'Abonnement'],
       message: 'Category must be one of: bouquets, compositions, plantes, evenements'
     }
-  },
-  subcategory: {
-    type: String,
-    required: [true, 'Subcategory is required'],
-    trim: true,
-    maxlength: [100, 'Subcategory cannot exceed 100 characters']
   },
   images: [{
     type: String,
     required: true,
     match: [/^https?:\/\/.+\.(jpg|jpeg|png|webp)(\?.*)?$/i, 'Please provide valid image URLs']
   }],
-  stock: {
-    type: Number,
-    required: [true, 'Stock quantity is required'],
-    min: [0, 'Stock cannot be negative'],
-    default: 0
-  },
   isActive: {
     type: Boolean,
     default: true
@@ -123,10 +92,6 @@ const ProductSchema = new Schema({
   }],
   seo: {
     type: SEOSchema,
-    required: true
-  },
-  dimensions: {
-    type: DimensionsSchema,
     required: false
   },
   care: {
@@ -144,12 +109,11 @@ ProductSchema.index({ name: 'text', description: 'text', tags: 'text' });
 ProductSchema.index({ category: 1, subcategory: 1 });
 ProductSchema.index({ price: 1 });
 ProductSchema.index({ isActive: 1 });
-ProductSchema.index({ stock: 1 });
 ProductSchema.index({ createdAt: -1 });
 ProductSchema.index({ tags: 1 });
 
 // Index composé pour les filtres
-ProductSchema.index({ category: 1, isActive: 1, stock: 1 });
+ProductSchema.index({ category: 1, isActive: 1 });
 ProductSchema.index({ price: 1, category: 1, isActive: 1 });
 
 // Middleware pre-save pour générer le SEO automatiquement si manquant
@@ -162,19 +126,6 @@ ProductSchema.pre('save', function(next) {
     };
   }
   next();
-});
-
-// Virtuals
-ProductSchema.virtual('isInStock').get(function() {
-  return this.stock > 0;
-});
-
-ProductSchema.virtual('isLowStock').get(function() {
-  return this.stock > 0 && this.stock <= 5;
-});
-
-ProductSchema.virtual('isOutOfStock').get(function() {
-  return this.stock === 0;
 });
 
 ProductSchema.virtual('mainImage').get(function() {
@@ -208,11 +159,11 @@ ProductSchema.statics.findByCategory = function(category: string) {
 };
 
 ProductSchema.statics.findInStock = function() {
-  return this.find({ stock: { $gt: 0 }, isActive: true });
+  return this.find({ isActive: true });
 };
 
 ProductSchema.statics.findLowStock = function() {
-  return this.find({ stock: { $gt: 0, $lte: 5 }, isActive: true });
+  return this.find({ isActive: true });
 };
 
 ProductSchema.statics.searchProducts = function(
@@ -229,7 +180,6 @@ ProductSchema.statics.searchProducts = function(
     if (filters.minPrice) query.price.$gte = filters.minPrice;
     if (filters.maxPrice) query.price.$lte = filters.maxPrice;
   }
-  if (filters.inStock) query.stock = { $gt: 0 };
   if (filters.tags && filters.tags.length > 0) {
     query.tags = { $in: filters.tags };
   }
@@ -251,20 +201,6 @@ ProductSchema.statics.searchProducts = function(
     query: this.find(query).sort(sort).skip(skip).limit(pagination.limit),
     countQuery: this.countDocuments(query)
   };
-};
-
-// Méthodes d'instance
-ProductSchema.methods.updateStock = function(quantity: number) {
-  this.stock = Math.max(0, this.stock + quantity);
-  return this.save();
-};
-
-ProductSchema.methods.reduceStock = function(quantity: number) {
-  if (this.stock < quantity) {
-    throw new Error(`Stock insuffisant. Stock disponible: ${this.stock}`);
-  }
-  this.stock -= quantity;
-  return this.save();
 };
 
 ProductSchema.methods.addTag = function(tag: string) {

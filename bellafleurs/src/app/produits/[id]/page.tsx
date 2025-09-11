@@ -38,7 +38,6 @@ interface Product {
   slug?: string;
   careInstructions?: string;
   difficulty?: 'facile' | 'modéré' | 'difficile';
-  dimensions?: string;
   composition?: string;
   entretien?: string;
   averageRating?: number;
@@ -480,13 +479,6 @@ export default function ProductDetailPage() {
                         <div className="mt-6">
                           <h3 className="text-lg font-semibold text-gray-900 mb-2">Composition</h3>
                           <p className="text-gray-700">{product.composition}</p>
-                        </div>
-                      )}
-                      
-                      {product.dimensions && (
-                        <div className="mt-6">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Dimensions</h3>
-                          <p className="text-gray-700">{product.dimensions}</p>
                         </div>
                       )}
 

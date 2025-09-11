@@ -280,7 +280,6 @@ export const MESSAGES = {
     validation: 'Données invalides',
     fileTooBig: 'Fichier trop volumineux',
     unsupportedFile: 'Type de fichier non supporté',
-    outOfStock: 'Produit en rupture de stock',
     paymentFailed: 'Échec du paiement',
     orderNotFound: 'Commande introuvable',
     loginFailed: 'Identifiants incorrects',

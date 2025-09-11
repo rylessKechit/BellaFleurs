@@ -39,7 +39,7 @@ export const registerSchema = userSchema.omit({ role: true }).extend({
   path: ["confirmPassword"]
 });
 
-// Validation pour les produits
+// ✅ CORRECTION: Validation pour les produits selon le formulaire frontend
 export const productSchema = z.object({
   name: z.string()
     .min(2, 'Le nom doit contenir au moins 2 caractères')
@@ -53,33 +53,43 @@ export const productSchema = z.object({
     .min(0.01, 'Le prix doit être supérieur à 0')
     .max(10000, 'Le prix ne peut pas dépasser 10 000€'),
   category: z.enum(['bouquets', 'compositions', 'plantes', 'evenements']),
-  subcategory: z.string()
-    .min(1, 'Sous-catégorie requise')
-    .max(100, 'Sous-catégorie trop longue'),
   images: z.array(z.string().url('URL d\'image invalide'))
     .min(1, 'Au moins une image est requise')
     .max(10, 'Maximum 10 images'),
-  stock: z.number()
-    .min(0, 'Le stock ne peut pas être négatif')
-    .max(9999, 'Stock maximum: 9999'),
   isActive: z.boolean().default(true),
+  
+  // ✅ Champs optionnels présents dans le formulaire
   tags: z.array(z.string().max(30, 'Tag trop long')).default([]),
-  seo: z.object({
-    title: z.string().max(60, 'Titre SEO maximum 60 caractères'),
-    description: z.string().max(160, 'Description SEO maximum 160 caractères'),
-    keywords: z.array(z.string().max(50)).default([])
-  }),
-  dimensions: z.object({
-    height: z.number().min(0).max(500),
-    width: z.number().min(0).max(500),
-    depth: z.number().min(0).max(500)
-  }).optional(),
-  care: z.object({
-    difficulty: z.enum(['facile', 'modéré', 'difficile']).default('facile'),
-    watering: z.string().max(200, 'Instructions d\'arrosage trop longues'),
-    light: z.string().max(200, 'Instructions de luminosité trop longues'),
-    temperature: z.string().max(200, 'Instructions de température trop longues')
-  }).optional()
+  entretien: z.string().max(2000, 'Instructions d\'entretien trop longues').optional(),
+  motsClesSEO: z.array(z.string().max(50, 'Mot-clé SEO trop long')).default([]),
+  
+  // ✅ Champs techniques/système (optionnels)
+  slug: z.string().optional(),
+  averageRating: z.number().min(0).max(5).default(0),
+  reviewsCount: z.number().min(0).default(0),
+  
+  // ✅ SUPPRIMÉ: subcategory, seo, care (non utilisés dans le formulaire)
+});
+
+// ✅ NOUVEAU: Schéma spécifique pour la création de produit (correspond exactement au frontend)
+export const createProductSchema = z.object({
+  // Champs obligatoires
+  name: z.string().min(2).max(200).trim(),
+  description: z.string().min(10).max(2000).trim(),
+  price: z.number().min(0.01).max(10000),
+  category: z.enum(['bouquets', 'compositions', 'plantes', 'evenements']),
+  images: z.array(z.string().url()).min(1).max(10),
+  
+  // Champs optionnels
+  isActive: z.boolean().default(true),
+  tags: z.array(z.string().max(30)).default([]),
+  entretien: z.string().max(2000).optional(),
+  motsClesSEO: z.array(z.string().max(50)).default([]),
+  
+  // ✅ BACKWARD COMPATIBILITY: Anciens champs qui peuvent encore être envoyés
+  careInstructions: z.string().optional(),
+  difficulty: z.string().optional(),
+  composition: z.string().optional(),
 });
 
 // Validation pour les commandes
@@ -135,7 +145,6 @@ export const updateOrderStatusSchema = z.object({
 // Validation pour les filtres de recherche
 export const productFiltersSchema = z.object({
   category: z.string().optional(),
-  subcategory: z.string().optional(),
   minPrice: z.number().min(0).optional(),
   maxPrice: z.number().min(0).optional(),
   inStock: z.boolean().optional(),
@@ -202,12 +211,33 @@ export type UserInput = z.infer<typeof userSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type ProductInput = z.infer<typeof productSchema>;
+export type CreateProductInput = z.infer<typeof createProductSchema>; // ✅ NOUVEAU TYPE
 export type OrderInput = z.infer<typeof orderSchema>;
 export type ProductFiltersInput = z.infer<typeof productFiltersSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
 export type UploadInput = z.infer<typeof uploadSchema>;
 export type QueryParamsInput = z.infer<typeof queryParamsSchema>;
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
+
+// ✅ NOUVEAU: Fonction d'aide pour valider un produit avec logs détaillés
+export function validateProductData(data: unknown): {
+  success: boolean;
+  data?: CreateProductInput;
+  errors?: z.ZodError;
+} {
+  try {
+    console.log('🔍 Validation des données produit:', data);
+    const result = createProductSchema.parse(data);
+    console.log('✅ Validation réussie:', result);
+    return { success: true, data: result };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error('❌ Erreurs de validation:', error.errors);
+      return { success: false, errors: error };
+    }
+    throw error;
+  }
+}
 
 // Fonctions d'aide pour la validation
 export function validateEmail(email: string): boolean {

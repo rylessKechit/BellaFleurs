@@ -12,7 +12,6 @@ export async function GET() {
     // Pour l'exemple, on prend les plus récents avec du stock
     const featuredProducts = await Product.find({
       isActive: true,
-      stock: { $gt: 0 }
     })
     .sort({ createdAt: -1 })
     .limit(8)

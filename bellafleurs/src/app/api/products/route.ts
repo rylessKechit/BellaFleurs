@@ -32,7 +32,6 @@ interface DBProduct {
   entretien?: string;
   careInstructions?: string;
   difficulty?: string;
-  dimensions?: string;
   composition?: string;
   createdAt?: Date;
   [key: string]: any;
@@ -54,7 +53,6 @@ interface FormattedProduct {
   entretien?: string;
   careInstructions?: string;
   difficulty?: string;
-  dimensions?: string;
   composition?: string;
   createdAt?: Date;
 }
@@ -149,7 +147,7 @@ export async function GET(request: NextRequest) {
         .sort(sortQuery)
         .skip(skip)
         .limit(limit)
-        .select('name description price images category isActive tags slug averageRating reviewsCount entretien careInstructions difficulty dimensions composition createdAt')
+        .select('name description price images category isActive tags slug averageRating reviewsCount entretien careInstructions difficulty composition createdAt')
         .lean() as Promise<DBProduct[]>,
       Product.countDocuments(filter)
     ]);
@@ -175,7 +173,6 @@ export async function GET(request: NextRequest) {
       entretien: product.entretien,
       careInstructions: product.careInstructions,
       difficulty: product.difficulty,
-      dimensions: product.dimensions,
       composition: product.composition,
       createdAt: product.createdAt
     }));
@@ -244,7 +241,6 @@ export async function POST(request: NextRequest) {
       entretien,
       careInstructions,
       difficulty,
-      dimensions,
       composition,
       motsClesSEO
     } = body;
@@ -323,7 +319,6 @@ export async function POST(request: NextRequest) {
       entretien: entretien?.trim() || '',
       careInstructions: careInstructions?.trim() || '',
       difficulty: difficulty || 'facile',
-      dimensions: dimensions?.trim() || '',
       composition: composition?.trim() || '',
       motsClesSEO: processedMotsClesSEO,
       averageRating: 0,

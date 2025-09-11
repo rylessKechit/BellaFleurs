@@ -1,4 +1,4 @@
-// src/app/api/cart/route.ts - Version MongoDB sans logique stock avec DELETE corrigé
+// src/app/api/cart/route.ts
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/cart - Ajouter un article au panier (sans vérification stock)
+// POST /api/cart - Ajouter un article au panier
 export async function POST(request: NextRequest) {
   try {
     await connectDB();

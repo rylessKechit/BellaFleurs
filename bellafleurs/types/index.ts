@@ -41,18 +41,12 @@ export interface IProduct extends BaseDocument {
   category: 'bouquets' | 'compositions' | 'plantes' | 'evenements';
   subcategory: string;
   images: string[];
-  stock: number;
   isActive: boolean;
   tags: string[];
   seo: {
     title: string;
     description: string;
     keywords: string[];
-  };
-  dimensions?: {
-    height: number;
-    width: number;
-    depth: number;
   };
   care?: {
     difficulty: 'facile' | 'modéré' | 'difficile';
@@ -326,18 +320,12 @@ export interface ProductFormData {
   category: IProduct['category'];
   subcategory: string;
   images: string[];
-  stock: number;
   isActive: boolean;
   tags: string[];
   seo: {
     title: string;
     description: string;
     keywords: string[];
-  };
-  dimensions?: {
-    height: number;
-    width: number;
-    depth: number;
   };
   care?: {
     difficulty: 'facile' | 'modéré' | 'difficile';

@@ -19,7 +19,6 @@ Site e-commerce moderne pour la boutique de fleurs Bella Fleurs, développé ave
 - **CRUD Produits** : Création, modification, suppression des produits
 - **Gestion Images** : Upload et organisation des photos produits
 - **Gestion Commandes** : Suivi, modification statut, communication client
-- **Gestion Stock** : Contrôle inventaire et alertes stock bas
 
 ## 🛠️ Stack Technique
 
@@ -188,7 +187,6 @@ bella-fleurs/
   category: 'bouquets' | 'compositions' | 'plantes' | 'evenements'
   subcategory: string
   images: string[] // URLs Cloudinary
-  stock: number
   isActive: boolean
   tags: string[]
   seo: {

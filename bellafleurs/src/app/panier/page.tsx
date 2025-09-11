@@ -26,7 +26,6 @@ interface CartItem {
   price: number;
   quantity: number;
   image: string;
-  stock: number;
   isActive: boolean;
 }
 
@@ -258,11 +257,6 @@ export default function CartPage() {
                               ⚠️ Produit plus disponible
                             </p>
                           )}
-                          {item.isActive && item.stock < 5 && (
-                            <p className="text-sm text-orange-600 mt-1">
-                              ⚠️ Plus que {item.stock} en stock
-                            </p>
-                          )}
                         </div>
 
                         {/* Contrôles quantité */}
@@ -285,7 +279,6 @@ export default function CartPage() {
                               size="sm"
                               onClick={() => updateQuantity(item._id, item.quantity + 1)}
                               disabled={
-                                item.quantity >= item.stock || 
                                 item.quantity >= 50 || 
                                 updatingItems.includes(item._id) ||
                                 !item.isActive

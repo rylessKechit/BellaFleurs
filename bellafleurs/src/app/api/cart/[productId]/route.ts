@@ -93,16 +93,6 @@ export async function PUT(
       }, { status: 404 });
     }
 
-    if (quantity > product.stock) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: `Stock insuffisant. Stock disponible: ${product.stock}`,
-          code: 'INSUFFICIENT_STOCK'
-        }
-      }, { status: 400 });
-    }
-
     // Mettre à jour la quantité via la méthode du modèle
     await cart.updateQuantity(productId, quantity);
 

@@ -178,20 +178,12 @@ CartSchema.methods.addItem = async function(this: ICart, productId: string, quan
     throw new Error('Produit non disponible');
   }
   
-  if (product.stock < quantity) {
-    throw new Error(`Stock insuffisant. Stock disponible: ${product.stock}`);
-  }
-  
   const existingItemIndex = this.items.findIndex(
     (item: any) => item.product.toString() === productId
   );
   
   if (existingItemIndex >= 0) {
     const newQuantity = this.items[existingItemIndex].quantity + quantity;
-    
-    if (newQuantity > product.stock) {
-      throw new Error(`Stock insuffisant. Stock disponible: ${product.stock}`);
-    }
     
     if (newQuantity > 50) {
       throw new Error('Quantité maximale par article: 50');
@@ -238,10 +230,6 @@ CartSchema.methods.updateQuantity = async function(this: ICart, productId: strin
   
   if (!product) {
     throw new Error('Produit introuvable');
-  }
-  
-  if (quantity > product.stock) {
-    throw new Error(`Stock insuffisant. Stock disponible: ${product.stock}`);
   }
   
   if (quantity > 50) {

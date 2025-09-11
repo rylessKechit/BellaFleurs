@@ -10,7 +10,7 @@ export async function GET() {
 
     // Agrégation pour compter les produits par catégorie
     const categoriesWithCounts = await Product.aggregate([
-      { $match: { isActive: true, stock: { $gt: 0 } } },
+      { $match: { isActive: true } },
       {
         $group: {
           _id: '$category',
