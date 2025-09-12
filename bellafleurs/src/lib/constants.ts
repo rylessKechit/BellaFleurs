@@ -187,7 +187,7 @@ export const DELIVERY_TYPES = {
     value: 'delivery',
     label: 'Livraison à domicile',
     description: 'Livraison directement chez vous',
-    price: 8.90,
+    price: 10,
     icon: '🚚'
   }
 } as const;

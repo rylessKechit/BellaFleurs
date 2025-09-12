@@ -186,7 +186,7 @@ export default function CheckoutPage() {
 
   // Calculs
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const deliveryFee = deliveryInfo.type === 'delivery' ? (subtotal >= 50 ? 0 : 8.90) : 0;
+  const deliveryFee = deliveryInfo.type === 'delivery' ? (subtotal >= 50 ? 0 : 10) : 0;
   const total = subtotal + deliveryFee;
 
   // Navigation entre les étapes

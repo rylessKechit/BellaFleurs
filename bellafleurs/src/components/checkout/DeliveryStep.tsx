@@ -50,7 +50,7 @@ const DeliveryStep: React.FC<DeliveryStepProps> = ({
   errors,
   subtotal
 }) => {
-  const deliveryPrice = subtotal >= 50 ? 0 : 8.90;
+  const deliveryPrice = subtotal >= 50 ? 0 : 10;
   
   // Date minimale (demain)
   const minDate = new Date();
