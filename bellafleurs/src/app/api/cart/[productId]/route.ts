@@ -68,7 +68,12 @@ export async function PUT(
 
     // Vérifier si le produit existe dans le panier
     const itemIndex = cart.items.findIndex(
-      (item: any) => item.product.toString() === productId
+      (item: any) => {
+        const itemProductId = item.product._id 
+          ? item.product._id.toString()  // Si populé
+          : item.product.toString();     // Si ObjectId simple
+        return itemProductId === productId;
+      }
     );
     
     if (itemIndex === -1) {
@@ -165,7 +170,12 @@ export async function DELETE(
 
     // Vérifier si le produit existe dans le panier
     const itemExists = cart.items.some(
-      (item: any) => item.product.toString() === productId
+      (item: any) => {
+        const itemProductId = item.product._id 
+          ? item.product._id.toString()  // Si populé
+          : item.product.toString();     // Si ObjectId simple
+        return itemProductId === productId;
+      }
     );
 
     if (!itemExists) {

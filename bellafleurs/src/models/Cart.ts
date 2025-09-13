@@ -118,15 +118,11 @@ const CartSchema = new Schema<ICart, ICartModel, ICartMethods>({
   toObject: { virtuals: true }
 });
 
-// Index pour les performances
-CartSchema.index({ user: 1 });
-CartSchema.index({ sessionId: 1 });
-CartSchema.index({ updatedAt: -1 });
-CartSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-
-// Index uniques séparés pour éviter les conflits
+// Index pour les performances et contraintes
 CartSchema.index({ user: 1 }, { unique: true, sparse: true });
 CartSchema.index({ sessionId: 1 }, { unique: true, sparse: true });
+CartSchema.index({ updatedAt: -1 });
+CartSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Middleware pre-save pour calculer les totaux
 CartSchema.pre<ICart>('save', function(next) {
@@ -179,7 +175,12 @@ CartSchema.methods.addItem = async function(this: ICart, productId: string, quan
   }
   
   const existingItemIndex = this.items.findIndex(
-    (item: any) => item.product.toString() === productId
+    (item: any) => {
+      const itemProductId = item.product._id 
+        ? item.product._id.toString()  // Si populé
+        : item.product.toString();     // Si ObjectId simple
+      return itemProductId === productId;
+    }
   );
   
   if (existingItemIndex >= 0) {
@@ -206,9 +207,17 @@ CartSchema.methods.addItem = async function(this: ICart, productId: string, quan
 };
 
 CartSchema.methods.removeItem = async function(this: ICart, productId: string) {
-  this.items = this.items.filter(
-    (item: any) => item.product.toString() !== productId
-  );
+  const initialLength = this.items.length;
+  
+  this.items = this.items.filter((item: any) => {
+    // Gestion des cas populate et non-populate
+    const itemProductId = item.product._id 
+      ? item.product._id.toString()  // Si populé (objet complet)
+      : item.product.toString();     // Si ObjectId simple
+    
+    return itemProductId !== productId;
+  });
+  
   return this.save();
 };
 
@@ -237,7 +246,12 @@ CartSchema.methods.updateQuantity = async function(this: ICart, productId: strin
   }
   
   const itemIndex = this.items.findIndex(
-    (item: any) => item.product.toString() === productId
+    (item: any) => {
+      const itemProductId = item.product._id 
+        ? item.product._id.toString()  // Si populé
+        : item.product.toString();     // Si ObjectId simple
+      return itemProductId === productId;
+    }
   );
   
   if (itemIndex >= 0) {
