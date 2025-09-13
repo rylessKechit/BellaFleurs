@@ -231,10 +231,11 @@ const TimelineSchema = new Schema({
   status: {
     type: String,
     enum: {
-      values: ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'],
-      message: 'Invalid timeline status'
+      values: ['payée', 'en_creation', 'prête', 'en_livraison', 'livrée', 'annulée'],
+      message: 'Invalid order status'
     },
-    required: [true, 'Timeline status is required']
+    default: 'payée', // Premier statut après paiement réussi
+    required: [true, 'Order status is required']
   },
   date: {
     type: Date,

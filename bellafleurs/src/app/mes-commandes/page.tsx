@@ -15,7 +15,8 @@ import {
   Euro,
   ArrowLeft,
   Eye,
-  Download
+  Download,
+  AlertCircle  // ← AJOUT UNIQUEMENT DE CETTE LIGNE
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,7 +42,7 @@ interface Order {
   orderNumber: string;
   items: OrderItem[];
   totalAmount: number;
-  status: 'validé' | 'en_cours_creation' | 'prête' | 'en_livraison' | 'livré';
+  status: 'payée' | 'en_creation' | 'prête' | 'en_livraison' | 'livrée' | 'annulée';
   paymentStatus: 'pending' | 'paid' | 'failed';
   deliveryInfo: {
     type: 'delivery' | 'pickup';
@@ -68,14 +69,14 @@ interface Order {
 }
 
 const getStatusConfig = (status: Order['status']) => {
-  const configs = {
-    'validé': {
-      label: 'Validée',
+  const configs: Record<string, any> = {
+    'payée': {
+      label: 'Payée - En attente de création',
       color: 'bg-blue-100 text-blue-800',
       icon: CheckCircle,
-      description: 'Votre commande a été confirmée'
+      description: 'Votre commande a été payée et est en attente de création'
     },
-    'en_cours_creation': {
+    'en_creation': {
       label: 'En création',
       color: 'bg-purple-100 text-purple-800',
       icon: Clock,
@@ -85,7 +86,7 @@ const getStatusConfig = (status: Order['status']) => {
       label: 'Prête',
       color: 'bg-green-100 text-green-800',
       icon: Package,
-      description: 'Votre commande est prête'
+      description: 'Votre commande est prête pour la livraison'
     },
     'en_livraison': {
       label: 'En livraison',
@@ -93,14 +94,26 @@ const getStatusConfig = (status: Order['status']) => {
       icon: Truck,
       description: 'Votre commande est en cours de livraison'
     },
-    'livré': {
+    'livrée': {
       label: 'Livrée',
       color: 'bg-emerald-100 text-emerald-800',
       icon: CheckCircle,
-      description: 'Votre commande a été livrée'
+      description: 'Votre commande a été livrée avec succès'
+    },
+    'annulée': {
+      label: 'Annulée',
+      color: 'bg-red-100 text-red-800',
+      icon: AlertCircle,
+      description: 'Votre commande a été annulée'
     }
   };
-  return configs[status];
+  
+  return configs[status] || {
+    label: `Statut inconnu (${status})`,
+    color: 'bg-gray-100 text-gray-800',
+    icon: AlertCircle,
+    description: 'Statut non reconnu'
+  };
 };
 
 const formatDate = (dateString: string) => {
@@ -187,25 +200,26 @@ function OrderDetails({ order }: { order: Order }) {
       {/* Informations de livraison */}
       <div>
         <h4 className="font-medium text-gray-900 mb-3">Informations de livraison</h4>
-        <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+        <div className="bg-gray-50 p-4 rounded-lg space-y-3">
           <div className="flex items-center space-x-2">
             <Calendar className="w-4 h-4 text-gray-500" />
+            <span className="text-sm text-gray-600">
+              {new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}
+            </span>
           </div>
           
-          {order.deliveryInfo.type === 'delivery' && order.deliveryInfo.address && (
+          {order.deliveryInfo.type === 'delivery' && order.deliveryInfo.address ? (
             <div className="flex items-start space-x-2">
               <MapPin className="w-4 h-4 text-gray-500 mt-0.5" />
-              <div className="text-sm">
+              <div className="text-sm text-gray-600">
                 <p>{order.deliveryInfo.address.street}</p>
                 <p>{order.deliveryInfo.address.zipCode} {order.deliveryInfo.address.city}</p>
               </div>
             </div>
-          )}
-          
-          {order.deliveryInfo.type === 'pickup' && (
+          ) : (
             <div className="flex items-center space-x-2">
               <Package className="w-4 h-4 text-gray-500" />
-              <span className="text-sm">Retrait en boutique</span>
+              <span className="text-sm text-gray-600">Retrait en boutique</span>
             </div>
           )}
           
@@ -217,20 +231,19 @@ function OrderDetails({ order }: { order: Order }) {
         </div>
       </div>
 
-      {/* Récapitulatif */}
-      <div>
-        <h4 className="font-medium text-gray-900 mb-3">Récapitulatif</h4>
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <div className="flex justify-between items-center font-medium text-lg">
-            <span>Total</span>
-            <span>{order.totalAmount.toFixed(2)}€</span>
-          </div>
-          <div className="flex justify-between items-center text-sm text-gray-600 mt-1">
-            <span>Statut paiement</span>
-            <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}>
-              {order.paymentStatus === 'paid' ? 'Payé' : 'En attente'}
-            </Badge>
-          </div>
+      {/* Total et paiement */}
+      <div className="border-t pt-4">
+        <div className="flex justify-between items-center mb-2">
+          <span className="font-medium text-gray-900">Total</span>
+          <span className="text-lg font-bold text-gray-900">
+            {order.totalAmount.toFixed(2)}€
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-600">Statut du paiement</span>
+          <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+            {order.paymentStatus === 'paid' ? 'Payé' : 'En attente'}
+          </Badge>
         </div>
       </div>
 
@@ -375,21 +388,57 @@ export default function MesCommandesPage() {
                             </p>
                           </div>
                         </div>
-                        
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Eye className="w-4 h-4 mr-2" />
-                              Détails
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                            <DialogHeader>
-                              <DialogTitle>Détails de la commande</DialogTitle>
-                            </DialogHeader>
-                            <OrderDetails order={order} />
-                          </DialogContent>
-                        </Dialog>
+
+                        <div className="flex items-center space-x-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => setSelectedOrder(order)}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                Détails
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>
+                                  Détails de la commande {order.orderNumber}
+                                </DialogTitle>
+                              </DialogHeader>
+                              <OrderDetails order={order} />
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                      </div>
+
+                      {/* Informations rapides */}
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex justify-between items-center text-sm text-gray-600">
+                          <div className="flex items-center space-x-4">
+                            <span className="flex items-center">
+                              <Calendar className="w-4 h-4 mr-1" />
+                              {new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}
+                            </span>
+                            <span className="flex items-center">
+                              {order.deliveryInfo.type === 'delivery' ? (
+                                <>
+                                  <MapPin className="w-4 h-4 mr-1" />
+                                  Livraison
+                                </>
+                              ) : (
+                                <>
+                                  <Package className="w-4 h-4 mr-1" />
+                                  Retrait
+                                </>
+                              )}
+                            </span>
+                          </div>
+                          <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                            {order.paymentStatus === 'paid' ? 'Payé' : 'En attente'}
+                          </Badge>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

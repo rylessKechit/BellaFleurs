@@ -17,7 +17,8 @@ import {
   Truck,
   MoreHorizontal,
   Download,
-  RefreshCw
+  RefreshCw,
+  AlertCircle  // ← AJOUT UNIQUEMENT DE CETTE LIGNE
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,7 +50,7 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { toast } from 'sonner';
 
 // Types corrigés
-type OrderStatus = 'validé' | 'en_cours_creation' | 'prête' | 'en_livraison' | 'livré';
+type OrderStatus = 'payée' | 'en_creation' | 'prête' | 'en_livraison' | 'livrée' | 'annulée';
 
 interface OrderItem {
   _id: string;
@@ -92,42 +93,58 @@ interface Order {
   updatedAt: string;
 }
 
-const statusConfig: Record<OrderStatus, {
-  label: string;
-  color: string;
-  icon: any;
-  nextStatus: OrderStatus | null;
-}> = {
-  'validé': {
-    label: 'Validée',
-    color: 'bg-blue-100 text-blue-800',
-    icon: CheckCircle,
-    nextStatus: 'en_cours_creation'
-  },
-  'en_cours_creation': {
-    label: 'En création',
-    color: 'bg-purple-100 text-purple-800',
-    icon: Clock,
-    nextStatus: 'prête'
-  },
-  'prête': {
-    label: 'Prête',
-    color: 'bg-green-100 text-green-800',
-    icon: Package,
-    nextStatus: 'en_livraison'
-  },
-  'en_livraison': {
-    label: 'En livraison',
-    color: 'bg-orange-100 text-orange-800',
-    icon: Truck,
-    nextStatus: 'livré'
-  },
-  'livré': {
-    label: 'Livrée',
-    color: 'bg-emerald-100 text-emerald-800',
-    icon: CheckCircle,
+const getOrderStatusConfig = (status: string) => {
+  const statusMapping: Record<string, any> = {
+    'payée': {
+      label: 'Payée - En attente de création',
+      color: 'bg-blue-100 text-blue-800',
+      icon: CheckCircle,
+      nextStatus: 'en_creation',
+      description: 'Commande payée, en attente de création'
+    },
+    'en_creation': {
+      label: 'En création',
+      color: 'bg-purple-100 text-purple-800',
+      icon: Clock,
+      nextStatus: 'prête',
+      description: 'Bouquet en cours de création'
+    },
+    'prête': {
+      label: 'Prête',
+      color: 'bg-green-100 text-green-800',
+      icon: Package,
+      nextStatus: 'en_livraison',
+      description: 'Commande prête pour livraison'
+    },
+    'en_livraison': {
+      label: 'En livraison',
+      color: 'bg-orange-100 text-orange-800',
+      icon: Truck,
+      nextStatus: 'livrée',
+      description: 'Commande en cours de livraison'
+    },
+    'livrée': {
+      label: 'Livrée',
+      color: 'bg-emerald-100 text-emerald-800',
+      icon: CheckCircle,
+      nextStatus: null,
+      description: 'Commande livrée avec succès'
+    },
+    'annulée': {
+      label: 'Annulée',
+      color: 'bg-red-100 text-red-800',
+      icon: AlertCircle,
+      nextStatus: null,
+      description: 'Commande annulée'
+    }
+  };
+  
+  return statusMapping[status] || {
+    label: `Statut inconnu (${status})`,
+    color: 'bg-gray-100 text-gray-800',
+    icon: AlertCircle,
     nextStatus: null
-  }
+  };
 };
 
 const formatDate = (dateString: string) => {
@@ -181,7 +198,7 @@ function OrderDetails({
     }
   };
 
-  const config = statusConfig[order.status];
+  const config = getOrderStatusConfig(order.status); // ← CHANGEMENT ICI
   const Icon = config.icon;
 
   return (
@@ -337,7 +354,7 @@ function OrderDetails({
               ) : (
                 <Icon className="w-4 h-4 mr-2" />
               )}
-              Passer à "{statusConfig[config.nextStatus!].label}"
+              Passer à "{getOrderStatusConfig(config.nextStatus).label}" {/* ← CHANGEMENT ICI */}
             </Button>
           </CardContent>
         </Card>
@@ -369,7 +386,7 @@ function OrderDetails({
         <CardContent>
           <div className="space-y-4">
             {order.timeline.map((step, index) => {
-              const stepConfig = statusConfig[step.status];
+              const stepConfig = getOrderStatusConfig(step.status); // ← CHANGEMENT ICI
               const StepIcon = stepConfig.icon;
               
               return (
@@ -466,8 +483,8 @@ export default function AdminOrdersPage() {
   // Statistiques rapides
   const stats = {
     total: orders.length,
-    validé: orders.filter(o => o.status === 'validé').length,
-    en_cours: orders.filter(o => o.status === 'en_cours_creation').length,
+    validé: orders.filter(o => o.status === 'payée').length,
+    en_cours: orders.filter(o => o.status === 'en_creation').length,
     prête: orders.filter(o => o.status === 'prête').length,
     en_livraison: orders.filter(o => o.status === 'en_livraison').length
   };
@@ -550,11 +567,11 @@ export default function AdminOrdersPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les statuts</SelectItem>
-                    <SelectItem value="validé">Validées</SelectItem>
-                    <SelectItem value="en_cours_creation">En création</SelectItem>
+                    <SelectItem value="payée">Payée</SelectItem>
+                    <SelectItem value="en_creation">En création</SelectItem>
                     <SelectItem value="prête">Prêtes</SelectItem>
                     <SelectItem value="en_livraison">En livraison</SelectItem>
-                    <SelectItem value="livré">Livrées</SelectItem>
+                    <SelectItem value="livrée">Livrées</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -569,7 +586,7 @@ export default function AdminOrdersPage() {
         {/* Liste des commandes */}
         <div className="space-y-4">
           {filteredOrders.map((order) => {
-            const config = statusConfig[order.status];
+            const config = getOrderStatusConfig(order.status); // ← CHANGEMENT ICI
             const Icon = config.icon;
             
             return (
@@ -612,7 +629,7 @@ export default function AdminOrdersPage() {
                             variant="outline"
                             onClick={() => handleStatusUpdate(order._id, config.nextStatus!)}
                           >
-                            → {statusConfig[config.nextStatus].label}
+                            → {getOrderStatusConfig(config.nextStatus).label} {/* ← CHANGEMENT ICI */}
                           </Button>
                         )}
 

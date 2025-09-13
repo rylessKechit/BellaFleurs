@@ -159,13 +159,13 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
         orderId,
         {
           paymentStatus: 'paid',
-          status: 'confirmed',
+          status: 'payée', // ← NOUVEAU: Statut initial après paiement
           stripePaymentIntentId: paymentIntent.id,
           $push: {
             timeline: {
-              status: 'confirmed',
+              status: 'payée',
               date: new Date(),
-              note: 'Paiement confirmé automatiquement par Stripe'
+              note: 'Commande payée - En attente de création'
             }
           }
         },
