@@ -25,7 +25,6 @@ interface OrderDetails {
   deliveryInfo: {
     type: 'delivery' | 'pickup';
     date: string;
-    timeSlot: string;
     address?: string;
   };
   totalAmount: number;
@@ -48,7 +47,6 @@ const mockOrderDetails: OrderDetails = {
   deliveryInfo: {
     type: 'delivery',
     date: '2024-12-16',
-    timeSlot: '14h-17h',
     address: '123 Rue de la Paix, 75001 Paris'
   },
   totalAmount: 110.90,
@@ -208,7 +206,6 @@ export default function CheckoutSuccessPage() {
                         <div className="font-medium text-green-800">
                           {orderDetails.deliveryInfo.type === 'delivery' ? 'Livraison' : 'Retrait'}
                         </div>
-                        <div className="text-green-600">{orderDetails.deliveryInfo.timeSlot}</div>
                       </div>
                     </div>
                   </div>
@@ -278,7 +275,6 @@ export default function CheckoutSuccessPage() {
                           ? 'Vos fleurs sont en route vers votre adresse'
                           : 'Vos fleurs vous attendent en boutique',
                         status: 'upcoming',
-                        time: orderDetails.deliveryInfo.timeSlot
                       }
                     ].map((step) => (
                       <div key={step.step} className="flex items-start space-x-4">

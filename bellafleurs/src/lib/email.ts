@@ -180,7 +180,6 @@ Montant total: ${order.totalAmount.toFixed(2)}€
 
 Type de service: ${order.deliveryInfo.type === 'delivery' ? 'Livraison' : 'Retrait en boutique'}
 Date prévue: ${new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}
-Créneau: ${order.deliveryInfo.timeSlot}
 
 ${order.deliveryInfo.type === 'delivery' && order.deliveryInfo.address ? 
   `Adresse de livraison:
@@ -233,7 +232,7 @@ Excellente nouvelle ! Votre commande ${order.orderNumber} est maintenant prête.
 
 ${order.deliveryInfo.type === 'pickup' 
   ? 'Vous pouvez venir la récupérer en boutique aux horaires d\'ouverture.'
-  : `Nous préparerons la livraison pour le ${new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')} entre ${order.deliveryInfo.timeSlot}.`
+  : `Nous préparerons la livraison pour le ${new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}.`
 }
 
 ${note ? `Message de nos fleuristes: ${note}` : ''}
@@ -312,7 +311,6 @@ Total: ${order.totalAmount.toFixed(2)}€
 
 Service choisi: ${order.deliveryInfo.type === 'delivery' ? 'Livraison' : 'Retrait en boutique'}
 Date prévue: ${new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}
-Créneau: ${order.deliveryInfo.timeSlot}
 
 ${order.deliveryInfo.type === 'delivery' && order.deliveryInfo.address ? 
   `Adresse de livraison:

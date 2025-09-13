@@ -67,7 +67,7 @@ NEXTAUTH_URL=http://localhost:3000
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/bella-fleurs
 
 # Stripe
-STRIPE_PUBLIC_KEY=pk_test_...
+NEXT_PUBLIC_STRIPE_PUBLIC_KEY=pk_test_...
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
@@ -225,7 +225,6 @@ bella-fleurs/
       country: string
     }
     date: Date
-    timeSlot: string
     notes?: string
   }
   customerInfo: {

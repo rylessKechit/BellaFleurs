@@ -7,8 +7,8 @@ if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('STRIPE_SECRET_KEY is not defined in environment variables');
 }
 
-if (!process.env.STRIPE_PUBLIC_KEY) {
-  throw new Error('STRIPE_PUBLIC_KEY is not defined in environment variables');
+if (!process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY) {
+  throw new Error('NEXT_PUBLIC_STRIPE_PUBLIC_KEY is not defined in environment variables');
 }
 
 // Instance Stripe côté serveur
@@ -22,7 +22,7 @@ let stripePromise: ReturnType<typeof loadStripe>;
 
 export const getStripe = () => {
   if (!stripePromise) {
-    stripePromise = loadStripe(process.env.STRIPE_PUBLIC_KEY!);
+    stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
   }
   return stripePromise;
 };

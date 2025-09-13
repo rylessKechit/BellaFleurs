@@ -119,7 +119,6 @@ export const deliveryInfoSchema = z.object({
     country: z.string().default('France')
   }).optional(),
   date: z.date().min(new Date(), 'La date doit être dans le futur'),
-  timeSlot: z.enum(['9h-12h', '12h-14h', '14h-17h', '17h-19h']),
   notes: z.string().max(500, 'Notes trop longues').optional()
 }).refine((data) => {
   if (data.type === 'delivery') {

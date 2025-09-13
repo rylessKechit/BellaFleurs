@@ -75,7 +75,6 @@ interface Order {
       zipCode: string;
     };
     date: string;
-    timeSlot: string;
     notes?: string;
   };
   customerInfo: {
@@ -250,10 +249,6 @@ function OrderDetails({
           <CardContent className="space-y-3">
             <div className="flex items-center space-x-2">
               <Calendar className="w-4 h-4 text-gray-500" />
-              <span>
-                {new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')} 
-                - {order.deliveryInfo.timeSlot}
-              </span>
             </div>
             
             {order.deliveryInfo.type === 'delivery' && order.deliveryInfo.address ? (

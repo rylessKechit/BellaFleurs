@@ -1,4 +1,4 @@
-// src/app/checkout/page.tsx - Version complète avec Stripe
+// src/app/checkout/page.tsx - Version finale sans timeSlot
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -40,7 +40,6 @@ interface DeliveryInfo {
     complement?: string;
   };
   date: string;
-  timeSlot: string;
   notes?: string;
 }
 
@@ -106,15 +105,24 @@ function useCheckoutValidation() {
     if (step >= 2) {
       // Validation livraison
       if (!deliveryInfo.date) newErrors.date = 'Date de livraison requise';
-      if (!deliveryInfo.timeSlot) newErrors.timeSlot = 'Créneau horaire requis';
       
-      if (deliveryInfo.type === 'delivery') {
-        if (!deliveryInfo.address?.street?.trim()) newErrors.street = 'Adresse requise';
-        if (!deliveryInfo.address?.city?.trim()) newErrors.city = 'Ville requise';
-        if (!deliveryInfo.address?.zipCode?.trim()) newErrors.zipCode = 'Code postal requis';
-        else if (!/^\d{5}$/.test(deliveryInfo.address.zipCode)) {
-          newErrors.zipCode = 'Code postal invalide';
+      // Validation de la date (minimum 2 jours dans le futur)
+      if (deliveryInfo.date) {
+        const selectedDate = new Date(deliveryInfo.date);
+        const minDate = new Date();
+        minDate.setDate(minDate.getDate() + 2);
+        
+        if (selectedDate < minDate) {
+          newErrors.date = 'La date de livraison doit être dans au moins 2 jours';
         }
+      }
+      
+      // Validation adresse (toujours nécessaire pour la livraison)
+      if (!deliveryInfo.address?.street?.trim()) newErrors.street = 'Adresse requise';
+      if (!deliveryInfo.address?.city?.trim()) newErrors.city = 'Ville requise';
+      if (!deliveryInfo.address?.zipCode?.trim()) newErrors.zipCode = 'Code postal requis';
+      else if (!/^\d{5}$/.test(deliveryInfo.address.zipCode)) {
+        newErrors.zipCode = 'Code postal invalide (5 chiffres)';
       }
     }
 
@@ -140,15 +148,15 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => (
   <div className="flex items-center justify-center mb-8">
     {[1, 2, 3].map((step, index) => (
       <div key={step} className="flex items-center">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-medium ${
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-all duration-300 ${
           step <= currentStep 
-            ? 'bg-green-600 text-white' 
+            ? 'bg-green-600 text-white shadow-lg' 
             : 'bg-gray-200 text-gray-600'
         }`}>
           {step < currentStep ? <Check className="w-5 h-5" /> : step}
         </div>
         {step < 3 && (
-          <div className={`w-16 h-1 mx-2 ${
+          <div className={`w-16 h-1 mx-2 transition-all duration-300 ${
             step < currentStep ? 'bg-green-600' : 'bg-gray-200'
           }`} />
         )}
@@ -177,7 +185,6 @@ export default function CheckoutPage() {
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo>({
     type: 'delivery',
     date: '',
-    timeSlot: '',
     notes: ''
   });
 
@@ -186,7 +193,7 @@ export default function CheckoutPage() {
 
   // Calculs
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const deliveryFee = deliveryInfo.type === 'delivery' ? (subtotal >= 50 ? 0 : 10) : 0;
+  const deliveryFee = subtotal >= 50 ? 0 : 10;
   const total = subtotal + deliveryFee;
 
   // Navigation entre les étapes
@@ -224,15 +231,16 @@ export default function CheckoutPage() {
           phone: customerInfo.phone
         },
         deliveryInfo: {
-          type: deliveryInfo.type,
-          address: deliveryInfo.type === 'delivery' ? deliveryInfo.address : undefined,
+          type: 'delivery',
+          address: deliveryInfo.address,
           date: new Date(deliveryInfo.date),
-          timeSlot: deliveryInfo.timeSlot,
           notes: deliveryInfo.notes
         },
         paymentMethod: 'card',
         totalAmount: total
       };
+
+      console.log('📤 Envoi des données de commande:', orderData);
 
       // Créer la commande
       const response = await fetch('/api/orders', {
@@ -326,15 +334,15 @@ export default function CheckoutPage() {
           {/* Breadcrumb */}
           <nav className="mb-8">
             <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <button onClick={() => router.push('/')} className="hover:text-green-600">
+              <button onClick={() => router.push('/')} className="hover:text-green-600 transition-colors">
                 Accueil
               </button>
               <span>/</span>
-              <button onClick={() => router.push('/panier')} className="hover:text-green-600">
+              <button onClick={() => router.push('/panier')} className="hover:text-green-600 transition-colors">
                 Panier
               </button>
               <span>/</span>
-              <span className="text-gray-900">Commande</span>
+              <span className="text-gray-900 font-medium">Commande</span>
             </div>
           </nav>
 

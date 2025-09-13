@@ -1,10 +1,10 @@
-// src/models/Order.ts - Modèle complet avec intégration Stripe
+// src/models/Order.ts - Version sans timeSlot
 import mongoose, { Schema, Model, Document } from 'mongoose';
 
 // Interface pour les articles de commande
 export interface IOrderItem {
   _id?: string;
-  product: mongoose.Types.ObjectId; // Référence vers Product
+  product: mongoose.Types.ObjectId;
   name: string;
   price: number;
   quantity: number;
@@ -19,12 +19,11 @@ export interface IDeliveryAddress {
   complement?: string;
 }
 
-// Interface pour les informations de livraison
+// Interface pour les informations de livraison - SANS timeSlot
 export interface IDeliveryInfo {
   type: 'delivery' | 'pickup';
   address?: IDeliveryAddress;
   date: Date;
-  timeSlot: string;
   notes?: string;
 }
 
@@ -42,15 +41,6 @@ export interface ITimelineEntry {
   note?: string;
 }
 
-// Interface pour les informations Stripe
-export interface IStripeInfo {
-  paymentIntentId?: string;
-  chargeId?: string;
-  receiptUrl?: string;
-  refundId?: string;
-  disputeId?: string;
-}
-
 // Interface pour les méthodes d'instance
 export interface IOrderMethods {
   updateStatus(newStatus: IOrder['status'], note?: string): Promise<IOrder>;
@@ -60,13 +50,12 @@ export interface IOrderMethods {
   addTimelineEntry(status: IOrder['status'], note?: string): Promise<IOrder>;
   canBeCancelled(): boolean;
   canBeRefunded(): boolean;
-  generateReceiptData(): any;
 }
 
 // Interface principale pour le document Order
 export interface IOrder extends Document, IOrderMethods {
   orderNumber: string;
-  user?: mongoose.Types.ObjectId; // ObjectId de l'utilisateur (optionnel pour les invités)
+  user?: mongoose.Types.ObjectId;
   items: IOrderItem[];
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
@@ -180,7 +169,7 @@ const AddressSchema = new Schema({
   }
 }, { _id: false });
 
-// Schéma pour les informations de livraison
+// Schéma pour les informations de livraison - SANS timeSlot
 const DeliveryInfoSchema = new Schema({
   type: {
     type: String,
@@ -204,14 +193,6 @@ const DeliveryInfoSchema = new Schema({
         return date >= new Date();
       },
       message: 'Delivery date cannot be in the past'
-    }
-  },
-  timeSlot: {
-    type: String,
-    required: [true, 'Time slot is required'],
-    enum: {
-      values: ['9h-12h', '12h-14h', '14h-17h', '17h-19h'],
-      message: 'Invalid time slot'
     }
   },
   notes: {
@@ -278,7 +259,7 @@ const OrderSchema = new Schema<IOrder, IOrderModel, IOrderMethods>({
   user: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: false, // Optionnel pour les commandes d'invités
+    required: false,
     sparse: true
   },
   items: {
@@ -328,7 +309,7 @@ const OrderSchema = new Schema<IOrder, IOrderModel, IOrderMethods>({
   // Champs Stripe
   stripePaymentIntentId: {
     type: String,
-    sparse: true, // Permet les valeurs null sans conflit d'unicité
+    sparse: true,
     match: [/^pi_[a-zA-Z0-9_]+$/, 'Invalid Stripe Payment Intent ID format']
   },
   stripeChargeId: {
@@ -492,97 +473,66 @@ OrderSchema.methods.addTimelineEntry = function(this: IOrder, status: IOrder['st
     date: new Date(),
     note
   } as ITimelineEntry);
+  
   return this.save();
 };
 
 OrderSchema.methods.canBeCancelled = function(this: IOrder) {
-  return this.canBeCancelledVirtual;
+  return ['pending', 'confirmed', 'preparing'].includes(this.status);
 };
 
 OrderSchema.methods.canBeRefunded = function(this: IOrder) {
-  return this.canBeRefundedVirtual;
+  return this.paymentStatus === 'paid' && 
+         ['confirmed', 'preparing', 'ready', 'cancelled'].includes(this.status);
 };
-
-OrderSchema.methods.generateReceiptData = function(this: IOrder) {
-  return {
-    orderNumber: this.orderNumber,
-    date: this.createdAt,
-    customer: this.customerInfo,
-    items: this.items,
-    totalAmount: this.totalAmount,
-    paymentMethod: this.paymentMethod,
-    deliveryInfo: this.deliveryInfo,
-    stripeReceiptUrl: this.stripeReceiptUrl
-  };
-};
-
-// Middleware pre-save
-OrderSchema.pre('save', function(this: IOrder, next) {
-  // Valider le total calculé
-  if (this.isModified('items')) {
-    const calculatedTotal = this.calculateTotal();
-    if (Math.abs(this.totalAmount - calculatedTotal) > 0.01) {
-      this.totalAmount = calculatedTotal;
-    }
-  }
-  
-  // Estimer la livraison si pas définie
-  if (!this.estimatedDelivery && this.deliveryInfo) {
-    const deliveryDate = new Date(this.deliveryInfo.date);
-    this.estimatedDelivery = deliveryDate;
-  }
-  
-  next();
-});
 
 // Méthodes statiques
-OrderSchema.statics.generateOrderNumber = async function(this: IOrderModel) {
-  const today = new Date();
-  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+OrderSchema.statics.generateOrderNumber = async function() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
   
-  // Compter les commandes du jour
-  const count = await this.countDocuments({
-    orderNumber: { $regex: `^BF-${dateStr}-` }
-  });
+  const datePrefix = `BF-${year}${month}${day}`;
   
-  const orderNum = (count + 1).toString().padStart(4, '0');
-  return `BF-${dateStr}-${orderNum}`;
+  const lastOrder = await this.findOne({
+    orderNumber: { $regex: `^${datePrefix}` }
+  }).sort({ orderNumber: -1 });
+
+  let sequence = 1;
+  if (lastOrder) {
+    const lastSequence = parseInt(lastOrder.orderNumber.split('-')[2]);
+    sequence = lastSequence + 1;
+  }
+
+  return `${datePrefix}-${String(sequence).padStart(4, '0')}`;
 };
 
-OrderSchema.statics.findByOrderNumber = function(this: IOrderModel, orderNumber: string) {
-  return this.findOne({ orderNumber }).populate('items.product', 'name images');
+OrderSchema.statics.findByOrderNumber = function(orderNumber: string) {
+  return this.findOne({ orderNumber });
 };
 
-OrderSchema.statics.findByUser = function(this: IOrderModel, userId: string) {
-  return this.find({ user: userId })
-    .sort({ createdAt: -1 })
-    .populate('items.product', 'name images');
+OrderSchema.statics.findByUser = function(userId: string) {
+  return this.find({ user: userId }).sort({ createdAt: -1 });
 };
 
-OrderSchema.statics.findByEmail = function(this: IOrderModel, email: string) {
-  return this.find({ 'customerInfo.email': email })
-    .sort({ createdAt: -1 })
-    .populate('items.product', 'name images');
+OrderSchema.statics.findByEmail = function(email: string) {
+  return this.find({ 'customerInfo.email': email }).sort({ createdAt: -1 });
 };
 
-OrderSchema.statics.findByStatus = function(this: IOrderModel, status: IOrder['status']) {
-  return this.find({ status })
-    .sort({ createdAt: -1 })
-    .populate('items.product', 'name images');
+OrderSchema.statics.findByStatus = function(status: IOrder['status']) {
+  return this.find({ status }).sort({ createdAt: -1 });
 };
 
-OrderSchema.statics.findByPaymentStatus = function(this: IOrderModel, paymentStatus: IOrder['paymentStatus']) {
-  return this.find({ paymentStatus })
-    .sort({ createdAt: -1 })
-    .populate('items.product', 'name images');
+OrderSchema.statics.findByPaymentStatus = function(paymentStatus: IOrder['paymentStatus']) {
+  return this.find({ paymentStatus }).sort({ createdAt: -1 });
 };
 
-OrderSchema.statics.findByStripePaymentIntent = function(this: IOrderModel, paymentIntentId: string) {
-  return this.findOne({ stripePaymentIntentId: paymentIntentId })
-    .populate('items.product', 'name images');
+OrderSchema.statics.findByStripePaymentIntent = function(paymentIntentId: string) {
+  return this.findOne({ stripePaymentIntentId: paymentIntentId });
 };
 
-OrderSchema.statics.getOrderStats = async function(this: IOrderModel, startDate?: Date, endDate?: Date) {
+OrderSchema.statics.getOrderStats = async function(startDate?: Date, endDate?: Date) {
   const matchStage: any = {};
   
   if (startDate || endDate) {
@@ -618,13 +568,13 @@ OrderSchema.statics.getOrderStats = async function(this: IOrderModel, startDate?
   };
 };
 
-OrderSchema.statics.getPendingOrders = function(this: IOrderModel) {
+OrderSchema.statics.getPendingOrders = function() {
   return this.find({ 
     status: { $in: ['pending', 'confirmed', 'preparing', 'ready'] }
   }).sort({ createdAt: -1 });
 };
 
-OrderSchema.statics.getOverdueOrders = function(this: IOrderModel) {
+OrderSchema.statics.getOverdueOrders = function() {
   const threeDaysAgo = new Date();
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
   

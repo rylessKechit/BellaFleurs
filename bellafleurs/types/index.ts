@@ -96,7 +96,6 @@ export interface IOrder extends BaseDocument {
       country: string;
     };
     date: Date;
-    timeSlot: '9h-12h' | '12h-14h' | '14h-17h' | '17h-19h';
     notes?: string;
   };
   customerInfo: {
@@ -352,7 +351,6 @@ export interface OrderFormData {
       country: string;
     };
     date: Date;
-    timeSlot: IOrder['deliveryInfo']['timeSlot'];
     notes?: string;
   };
 }
@@ -368,7 +366,6 @@ export type PaymentStatus = IOrder['paymentStatus'];
 export type UserRole = IUser['role'];
 export type ProductCategory = IProduct['category'];
 export type DeliveryType = IOrder['deliveryInfo']['type'];
-export type TimeSlot = IOrder['deliveryInfo']['timeSlot'];
 
 // Form validation types
 export interface ValidationError {

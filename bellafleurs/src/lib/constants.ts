@@ -456,5 +456,4 @@ export type ProductCategoryId = keyof typeof PRODUCT_CATEGORIES;
 export type OrderStatusValue = keyof typeof ORDER_STATUS;
 export type PaymentStatusValue = keyof typeof PAYMENT_STATUS;
 export type DeliveryTypeValue = keyof typeof DELIVERY_TYPES;
-export type TimeSlotValue = keyof typeof TIME_SLOTS;
 export type CareDifficultyValue = keyof typeof CARE_DIFFICULTY;
