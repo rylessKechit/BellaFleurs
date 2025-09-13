@@ -28,6 +28,7 @@ import {
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { toast } from 'sonner';
+import { useCart } from '@/contexts/CartContext';
 
 interface Product {
   _id: string;
@@ -126,6 +127,8 @@ export default function ProductsPage() {
     }
   };
 
+  const { incrementCartCount } = useCart();
+
   // Ajouter au panier (plus de vérification de stock)
   const addToCart = async (productId: string, productName: string) => {
     if (addingToCart.includes(productId)) return;
@@ -149,6 +152,7 @@ export default function ProductsPage() {
 
       if (response.ok && data.success) {
         toast.success(`${productName} ajouté au panier`);
+        incrementCartCount(1);
       } else {
         throw new Error(data.error?.message || 'Erreur lors de l\'ajout au panier');
       }

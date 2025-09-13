@@ -19,6 +19,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { toast } from 'sonner';
+import { useCart } from '@/contexts/CartContext';
 
 interface CartItem {
   _id: string;
@@ -60,6 +61,8 @@ export default function CartPage() {
       setIsLoading(false);
     }
   };
+
+  const { decrementCartCount, clearCartCount } = useCart();
 
   // Mettre à jour la quantité
   const updateQuantity = async (productId: string, newQuantity: number) => {
@@ -111,6 +114,7 @@ export default function CartPage() {
       if (response.ok) {
         setCartItems(prev => prev.filter(item => item._id !== productId));
         toast.success('Article supprimé du panier');
+        decrementCartCount(1);
       } else {
         const data = await response.json();
         throw new Error(data.error?.message || 'Erreur lors de la suppression');
@@ -136,6 +140,7 @@ export default function CartPage() {
       if (response.ok) {
         setCartItems([]);
         toast.success('Panier vidé');
+        clearCartCount();
       } else {
         throw new Error('Erreur lors du vidage du panier');
       }

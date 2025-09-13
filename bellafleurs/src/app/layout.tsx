@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
 import SessionProvider from '@/components/providers/SessionProvider';
+import { CartProvider } from '@/contexts/CartContext';
 import './globals.css';
 
 const inter = Inter({ 
@@ -84,29 +85,28 @@ export default function RootLayout({
     <html lang="fr" className={inter.variable}>
       <body className={`${inter.className} antialiased`}>
         <SessionProvider>
-          {/* Pétales animés en arrière-plan */}
-          <div id="petals" className="fixed inset-0 pointer-events-none z-0" />
-          
-          {/* Contenu principal */}
-          <div className="relative z-10 min-h-screen flex flex-col">
-            {children}
-          </div>
-          
-          {/* Notifications toast */}
-          <Toaster
-            position="top-right"
-            expand={false}
-            richColors
-            closeButton
-            toastOptions={{
-              style: {
-                background: 'white',
-                border: '1px solid #e5e7eb',
-                color: '#374151',
-              },
-              className: 'font-medium',
-            }}
-          />
+          <CartProvider>
+            {/* Contenu principal */}
+            <div className="relative z-10 min-h-screen flex flex-col">
+              {children}
+            </div>
+            
+            {/* Notifications toast */}
+            <Toaster
+              position="top-right"
+              expand={false}
+              richColors
+              closeButton
+              toastOptions={{
+                style: {
+                  background: 'white',
+                  border: '1px solid #e5e7eb',
+                  color: '#374151',
+                },
+                className: 'font-medium',
+              }}
+            />
+          </CartProvider>
         </SessionProvider>
       </body>
     </html>

@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { toast } from 'sonner';
+import { useCart } from '@/contexts/CartContext';
 
 interface Product {
   _id: string;
@@ -98,6 +99,8 @@ export default function ProductDetailPage() {
     fetchProduct();
   }, [params.id]);
 
+  const { incrementCartCount } = useCart();
+
   // Fonction pour ajouter au panier (sans vérification de stock)
   const addToCart = async () => {
     if (!product || isAddingToCart) return;
@@ -122,6 +125,7 @@ export default function ProductDetailPage() {
 
       if (response.ok && data.success) {
         toast.success(data.message || 'Produit ajouté au panier');
+        incrementCartCount(1);
         
         // Réinitialiser la quantité à 1
         setQuantity(1);

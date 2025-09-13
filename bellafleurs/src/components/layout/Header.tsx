@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useCart } from '@/contexts/CartContext';
 
 const navigation = [
   { name: 'Accueil', href: '/' },
@@ -176,6 +177,8 @@ export default function Header() {
     );
   };
 
+  const { cartCount } = useCart();
+
   return (
     <header
       className={`fixed top-0 w-full z-50 transition-all duration-300 ${
@@ -240,7 +243,7 @@ export default function Header() {
                 <Link href="/panier" className="relative">
                   <ShoppingCart className="w-5 h-5" />
                   <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-green-500 text-white">
-                    0
+                    {cartCount}
                   </Badge>
                 </Link>
               </Button>
