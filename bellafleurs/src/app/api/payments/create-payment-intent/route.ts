@@ -2,34 +2,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { stripe, formatAmountForStripe, handleStripeError, validateStripeMetadata } from '@/lib/stripe';
-import connectDB from '@/lib/mongodb';
-import Order from '@/models/Order';
+import { stripe, formatAmountForStripe, handleStripeError } from '@/lib/stripe';
 import { z } from 'zod';
 
 // Schéma de validation pour la création du Payment Intent
 const createPaymentIntentSchema = z.object({
-  orderId: z.string().min(1, 'Order ID requis'),
   amount: z.number().min(50, 'Montant minimum: 0.50€').max(99999999, 'Montant trop élevé'),
   currency: z.string().default('eur'),
   customerEmail: z.string().email().optional(),
-  metadata: z.record(z.string()).optional()
+  orderData: z.object({
+    items: z.array(z.object({
+      product: z.string(),
+      name: z.string(),
+      price: z.number(),
+      quantity: z.number(),
+      image: z.string().optional()
+    })),
+    customerInfo: z.object({
+      name: z.string(),
+      email: z.string().email(),
+      phone: z.string()
+    }),
+    deliveryInfo: z.object({
+      type: z.enum(['delivery', 'pickup']),
+      address: z.object({
+        street: z.string(),
+        city: z.string(),
+        zipCode: z.string(),
+        complement: z.string().optional()
+      }).optional(),
+      date: z.date().or(z.string()),
+      notes: z.string().optional()
+    }),
+    paymentMethod: z.string(),
+    totalAmount: z.number()
+  })
 });
 
 // POST /api/payments/create-payment-intent
 export async function POST(req: NextRequest) {
   try {
-    // Vérifier l'authentification
+    // Vérifier l'authentification (optionnel pour les invités)
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Authentification requise',
-          code: 'AUTH_REQUIRED'
-        }
-      }, { status: 401 });
-    }
 
     // Valider les données d'entrée
     const body = await req.json();
@@ -46,99 +60,57 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const { orderId, amount, currency, customerEmail, metadata } = validationResult.data;
+    const { amount, currency, customerEmail, orderData } = validationResult.data;
 
-    // Connecter à la base de données
-    await connectDB();
+    // Préparer les métadonnées pour Stripe (limité à 500 caractères par clé)
+    const metadata: Record<string, string> = {
+      // Informations client
+      customer_name: orderData.customerInfo.name.substring(0, 490),
+      customer_email: orderData.customerInfo.email.substring(0, 490),
+      customer_phone: orderData.customerInfo.phone.substring(0, 490),
+      
+      // Informations livraison
+      delivery_type: orderData.deliveryInfo.type,
+      delivery_date: new Date(orderData.deliveryInfo.date).toISOString(),
+      delivery_address: orderData.deliveryInfo.address ? 
+        `${orderData.deliveryInfo.address.street}, ${orderData.deliveryInfo.address.city} ${orderData.deliveryInfo.address.zipCode}`.substring(0, 490) : '',
+      
+      // Informations commande
+      total_amount: orderData.totalAmount.toString(),
+      items_count: orderData.items.length.toString(),
+      payment_method: orderData.paymentMethod,
+      
+      // Utilisateur connecté (si applicable)
+      user_id: session?.user?.id || 'guest',
+      
+      // Notes
+      delivery_notes: orderData.deliveryInfo.notes?.substring(0, 490) || ''
+    };
 
-    // Vérifier que la commande existe et appartient à l'utilisateur
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Commande introuvable',
-          code: 'ORDER_NOT_FOUND'
-        }
-      }, { status: 404 });
-    }
-
-    // Vérifier que l'utilisateur peut payer cette commande
-    if (order.user?.toString() !== session.user.id && !customerEmail) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Accès refusé à cette commande',
-          code: 'ACCESS_DENIED'
-        }
-      }, { status: 403 });
-    }
-
-    // Vérifier que la commande n'est pas déjà payée
-    if (order.paymentStatus === 'paid') {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Commande déjà payée',
-          code: 'ALREADY_PAID'
-        }
-      }, { status: 400 });
-    }
-
-    // Vérifier que le montant correspond à la commande
-    const orderAmountInCents = formatAmountForStripe(order.totalAmount, currency);
-    if (Math.abs(amount - orderAmountInCents) > 1) { // Tolérance de 1 centime
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Montant incorrect',
-          code: 'AMOUNT_MISMATCH'
-        }
-      }, { status: 400 });
-    }
-
-    // Préparer les métadonnées pour Stripe
-    const stripeMetadata = validateStripeMetadata({
-      orderId: order.id.toString(),
-      orderNumber: order.orderNumber,
-      customerName: order.customerInfo.name,
-      customerEmail: order.customerInfo.email,
-      userId: session.user.id,
-      ...metadata
-    });
+    // Ajouter les items (format condensé)
+    const itemsMetadata = orderData.items.map(item => 
+      `${item.name}:${item.quantity}x${item.price}€`
+    ).join('|');
+    metadata.items = itemsMetadata.substring(0, 490);
 
     // Créer le Payment Intent avec Stripe
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount,
-      currency: currency.toLowerCase(),
-      metadata: stripeMetadata,
+      amount: amount, // Déjà en centimes
+      currency: currency,
       automatic_payment_methods: {
         enabled: true,
       },
-      description: `Paiement pour commande ${order.orderNumber}`,
-      receipt_email: customerEmail || order.customerInfo.email,
-      setup_future_usage: undefined, // Pas de réutilisation future par défaut
-    });
-
-    // Mettre à jour la commande avec l'ID du Payment Intent
-    await Order.findByIdAndUpdate(orderId, {
-      stripePaymentIntentId: paymentIntent.id,
-      paymentStatus: 'pending',
-      $push: {
-        timeline: {
-          status: 'payée',
-          date: new Date(),
-          note: 'Payment Intent créé'
-        }
-      }
+      receipt_email: customerEmail || orderData.customerInfo.email,
+      metadata: metadata,
+      description: `Commande Bella Fleurs - ${orderData.customerInfo.name}`,
     });
 
     // Log pour le debug (à retirer en production)
     console.log('✅ Payment Intent créé:', {
       paymentIntentId: paymentIntent.id,
-      orderId: order._id,
       amount: amount,
-      currency: currency
+      currency: currency,
+      customer: orderData.customerInfo.name
     });
 
     return NextResponse.json({
@@ -150,11 +122,6 @@ export async function POST(req: NextRequest) {
           amount: paymentIntent.amount,
           currency: paymentIntent.currency,
           status: paymentIntent.status
-        },
-        order: {
-          id: order._id,
-          orderNumber: order.orderNumber,
-          totalAmount: order.totalAmount
         }
       }
     });
@@ -208,29 +175,13 @@ export async function GET(req: NextRequest) {
         success: false,
         error: {
           message: 'Payment Intent ID requis',
-          code: 'PAYMENT_INTENT_ID_REQUIRED'
+          code: 'MISSING_PAYMENT_INTENT_ID'
         }
       }, { status: 400 });
     }
 
     // Récupérer le Payment Intent depuis Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-    // Vérifier que l'utilisateur peut accéder à ce Payment Intent
-    const orderId = paymentIntent.metadata.orderId;
-    if (orderId) {
-      await connectDB();
-      const order = await Order.findById(orderId);
-      if (order && order.user?.toString() !== session.user.id) {
-        return NextResponse.json({
-          success: false,
-          error: {
-            message: 'Accès refusé',
-            code: 'ACCESS_DENIED'
-          }
-        }, { status: 403 });
-      }
-    }
 
     return NextResponse.json({
       success: true,
@@ -264,7 +215,7 @@ export async function GET(req: NextRequest) {
       success: false,
       error: {
         message: 'Erreur lors de la récupération du paiement',
-        code: 'PAYMENT_INTENT_FETCH_ERROR'
+        code: 'PAYMENT_INTENT_GET_ERROR'
       }
     }, { status: 500 });
   }

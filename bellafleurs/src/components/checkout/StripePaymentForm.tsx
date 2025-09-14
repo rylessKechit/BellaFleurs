@@ -40,7 +40,7 @@ const cardElementOptions = {
 
 // Interface pour les props du formulaire
 interface StripePaymentFormProps {
-  orderId: string;
+  orderData: any;
   amount: number; // Montant en euros
   currency?: string;
   customerEmail?: string;
@@ -51,7 +51,7 @@ interface StripePaymentFormProps {
 
 // Composant interne pour le formulaire (à l'intérieur d'Elements)
 function PaymentForm({
-  orderId,
+  orderData,
   amount,
   currency = 'eur',
   customerEmail,
@@ -67,41 +67,6 @@ function PaymentForm({
   const [cardError, setCardError] = useState<string>('');
   const [cardComplete, setCardComplete] = useState(false);
 
-  // Créer le Payment Intent au montage du composant
-  useEffect(() => {
-    if (!orderId || !amount) return;
-
-    const createPaymentIntent = async () => {
-      try {
-        const response = await fetch('/api/payments/create-payment-intent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            orderId,
-            amount: Math.round(amount * 100), // Convertir en centimes
-            currency,
-            customerEmail
-          })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error?.message || 'Erreur lors de la création du paiement');
-        }
-
-        const result = await response.json();
-        setPaymentIntent(result.data.paymentIntent);
-
-      } catch (error: any) {
-        console.error('Erreur Payment Intent:', error);
-        onError(error.message || 'Erreur lors de la préparation du paiement');
-      }
-    };
-
-    createPaymentIntent();
-  }, [orderId, amount, currency, customerEmail, onError]);
-
   // Gérer les changements de la carte
   const handleCardChange = (event: any) => {
     setCardError(event.error ? event.error.message : '');
@@ -112,129 +77,89 @@ function PaymentForm({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!stripe || !elements || !paymentIntent) {
+    if (!stripe || !elements) {
       onError('Stripe n\'est pas encore chargé');
       return;
     }
 
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      onError('Élément de carte non trouvé');
+      return;
+    }
+
     if (!cardComplete) {
-      setCardError('Veuillez compléter les informations de carte');
+      onError('Veuillez compléter les informations de carte');
       return;
     }
 
     setIsProcessing(true);
-    setCardError('');
 
     try {
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) {
-        throw new Error('Élément carte non trouvé');
+      // 1. Créer le Payment Intent
+      console.log('🔄 Création du Payment Intent...');
+      
+      const response = await fetch('/api/payments/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          amount: Math.round(amount * 100),
+          currency,
+          customerEmail,
+          orderData
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Erreur lors de la création du paiement');
       }
 
-      // Confirmer le paiement avec Stripe
-      const { error, paymentIntent: confirmedPaymentIntent } = await stripe.confirmCardPayment(
-        paymentIntent.client_secret,
+      const result = await response.json();
+      const newPaymentIntent = result.data.paymentIntent;
+      console.log('✅ Payment Intent créé:', newPaymentIntent.id);
+
+      // 2. Confirmer le paiement avec Stripe
+      console.log('🔄 Confirmation du paiement...');
+      
+      const { error: confirmError, paymentIntent: confirmedPaymentIntent } = await stripe.confirmCardPayment(
+        newPaymentIntent.client_secret,
         {
           payment_method: {
             card: cardElement,
             billing_details: {
-              email: customerEmail,
-            },
+              name: orderData.customerInfo.name,
+              email: orderData.customerInfo.email,
+              phone: orderData.customerInfo.phone,
+              address: orderData.deliveryInfo.address ? {
+                line1: orderData.deliveryInfo.address.street,
+                city: orderData.deliveryInfo.address.city,
+                postal_code: orderData.deliveryInfo.address.zipCode,
+                country: 'FR'
+              } : undefined
+            }
           }
         }
       );
 
-      if (error) {
-        // Erreur de paiement
-        console.error('Erreur Stripe:', error);
-        
-        let errorMessage = 'Erreur de paiement';
-        
-        switch (error.code) {
-          case 'card_declined':
-            errorMessage = 'Votre carte a été refusée. Veuillez essayer avec une autre carte.';
-            break;
-          case 'expired_card':
-            errorMessage = 'Votre carte a expiré. Veuillez utiliser une carte valide.';
-            break;
-          case 'insufficient_funds':
-            errorMessage = 'Fonds insuffisants sur votre carte.';
-            break;
-          case 'incorrect_cvc':
-            errorMessage = 'Code de sécurité incorrect.';
-            break;
-          case 'processing_error':
-            errorMessage = 'Erreur de traitement. Veuillez réessayer.';
-            break;
-          case 'rate_limit':
-            errorMessage = 'Trop de tentatives. Veuillez attendre avant de réessayer.';
-            break;
-          default:
-            errorMessage = error.message || 'Erreur de paiement';
-        }
-        
-        setCardError(errorMessage);
-        onError(errorMessage);
-        
-      } else if (confirmedPaymentIntent.status === 'succeeded') {
-        // Paiement réussi !
-        console.log('✅ Paiement réussi:', confirmedPaymentIntent.id);
-        
-        // Confirmer côté serveur
-        try {
-          const confirmResponse = await fetch('/api/payments/confirm-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              paymentIntentId: confirmedPaymentIntent.id,
-              orderId: orderId
-            })
-          });
+      if (confirmError) {
+        throw new Error(confirmError.message || 'Erreur lors de la confirmation du paiement');
+      }
 
-          if (confirmResponse.ok) {
-            const confirmResult = await confirmResponse.json();
-            toast.success('Paiement confirmé avec succès !');
-            onSuccess({
-              paymentIntent: confirmedPaymentIntent,
-              order: confirmResult.data.order
-            });
-          } else {
-            // Le paiement Stripe a réussi mais la confirmation serveur a échoué
-            console.warn('⚠️ Paiement Stripe réussi mais confirmation serveur échouée');
-            onSuccess({
-              paymentIntent: confirmedPaymentIntent,
-              order: null,
-              warning: 'Paiement effectué mais confirmation en cours'
-            });
-          }
-          
-        } catch (confirmError) {
-          console.error('Erreur confirmation serveur:', confirmError);
-          // Le paiement a réussi mais on ne peut pas confirmer côté serveur
-          onSuccess({
-            paymentIntent: confirmedPaymentIntent,
-            order: null,
-            warning: 'Paiement effectué, confirmation en cours'
-          });
-        }
-        
-      } else if (confirmedPaymentIntent.status === 'requires_action') {
-        // Le paiement nécessite une action supplémentaire (3D Secure, etc.)
-        setCardError('Action supplémentaire requise. Veuillez suivre les instructions de votre banque.');
-        
+      if (confirmedPaymentIntent?.status === 'succeeded') {
+        console.log('✅ Paiement confirmé:', confirmedPaymentIntent.id);
+        onSuccess({
+          paymentIntent: confirmedPaymentIntent,
+          orderData
+        });
       } else {
-        // Autres statuts
-        setCardError(`Statut de paiement inattendu: ${confirmedPaymentIntent.status}`);
-        onError(`Paiement non finalisé: ${confirmedPaymentIntent.status}`);
+        throw new Error('Le paiement n\'a pas pu être confirmé');
       }
 
     } catch (error: any) {
-      console.error('Erreur lors du paiement:', error);
-      const errorMessage = error.message || 'Erreur lors du traitement du paiement';
-      setCardError(errorMessage);
-      onError(errorMessage);
-      
+      console.error('❌ Erreur de paiement:', error);
+      onError(error.message || 'Erreur lors du paiement');
     } finally {
       setIsProcessing(false);
     }
@@ -300,7 +225,7 @@ function PaymentForm({
           {/* Bouton de paiement */}
           <Button
             type="submit"
-            disabled={!stripe || !paymentIntent || !cardComplete || isProcessing || disabled}
+            disabled={!stripe || !cardComplete || isProcessing || disabled}
             className="w-full py-3 text-lg"
             size="lg"
           >

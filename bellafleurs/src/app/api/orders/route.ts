@@ -6,11 +6,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
-import Cart from '@/models/Cart';
-import Product from '@/models/Product';
 import { z } from 'zod';
 
-// Schéma de validation pour la création de commande - CORRIGÉ
+// Schéma de validation pour la création de commande
 const createOrderSchema = z.object({
   items: z.array(z.object({
     product: z.string(),
@@ -18,44 +16,42 @@ const createOrderSchema = z.object({
     price: z.number().positive(),
     quantity: z.number().int().positive(),
     image: z.string().optional()
-  })).min(1, 'Au moins un article requis'),
+  })).min(1),
   customerInfo: z.object({
-    name: z.string().min(2, 'Nom requis'),
-    email: z.string().email('Email invalide'),
-    phone: z.string().min(10, 'Téléphone requis')
+    name: z.string().min(2),
+    email: z.string().email(),
+    phone: z.string().min(10)
   }),
   deliveryInfo: z.object({
     type: z.enum(['delivery', 'pickup']),
     address: z.object({
-      street: z.string().min(1, 'Adresse requise'),
-      city: z.string().min(1, 'Ville requise'),
-      zipCode: z.string().regex(/^\d{5}$/, 'Code postal invalide'),
+      street: z.string().min(1),
+      city: z.string().min(1),
+      zipCode: z.string().regex(/^\d{5}$/),
       complement: z.string().optional()
     }).optional(),
     date: z.string().or(z.date()),
     notes: z.string().optional()
   }),
-  paymentMethod: z.enum(['card', 'paypal']).default('card'), // CORRIGÉ : 'paypal' au lieu de 'cash'
-  totalAmount: z.number().positive()
+  paymentMethod: z.enum(['card', 'paypal']).default('card'),
+  totalAmount: z.number().positive(),
+  stripePaymentIntentId: z.string().optional(),
+  paymentStatus: z.enum(['pending', 'paid', 'failed']).default('pending'),
+  status: z.enum(['payée', 'en_creation', 'prête', 'en_livraison', 'livrée', 'annulée']).default('payée')
 });
 
-// POST /api/orders - Créer une nouvelle commande
+// POST /api/orders - Créer une commande (fallback)
 export async function POST(request: NextRequest) {
   try {
-    // Connexion à la base de données
     await connectDB();
 
     // Vérifier l'authentification (optionnel pour les invités)
     const session = await getServerSession(authOptions);
     
-    // Valider les données d'entrée
     const body = await request.json();
-    console.log('📥 Données reçues:', body);
-    
     const validationResult = createOrderSchema.safeParse(body);
     
     if (!validationResult.success) {
-      console.error('❌ Erreur de validation:', validationResult.error);
       return NextResponse.json({
         success: false,
         error: {
@@ -66,127 +62,57 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { items, customerInfo, deliveryInfo, paymentMethod, totalAmount } = validationResult.data;
+    const { items, customerInfo, deliveryInfo, paymentMethod, totalAmount, stripePaymentIntentId, paymentStatus, status } = validationResult.data;
 
-    // Vérifier que tous les produits existent et sont actifs
-    const productIds = items.map(item => item.product);
-    const products = await Product.find({ 
-      _id: { $in: productIds }, 
-      isActive: true 
-    });
-
-    if (products.length !== productIds.length) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Certains produits ne sont plus disponibles',
-          code: 'PRODUCTS_UNAVAILABLE'
-        }
-      }, { status: 400 });
-    }
-
-    // Vérifier les prix (sécurité)
-    for (const item of items) {
-      const product = products.find(p => p._id.toString() === item.product);
-      if (!product) {
+    // Vérifier si une commande avec ce Payment Intent existe déjà
+    if (stripePaymentIntentId) {
+      const existingOrder = await Order.findOne({ stripePaymentIntentId });
+      if (existingOrder) {
         return NextResponse.json({
-          success: false,
-          error: {
-            message: 'Produit introuvable',
-            code: 'PRODUCT_NOT_FOUND'
-          }
-        }, { status: 400 });
-      }
-      
-      if (Math.abs(product.price - item.price) > 0.01) {
-        return NextResponse.json({
-          success: false,
-          error: {
-            message: 'Les prix ont changé. Veuillez actualiser votre panier.',
-            code: 'PRICE_MISMATCH'
-          }
-        }, { status: 400 });
+          success: true,
+          message: 'Commande déjà existante',
+          data: { order: existingOrder }
+        });
       }
     }
 
-    // Générer un numéro de commande unique
-    const orderNumber = await generateOrderNumber();
+    // Générer le numéro de commande
+    const orderNumber = await Order.generateOrderNumber();
 
-    // Calculer le sous-total
-    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
-    // Calculer les frais de livraison
-    const deliveryFee = deliveryInfo.type === 'delivery' ? (subtotal >= 50 ? 0 : 10) : 0;
-    
-    // Vérifier le montant total
-    const expectedTotal = subtotal + deliveryFee;
-    if (Math.abs(expectedTotal - totalAmount) > 0.01) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Montant total incorrect',
-          code: 'TOTAL_MISMATCH'
-        }
-      }, { status: 400 });
-    }
-
-    // Créer la commande avec les bonnes valeurs d'enum
-    const orderData = {
+    // Créer la commande
+    const order = new Order({
       orderNumber,
       user: session?.user?.id || null,
-      items: items.map(item => ({
-        product: item.product,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        image: item.image
-      })),
-      customerInfo,
+      items,
+      totalAmount,
+      status,
+      paymentStatus,
+      paymentMethod,
+      stripePaymentIntentId,
       deliveryInfo: {
         ...deliveryInfo,
         date: new Date(deliveryInfo.date)
       },
-      subtotal,
-      deliveryFee,
-      totalAmount,
-      paymentMethod,
-      status: 'payée', // CORRIGÉ : utiliser 'pending' au lieu de 'en_attente'
-      paymentStatus: 'paid',
+      customerInfo,
       timeline: [{
-        status: 'pending', // CORRIGÉ : utiliser 'pending' au lieu de 'en_attente'
+        status,
         date: new Date(),
-        note: 'Commande créée en attente de paiement'
+        note: 'Commande créée'
       }]
-    };
+    });
 
-    console.log('📝 Données de commande à créer:', orderData);
-
-    const order = new Order(orderData);
     await order.save();
 
     console.log('✅ Commande créée:', {
+      id: order._id,
       orderNumber: order.orderNumber,
-      orderId: order._id,
-      customerEmail: customerInfo.email,
-      totalAmount: order.totalAmount
+      via: 'API fallback'
     });
 
     return NextResponse.json({
       success: true,
       message: 'Commande créée avec succès',
-      data: {
-        order: {
-          _id: order._id,
-          orderNumber: order.orderNumber,
-          status: order.status,
-          paymentStatus: order.paymentStatus,
-          totalAmount: order.totalAmount,
-          items: order.items,
-          customerInfo: order.customerInfo,
-          deliveryInfo: order.deliveryInfo,
-          createdAt: order.createdAt
-        }
-      }
+      data: { order }
     }, { status: 201 });
 
   } catch (error: any) {
@@ -203,34 +129,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Erreur de validation Mongoose
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map((err: any) => ({
-        field: err.path,
-        message: err.message
-      }));
-
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Erreur de validation des données',
-          code: 'MONGOOSE_VALIDATION_ERROR',
-          details: validationErrors
-        }
-      }, { status: 400 });
-    }
-
-    // Erreur de duplication (numéro de commande)
-    if (error.code === 11000) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Erreur de création de commande (duplication)',
-          code: 'DUPLICATE_ORDER'
-        }
-      }, { status: 409 });
-    }
-
     return NextResponse.json({
       success: false,
       error: {
@@ -241,7 +139,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/orders - Récupérer les commandes (admin ou utilisateur selon les droits)
+// GET /api/orders - Récupérer les commandes
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
@@ -260,29 +158,30 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const status = searchParams.get('status');
     const skip = (page - 1) * limit;
 
-    let query: any = {};
+    let filters: any = {};
 
-    // Si admin, peut voir toutes les commandes, sinon seulement les siennes
     if (session.user.role !== 'admin') {
-      query = {
-        $or: [
-          { user: session.user.id },
-          { 'customerInfo.email': session.user.email }
-        ]
-      };
+      filters.user = session.user.id;
     }
 
-    const [orders, total] = await Promise.all([
-      Order.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate('items.product', 'name images')
-        .lean(),
-      Order.countDocuments(query)
-    ]);
+    if (status && status !== 'all') {
+      filters.status = status;
+    }
+
+    const orders = await Order.find(filters)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('user', 'name email')
+      .select('-__v');
+
+    const total = await Order.countDocuments(filters);
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
 
     return NextResponse.json({
       success: true,
@@ -292,7 +191,11 @@ export async function GET(request: NextRequest) {
           page,
           limit,
           total,
-          pages: Math.ceil(total / limit)
+          totalPages,
+          hasNextPage,
+          hasPrevPage,
+          nextPage: hasNextPage ? page + 1 : null,
+          prevPage: hasPrevPage ? page - 1 : null
         }
       }
     });
@@ -307,28 +210,4 @@ export async function GET(request: NextRequest) {
       }
     }, { status: 500 });
   }
-}
-
-// Fonction utilitaire pour générer un numéro de commande unique
-async function generateOrderNumber(): Promise<string> {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  
-  // Format: BF-YYYYMMDD-XXXX
-  const datePrefix = `BF-${year}${month}${day}`;
-  
-  // Trouver le dernier numéro du jour
-  const lastOrder = await Order.findOne({
-    orderNumber: { $regex: `^${datePrefix}` }
-  }).sort({ orderNumber: -1 });
-
-  let sequence = 1;
-  if (lastOrder) {
-    const lastSequence = parseInt(lastOrder.orderNumber.split('-')[2]);
-    sequence = lastSequence + 1;
-  }
-
-  return `${datePrefix}-${String(sequence).padStart(4, '0')}`;
 }

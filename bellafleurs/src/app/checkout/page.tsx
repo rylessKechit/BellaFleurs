@@ -1,13 +1,14 @@
 // src/app/checkout/page.tsx - Version finale sans timeSlot
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/layout/Header';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { toast } from 'sonner';
+import { useCart } from '@/contexts/CartContext';
 
 // Composants des étapes
 import CustomerInfoStep from '@/components/checkout/CustomerInfoStep';
@@ -174,6 +175,8 @@ export default function CheckoutPage() {
   const [createdOrderId, setCreatedOrderId] = useState<string>('');
   const { errors, setErrors, validateStep } = useCheckoutValidation();
 
+  const { clearCartCount } = useCart();
+
   // États des formulaires
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     firstName: '',
@@ -199,12 +202,7 @@ export default function CheckoutPage() {
   // Navigation entre les étapes
   const nextStep = () => {
     if (validateStep(currentStep, customerInfo, deliveryInfo)) {
-      if (currentStep === 2) {
-        // Créer la commande avant de passer au paiement
-        createOrder();
-      } else {
-        setCurrentStep(prev => Math.min(prev + 1, 3));
-      }
+      setCurrentStep(prev => Math.min(prev + 1, 3));
     }
   };
 
@@ -212,90 +210,105 @@ export default function CheckoutPage() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  // Création de la commande (étape 2 → 3)
-  const createOrder = async () => {
-    setIsProcessing(true);
-    
+  // Succès du paiement Stripe
+  const handlePaymentSuccess = async (result: any) => {
     try {
+      // 1. Vider le panier immédiatement
+      await fetch('/api/cart/clear', {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      clearCartCount();
+
+      // 2. Logique hybride : Créer la commande côté client + webhook
+      await createOrderFallback(result);
+
+      toast.success('Paiement effectué avec succès !');
+      
+      // 3. Rediriger vers la page de succès
+      router.push('/checkout/success');
+      
+    } catch (error) {
+      console.error('Erreur post-paiement:', error);
+      router.push('/checkout/success');
+    }
+  };
+
+  // ✅ AJOUTER cette fonction de fallback
+  const createOrderFallback = async (result: any) => {
+    try {
+      // Attendre un peu pour laisser le webhook Stripe traiter (en prod)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Vérifier si la commande a été créée par le webhook
+      const checkResponse = await fetch(`/api/orders/by-payment-intent/${result.paymentIntent.id}`, {
+        credentials: 'include'
+      });
+
+      if (checkResponse.ok) {
+        console.log('✅ Commande trouvée via webhook');
+        return; // La commande existe déjà, parfait !
+      }
+
+      // Si pas trouvée, créer côté client (fallback pour dev)
+      console.log('🔄 Webhook non disponible, création côté client...');
+      
       const orderData = {
-        items: cartItems.map(item => ({
-          product: item._id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          image: item.image
-        })),
-        customerInfo: {
-          name: `${customerInfo.firstName} ${customerInfo.lastName}`,
-          email: customerInfo.email,
-          phone: customerInfo.phone
-        },
-        deliveryInfo: {
-          type: 'delivery',
-          address: deliveryInfo.address,
-          date: new Date(deliveryInfo.date),
-          notes: deliveryInfo.notes
-        },
-        paymentMethod: 'card',
-        totalAmount: total
+        ...orderDataForPayment,
+        stripePaymentIntentId: result.paymentIntent.id,
+        paymentStatus: 'paid',
+        status: 'payée'
       };
 
-      console.log('📤 Envoi des données de commande:', orderData);
-
-      // Créer la commande
-      const response = await fetch('/api/orders', {
+      const orderResponse = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(orderData)
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Erreur lors de la création de la commande');
-      }
-
-      const result = await response.json();
-      const order = result.data.order;
-      
-      setCreatedOrderId(order._id);
-      setCurrentStep(3);
-      toast.success('Commande créée, procédez au paiement');
-
-    } catch (error: any) {
-      console.error('Erreur lors de la création de la commande:', error);
-      toast.error(error.message || 'Erreur lors de la création de votre commande');
-      setErrors({ general: error.message || 'Erreur lors de la création de votre commande' });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Succès du paiement Stripe
-  const handlePaymentSuccess = async (result: any) => {
-    try {
-      // Vider le panier
-      await fetch('/api/cart/clear', {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      toast.success('Paiement effectué avec succès !');
-      
-      // Rediriger vers la page de succès
-      if (result.order?.orderNumber) {
-        router.push(`/checkout/success?order=${result.order.orderNumber}`);
+      if (orderResponse.ok) {
+        const orderResult = await orderResponse.json();
+        console.log('✅ Commande créée côté client:', orderResult.data.order.orderNumber);
       } else {
-        // Fallback si pas de numéro de commande
-        router.push('/checkout/success');
+        console.warn('⚠️ Échec création côté client, webhook prendra le relais');
       }
-      
+
     } catch (error) {
-      console.error('Erreur post-paiement:', error);
-      // Même si le vidage du panier échoue, le paiement a réussi
-      router.push('/checkout/success');
+      console.warn('⚠️ Fallback échoué, webhook prendra le relais:', error);
     }
   };
+
+  const orderDataForPayment = useMemo(() => {
+    // ✅ AJOUTÉ: Vérification que toutes les données sont présentes
+    if (!deliveryInfo.address || !deliveryInfo.date) {
+      return null; // Retourner null si les données ne sont pas complètes
+    }
+
+    return {
+      items: cartItems.map(item => ({
+        product: item._id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image
+      })),
+      customerInfo: {
+        name: `${customerInfo.firstName} ${customerInfo.lastName}`,
+        email: customerInfo.email,
+        phone: customerInfo.phone
+      },
+      deliveryInfo: {
+        type: 'delivery',
+        address: deliveryInfo.address,
+        date: new Date(deliveryInfo.date),
+        notes: deliveryInfo.notes
+      },
+      paymentMethod: 'card',
+      totalAmount: total
+    };
+  }, [cartItems, customerInfo, deliveryInfo, total]);
 
   // Erreur de paiement Stripe
   const handlePaymentError = (error: string) => {
@@ -379,9 +392,9 @@ export default function CheckoutPage() {
                 />
               )}
 
-              {currentStep === 3 && createdOrderId && (
+              {currentStep === 3 && orderDataForPayment && (
                 <StripePaymentForm
-                  orderId={createdOrderId}
+                  orderData={orderDataForPayment}
                   amount={total}
                   customerEmail={customerInfo.email}
                   onSuccess={handlePaymentSuccess}
