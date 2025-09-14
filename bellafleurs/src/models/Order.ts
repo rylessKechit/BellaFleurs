@@ -36,7 +36,7 @@ export interface ICustomerInfo {
 
 // Interface pour la timeline
 export interface ITimelineEntry {
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: 'payée' | 'en _creation' | 'prête' | 'en_livraison' | 'livrée' | 'annulée';
   date: Date;
   note?: string;
 }
@@ -58,7 +58,7 @@ export interface IOrder extends Document, IOrderMethods {
   user?: mongoose.Types.ObjectId;
   items: IOrderItem[];
   totalAmount: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: 'payée' | 'en_creation' | 'prête' | 'en_livraison' | 'livrée' | 'annulée';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded';
   paymentMethod: 'card' | 'paypal';
   
@@ -282,10 +282,10 @@ const OrderSchema = new Schema<IOrder, IOrderModel, IOrderMethods>({
   status: {
     type: String,
     enum: {
-      values: ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'],
+      values: ['payée', 'en_creation', 'prête', 'en_livraison', 'livrée', 'annulée'],
       message: 'Invalid order status'
     },
-    default: 'pending',
+    default: 'payée',
     required: [true, 'Order status is required']
   },
   paymentStatus: {
@@ -348,7 +348,7 @@ const OrderSchema = new Schema<IOrder, IOrderModel, IOrderMethods>({
     type: [TimelineSchema],
     default: function(this: any) {
       return [{
-        status: this.status || 'pending',
+        status: this.status || 'payée',
         date: new Date(),
         note: 'Commande créée'
       }];
@@ -392,7 +392,7 @@ OrderSchema.virtual('itemsCount').get(function(this: IOrder) {
 });
 
 OrderSchema.virtual('isCompleted').get(function(this: IOrder) {
-  return this.status === 'delivered';
+  return this.status === 'livrée';
 });
 
 OrderSchema.virtual('isPaid').get(function(this: IOrder) {
@@ -400,7 +400,7 @@ OrderSchema.virtual('isPaid').get(function(this: IOrder) {
 });
 
 OrderSchema.virtual('canBeCancelledVirtual').get(function(this: IOrder) {
-  return ['pending', 'confirmed', 'preparing'].includes(this.status);
+  return ['payée', 'en_creation'].includes(this.status);
 });
 
 OrderSchema.virtual('canBeRefundedVirtual').get(function(this: IOrder) {
@@ -422,19 +422,19 @@ OrderSchema.methods.updateStatus = function(this: IOrder, newStatus: IOrder['sta
   // Mettre à jour les dates de tracking
   const now = new Date();
   switch (newStatus) {
-    case 'confirmed':
+    case 'payée':
       this.confirmedAt = now;
       break;
-    case 'preparing':
+    case 'en_creation':
       this.preparedAt = now;
       break;
-    case 'ready':
+    case 'prête':
       this.readyAt = now;
       break;
-    case 'delivered':
+    case 'en_livraison':
       this.deliveredAt = now;
       break;
-    case 'cancelled':
+    case 'livrée':
       this.cancelledAt = now;
       break;
   }
@@ -459,7 +459,7 @@ OrderSchema.methods.cancel = function(this: IOrder, reason?: string) {
     throw new Error('Cette commande ne peut plus être annulée');
   }
   
-  return this.updateStatus('cancelled', reason || 'Commande annulée');
+  return this.updateStatus('annulée', reason || 'Commande annulée');
 };
 
 OrderSchema.methods.calculateTotal = function(this: IOrder) {
@@ -479,12 +479,12 @@ OrderSchema.methods.addTimelineEntry = function(this: IOrder, status: IOrder['st
 };
 
 OrderSchema.methods.canBeCancelled = function(this: IOrder) {
-  return ['pending', 'confirmed', 'preparing'].includes(this.status);
+  return ['payée'].includes(this.status);
 };
 
 OrderSchema.methods.canBeRefunded = function(this: IOrder) {
   return this.paymentStatus === 'paid' && 
-         ['confirmed', 'preparing', 'ready', 'cancelled'].includes(this.status);
+         ['payée', 'cancelled'].includes(this.status);
 };
 
 // Méthodes statiques
@@ -571,7 +571,7 @@ OrderSchema.statics.getOrderStats = async function(startDate?: Date, endDate?: D
 
 OrderSchema.statics.getPendingOrders = function() {
   return this.find({ 
-    status: { $in: ['pending', 'confirmed', 'preparing', 'ready'] }
+    status: { $in: ['payée', 'en_creation', 'prête'] }
   }).sort({ createdAt: -1 });
 };
 
@@ -580,7 +580,7 @@ OrderSchema.statics.getOverdueOrders = function() {
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
   
   return this.find({
-    status: { $in: ['pending', 'confirmed', 'preparing'] },
+    status: { $in: ['payée', 'en_creation', 'prête'] },
     createdAt: { $lt: threeDaysAgo }
   }).sort({ createdAt: 1 });
 };

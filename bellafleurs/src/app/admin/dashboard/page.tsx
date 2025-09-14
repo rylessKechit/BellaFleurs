@@ -41,7 +41,7 @@ interface RecentOrder {
   customerName: string;
   customerEmail: string;
   totalAmount: number;
-  status: 'validé' | 'en_cours_creation' | 'prête' | 'en_livraison' | 'livré';
+  status: 'payée' | 'en_creation' | 'prête' | 'en_livraison' | 'livrée';
   createdAt: string;
   itemsCount: number;
 }
@@ -128,11 +128,11 @@ export default function AdminDashboard() {
   // Fonction pour obtenir la couleur du statut
   const getStatusColor = (status: RecentOrder['status']) => {
     const colors = {
-      validé: 'bg-blue-100 text-blue-800',
-      en_cours_creation: 'bg-purple-100 text-purple-800',
+      payée: 'bg-blue-100 text-blue-800',
+      en_creation: 'bg-purple-100 text-purple-800',
       prête: 'bg-green-100 text-green-800',
       en_livraison: 'bg-orange-100 text-orange-800',
-      livré: 'bg-emerald-100 text-emerald-800'
+      livrée: 'bg-emerald-100 text-emerald-800'
     };
     return colors[status];
   };
@@ -140,11 +140,11 @@ export default function AdminDashboard() {
   // Fonction pour obtenir le label du statut
   const getStatusLabel = (status: RecentOrder['status']) => {
     const labels = {
-      validé: 'Validée',
-      en_cours_creation: 'En création',
+      payée: 'Validée',
+      en_creation: 'En création',
       prête: 'Prête',
       en_livraison: 'En livraison',
-      livré: 'Livrée'
+      livrée: 'Livrée'
     };
     return labels[status];
   };

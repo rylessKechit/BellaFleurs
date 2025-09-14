@@ -150,8 +150,8 @@ export async function POST(request: NextRequest) {
       deliveryFee,
       totalAmount,
       paymentMethod,
-      status: 'pending', // CORRIGÉ : utiliser 'pending' au lieu de 'en_attente'
-      paymentStatus: 'pending',
+      status: 'payée', // CORRIGÉ : utiliser 'pending' au lieu de 'en_attente'
+      paymentStatus: 'paid',
       timeline: [{
         status: 'pending', // CORRIGÉ : utiliser 'pending' au lieu de 'en_attente'
         date: new Date(),

@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
       paymentStatus: 'pending',
       $push: {
         timeline: {
-          status: 'pending',
+          status: 'payée',
           date: new Date(),
           note: 'Payment Intent créé'
         }

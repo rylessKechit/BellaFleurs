@@ -137,7 +137,7 @@ export const orderSchema = z.object({
 });
 
 export const updateOrderStatusSchema = z.object({
-  status: z.enum(['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled']),
+  status: z.enum(['payée', 'en_creation', 'prête', 'en_livraison', 'livrée', 'annulée']),
   note: z.string().max(200, 'Note trop longue').optional()
 });
 

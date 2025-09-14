@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       ]),
       Product.countDocuments({ isActive: true }),
       User.countDocuments({ role: 'client' }),
-      Order.countDocuments({ status: { $in: ['pending', 'confirmed'] } }),
+      Order.countDocuments({ status: { $in: ['payée'] } }),
       Order.countDocuments({ paymentStatus: 'paid' })
     ]);
 

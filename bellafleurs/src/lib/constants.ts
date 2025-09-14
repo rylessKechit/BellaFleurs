@@ -108,38 +108,38 @@ export const PRODUCT_CATEGORIES = {
 
 // Statuts des commandes
 export const ORDER_STATUS = {
-  pending: {
-    value: 'pending',
-    label: 'En attente',
+  payée: {
+    value: 'payée',
+    label: 'Payée',
     color: 'yellow',
-    description: 'Commande reçue, en attente de confirmation'
+    description: 'Commande reçue et payée'
   },
-  confirmed: {
-    value: 'confirmed',
-    label: 'Confirmée',
+  en_creation: {
+    value: 'en_creation',
+    label: 'En création',
     color: 'blue',
-    description: 'Commande confirmée et prise en compte'
+    description: 'Aurélie prépare votre commande'
   },
-  preparing: {
-    value: 'preparing',
-    label: 'En préparation',
-    color: 'orange',
-    description: 'Nos fleuristes préparent votre commande'
-  },
-  ready: {
-    value: 'ready',
+  prête: {
+    value: 'prête',
     label: 'Prête',
-    color: 'purple',
-    description: 'Commande prête pour livraison/retrait'
+    color: 'orange',
+    description: 'Votre création est prête'
   },
-  delivered: {
-    value: 'delivered',
+  en_livraison: {
+    value: 'en_livraison',
+    label: 'En livraison',
+    color: 'purple',
+    description: 'Commande en livraison'
+  },
+  livrée: {
+    value: 'livrée',
     label: 'Livrée',
     color: 'green',
     description: 'Commande livrée avec succès'
   },
-  cancelled: {
-    value: 'cancelled',
+  annulée: {
+    value: 'annulée',
     label: 'Annulée',
     color: 'red',
     description: 'Commande annulée'

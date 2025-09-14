@@ -84,7 +84,7 @@ export interface IOrder extends BaseDocument {
   user?: string; // ObjectId en string pour les clients connectés
   items: IOrderItem[];
   totalAmount: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  status: 'payée' | 'en_creation' | 'prête' | 'en_livraison' | 'livrée' | 'annulée';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   stripePaymentIntentId?: string;
   deliveryInfo: {

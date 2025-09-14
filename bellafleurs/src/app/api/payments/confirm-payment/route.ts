@@ -223,7 +223,7 @@ export async function POST(req: NextRequest) {
         paymentStatus: 'failed',
         $push: {
           timeline: {
-            status: 'pending',
+            status: 'payée',
             date: new Date(),
             note: `Paiement échoué - Statut: ${paymentIntent.status}`
           }

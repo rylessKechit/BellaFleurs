@@ -483,7 +483,7 @@ export default function AdminOrdersPage() {
   // Statistiques rapides
   const stats = {
     total: orders.length,
-    validé: orders.filter(o => o.status === 'payée').length,
+    payée: orders.filter(o => o.status === 'payée').length,
     en_cours: orders.filter(o => o.status === 'en_creation').length,
     prête: orders.filter(o => o.status === 'prête').length,
     en_livraison: orders.filter(o => o.status === 'en_livraison').length
@@ -521,7 +521,7 @@ export default function AdminOrdersPage() {
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-blue-600">{stats.validé}</p>
+              <p className="text-2xl font-bold text-blue-600">{stats.payée}</p>
               <p className="text-sm text-gray-600">Validées</p>
             </CardContent>
           </Card>

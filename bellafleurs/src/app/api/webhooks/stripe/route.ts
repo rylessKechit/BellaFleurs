@@ -220,7 +220,7 @@ async function handlePaymentIntentFailed(paymentIntent: any) {
       paymentStatus: 'failed',
       $push: {
         timeline: {
-          status: 'pending',
+          status: 'payée',
           date: new Date(),
           note: `Paiement échoué - ${paymentIntent.last_payment_error?.message || 'Erreur inconnue'}`
         }
@@ -294,7 +294,7 @@ async function handlePaymentIntentRequiresAction(paymentIntent: any) {
     await Order.findByIdAndUpdate(orderId, {
       $push: {
         timeline: {
-          status: 'pending',
+          status: 'payée',
           date: new Date(),
           note: 'Action requise pour le paiement (3D Secure, etc.)'
         }
@@ -325,7 +325,7 @@ async function handlePaymentIntentProcessing(paymentIntent: any) {
     await Order.findByIdAndUpdate(orderId, {
       $push: {
         timeline: {
-          status: 'pending',
+          status: 'payée',
           date: new Date(),
           note: 'Paiement en cours de traitement'
         }

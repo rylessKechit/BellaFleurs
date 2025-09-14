@@ -8,10 +8,10 @@ import { sendOrderStatusEmail, sendNewOrderNotification } from '@/lib/email';
 import { z } from 'zod';
 
 // Type pour les statuts de commande
-type OrderStatus = 'validé' | 'en_cours_creation' | 'prête' | 'en_livraison' | 'livré';
+type OrderStatus = 'payée' | 'en_creation' | 'prête' | 'en_livraison' | 'livrée';
 
 const statusUpdateSchema = z.object({
-  status: z.enum(['validé', 'en_cours_creation', 'prête', 'en_livraison', 'livré']),
+  status: z.enum(['payée', 'en_creation', 'prête', 'en_livraison', 'livrée']),
   note: z.string().optional()
 });
 
@@ -51,11 +51,11 @@ export async function PATCH(
 
     // Vérifier que le changement de statut est valide
     const statusFlow: Record<OrderStatus, OrderStatus[]> = {
-      'validé': ['en_cours_creation'],
-      'en_cours_creation': ['prête'],
+      'payée': ['en_creation'],
+      'en_creation': ['prête'],
       'prête': ['en_livraison'],
-      'en_livraison': ['livré'],
-      'livré': []
+      'en_livraison': ['livrée'],
+      'livrée': []
     };
 
     const currentStatus = currentOrder.status as OrderStatus;
@@ -88,8 +88,8 @@ export async function PATCH(
       { new: true }
     ).populate('items.product', 'name images');
 
-    // Envoyer email de notification au client (sauf pour "validé") - REMPLACEMENT DES CONSOLE.LOG
-    if (newStatus !== 'validé') {
+    // Envoyer email de notification au client (sauf pour "payée") - REMPLACEMENT DES CONSOLE.LOG
+    if (newStatus !== 'payée') {
       await sendOrderStatusEmail(updatedOrder, newStatus, note);
     }
 
