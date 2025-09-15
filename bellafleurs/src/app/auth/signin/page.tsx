@@ -61,40 +61,40 @@ function SignInForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-pink-50 px-4">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-pink-50 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-6 sm:space-y-8">
         <div className="text-center">
           <Link href="/" className="inline-block">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
               Bella Fleurs
             </h1>
           </Link>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+          <h2 className="mt-4 sm:mt-6 text-2xl sm:text-3xl font-bold text-gray-900">
             Bon retour parmi nous ! 🌸
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm sm:text-base text-gray-600">
             Connectez-vous pour accéder à votre compte
           </p>
         </div>
 
-        <div className="bg-white py-8 px-6 shadow-xl rounded-xl border border-gray-200">
+        <div className="bg-white py-6 sm:py-8 px-4 sm:px-6 shadow-xl rounded-xl border border-gray-200">
           {error && (
-            <Alert className="mb-6 border-red-200 bg-red-50">
+            <Alert className="mb-4 sm:mb-6 border-red-200 bg-red-50">
               <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-700">
+              <AlertDescription className="text-red-700 text-sm">
                 {getErrorMessage(error)}
               </AlertDescription>
             </Alert>
           )}
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Adresse email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                  <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                 </div>
                 <input
                   id="email"
@@ -107,7 +107,7 @@ function SignInForm() {
                     setEmail(e.target.value);
                     if (errors.email) setErrors({...errors, email: undefined});
                   }}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors duration-200 ${
+                  className={`w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors duration-200 text-sm sm:text-base ${
                     errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
                   }`}
                   placeholder="votre@email.com"
@@ -124,7 +124,7 @@ function SignInForm() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                 </div>
                 <input
                   id="password"
@@ -137,7 +137,7 @@ function SignInForm() {
                     setPassword(e.target.value);
                     if (errors.password) setErrors({...errors, password: undefined});
                   }}
-                  className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors duration-200 ${
+                  className={`w-full pl-9 sm:pl-10 pr-10 sm:pr-12 py-2.5 sm:py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors duration-200 text-sm sm:text-base ${
                     errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
                   }`}
                   placeholder="••••••••"
@@ -148,9 +148,9 @@ function SignInForm() {
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <EyeOff className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 hover:text-gray-600" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 hover:text-gray-600" />
                   )}
                 </button>
               </div>
@@ -167,25 +167,27 @@ function SignInForm() {
                   type="checkbox"
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
                   Se souvenir de moi
                 </label>
               </div>
 
-              <Link
-                href="/auth/forgot-password"
-                className="text-sm text-primary-600 hover:text-primary-700 transition-colors duration-200"
-              >
-                Mot de passe oublié ?
-              </Link>
+              <div className="text-sm">
+                <Link
+                  href="/auth/forgot-password"
+                  className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-200"
+                >
+                  Mot de passe oublié ?
+                </Link>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center items-center py-3 px-4 
+              className="w-full flex justify-center items-center py-2.5 sm:py-3 px-4 
                        bg-gradient-to-r from-primary-600 to-primary-700 
-                       text-white font-medium rounded-lg
+                       text-white font-medium rounded-lg text-sm sm:text-base
                        hover:from-primary-700 hover:to-primary-800
                        focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
                        disabled:opacity-50 disabled:cursor-not-allowed
@@ -194,19 +196,19 @@ function SignInForm() {
             >
               {isLoading ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white mr-2"></div>
                   Connexion...
                 </>
               ) : (
                 <>
                   Se connecter
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-4 sm:mt-6 text-center">
             <p className="text-sm text-gray-600">
               Vous n'avez pas encore de compte ?{' '}
               <Link
