@@ -144,20 +144,20 @@ function useUserProfile(isAuthenticated: boolean, setCustomerInfo: Function, set
   }, [isAuthenticated, setCustomerInfo, setDeliveryInfo]);
 }
 
-// Composant indicateur d'étapes
+// Composant indicateur d'étapes - VERSION RESPONSIVE
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
-  <div className="flex items-center justify-center mb-8">
+  <div className="flex items-center justify-center mb-6 sm:mb-8">
     {[1, 2, 3].map((step, index) => (
       <div key={step} className="flex items-center">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-medium transition-all duration-300 ${
+        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-medium transition-all duration-300 ${
           step <= currentStep 
             ? 'bg-green-600 text-white shadow-lg' 
             : 'bg-gray-200 text-gray-600'
         }`}>
-          {step < currentStep ? <Check className="w-5 h-5" /> : step}
+          {step < currentStep ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : step}
         </div>
         {step < 3 && (
-          <div className={`w-16 h-1 mx-2 transition-all duration-300 ${
+          <div className={`w-12 sm:w-16 h-1 mx-1 sm:mx-2 transition-all duration-300 ${
             step < currentStep ? 'bg-green-600' : 'bg-gray-200'
           }`} />
         )}
@@ -342,36 +342,36 @@ export default function CheckoutPage() {
     <>
       <Header />
       <main className="min-h-screen bg-gray-50 pt-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           
-          {/* Breadcrumb */}
-          <nav className="mb-8">
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <button onClick={() => router.push('/')} className="hover:text-green-600 transition-colors">
+          {/* Breadcrumb responsive */}
+          <nav className="mb-6 sm:mb-8">
+            <div className="flex items-center space-x-2 text-sm text-gray-600 overflow-x-auto">
+              <button onClick={() => router.push('/')} className="hover:text-green-600 transition-colors whitespace-nowrap">
                 Accueil
               </button>
               <span>/</span>
-              <button onClick={() => router.push('/panier')} className="hover:text-green-600 transition-colors">
+              <button onClick={() => router.push('/panier')} className="hover:text-green-600 transition-colors whitespace-nowrap">
                 Panier
               </button>
               <span>/</span>
-              <span className="text-gray-900 font-medium">Commande</span>
+              <span className="text-gray-900 font-medium whitespace-nowrap">Commande</span>
             </div>
           </nav>
 
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          {/* Header responsive */}
+          <div className="text-center mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
               Finaliser votre commande
             </h1>
-            <p className="text-gray-600">
+            <p className="text-sm sm:text-base text-gray-600">
               Quelques étapes pour recevoir vos plus belles fleurs
             </p>
           </div>
 
           <StepIndicator currentStep={currentStep} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             
             {/* Formulaire principal */}
             <div className="lg:col-span-2">
@@ -403,13 +403,13 @@ export default function CheckoutPage() {
                 />
               )}
 
-              {/* Navigation */}
-              <div className="flex justify-between mt-8">
+              {/* Navigation responsive */}
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-4 mt-6 sm:mt-8">
                 <Button 
                   variant="outline" 
                   onClick={prevStep}
                   disabled={currentStep === 1 || isProcessing}
-                  className="flex items-center"
+                  className="flex items-center justify-center w-full sm:w-auto order-2 sm:order-1"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Précédent
@@ -419,7 +419,7 @@ export default function CheckoutPage() {
                   <Button 
                     onClick={nextStep}
                     disabled={isProcessing}
-                    className="flex items-center"
+                    className="flex items-center justify-center w-full sm:w-auto order-1 sm:order-2"
                   >
                     {isProcessing ? (
                       <div className="flex items-center">
@@ -438,23 +438,25 @@ export default function CheckoutPage() {
 
               {/* Erreur générale */}
               {errors.general && (
-                <div className="mt-4 bg-red-50 p-4 rounded-lg border border-red-200">
+                <div className="mt-4 bg-red-50 p-3 sm:p-4 rounded-lg border border-red-200">
                   <p className="text-red-700 text-sm">{errors.general}</p>
                 </div>
               )}
             </div>
 
-            {/* Résumé de commande */}
+            {/* Résumé de commande - sticky sur desktop */}
             <div className="lg:col-span-1">
-              <OrderSummary
-                cartItems={cartItems}
-                customerInfo={customerInfo}
-                deliveryInfo={deliveryInfo}
-                subtotal={subtotal}
-                deliveryFee={deliveryFee}
-                total={total}
-                currentStep={currentStep}
-              />
+              <div className="lg:sticky lg:top-24">
+                <OrderSummary
+                  cartItems={cartItems}
+                  customerInfo={customerInfo}
+                  deliveryInfo={deliveryInfo}
+                  subtotal={subtotal}
+                  deliveryFee={deliveryFee}
+                  total={total}
+                  currentStep={currentStep}
+                />
+              </div>
             </div>
           </div>
         </div>
