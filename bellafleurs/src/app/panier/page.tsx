@@ -154,7 +154,7 @@ export default function CartPage() {
   // Calculs
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = subtotal >= 50 ? 0 : 5.90;
+  const shipping = subtotal >= 50 ? 0 : 10;
   const total = subtotal + shipping;
 
   if (isLoading) {
