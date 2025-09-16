@@ -18,7 +18,7 @@ import {
   MoreHorizontal,
   Download,
   RefreshCw,
-  AlertCircle  // ← AJOUT UNIQUEMENT DE CETTE LIGNE
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -90,325 +90,6 @@ interface Order {
     note?: string;
   }[];
   createdAt: string;
-  updatedAt: string;
-}
-
-const getOrderStatusConfig = (status: string) => {
-  const statusMapping: Record<string, any> = {
-    'payée': {
-      label: 'Payée - En attente de création',
-      color: 'bg-blue-100 text-blue-800',
-      icon: CheckCircle,
-      nextStatus: 'en_creation',
-      description: 'Commande payée, en attente de création'
-    },
-    'en_creation': {
-      label: 'En création',
-      color: 'bg-purple-100 text-purple-800',
-      icon: Clock,
-      nextStatus: 'prête',
-      description: 'Bouquet en cours de création'
-    },
-    'prête': {
-      label: 'Prête',
-      color: 'bg-green-100 text-green-800',
-      icon: Package,
-      nextStatus: 'en_livraison',
-      description: 'Commande prête pour livraison'
-    },
-    'en_livraison': {
-      label: 'En livraison',
-      color: 'bg-orange-100 text-orange-800',
-      icon: Truck,
-      nextStatus: 'livrée',
-      description: 'Commande en cours de livraison'
-    },
-    'livrée': {
-      label: 'Livrée',
-      color: 'bg-emerald-100 text-emerald-800',
-      icon: CheckCircle,
-      nextStatus: null,
-      description: 'Commande livrée avec succès'
-    },
-    'annulée': {
-      label: 'Annulée',
-      color: 'bg-red-100 text-red-800',
-      icon: AlertCircle,
-      nextStatus: null,
-      description: 'Commande annulée'
-    }
-  };
-  
-  return statusMapping[status] || {
-    label: `Statut inconnu (${status})`,
-    color: 'bg-gray-100 text-gray-800',
-    icon: AlertCircle,
-    nextStatus: null
-  };
-};
-
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
-
-// Composant Détails de commande
-function OrderDetails({ 
-  order, 
-  onStatusUpdate 
-}: { 
-  order: Order,
-  onStatusUpdate: (orderId: string, newStatus: OrderStatus, note?: string) => void 
-}) {
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [statusNote, setStatusNote] = useState('');
-  const [adminNotes, setAdminNotes] = useState(order.adminNotes || '');
-
-  const handleStatusUpdate = async (newStatus: OrderStatus) => {
-    setIsUpdating(true);
-    try {
-      await onStatusUpdate(order._id, newStatus, statusNote);
-      setStatusNote('');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleNotesUpdate = async () => {
-    try {
-      const response = await fetch(`/api/admin/orders/${order._id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ adminNotes })
-      });
-
-      if (response.ok) {
-        toast.success('Notes mises à jour');
-      } else {
-        throw new Error('Erreur lors de la mise à jour');
-      }
-    } catch (error) {
-      toast.error('Erreur lors de la mise à jour des notes');
-    }
-  };
-
-  const config = getOrderStatusConfig(order.status); // ← CHANGEMENT ICI
-  const Icon = config.icon;
-
-  return (
-    <div className="space-y-6 max-w-4xl">
-      
-      {/* En-tête avec statut */}
-      <div className="flex justify-between items-start border-b pb-4">
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900">
-            Commande {order.orderNumber}
-          </h3>
-          <p className="text-sm text-gray-600 mt-1">
-            Passée le {formatDate(order.createdAt)}
-          </p>
-        </div>
-        <div className="text-right">
-          <Badge className={config.color}>
-            <Icon className="w-3 h-3 mr-1" />
-            {config.label}
-          </Badge>
-          <p className="text-lg font-bold mt-1">
-            {order.totalAmount.toFixed(2)}€
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Informations client */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Informations client</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="w-4 h-4 text-gray-500" />
-              <span className="font-medium">{order.customerInfo.name}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Mail className="w-4 h-4 text-gray-500" />
-              <a 
-                href={`mailto:${order.customerInfo.email}`}
-                className="text-blue-600 hover:underline"
-              >
-                {order.customerInfo.email}
-              </a>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Phone className="w-4 h-4 text-gray-500" />
-              <a 
-                href={`tel:${order.customerInfo.phone}`}
-                className="text-blue-600 hover:underline"
-              >
-                {order.customerInfo.phone}
-              </a>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Informations de livraison */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Livraison</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-            </div>
-            
-            {order.deliveryInfo.type === 'delivery' && order.deliveryInfo.address ? (
-              <div className="flex items-start space-x-2">
-                <MapPin className="w-4 h-4 text-gray-500 mt-0.5" />
-                <div>
-                  <p>{order.deliveryInfo.address.street}</p>
-                  <p>{order.deliveryInfo.address.zipCode} {order.deliveryInfo.address.city}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <Package className="w-4 h-4 text-gray-500" />
-                <span>Retrait en boutique</span>
-              </div>
-            )}
-            
-            {order.deliveryInfo.notes && (
-              <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded">
-                <strong>Note:</strong> {order.deliveryInfo.notes}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Articles */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Articles commandés</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {order.items.map((item) => (
-              <div key={item._id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-16 h-16 object-cover rounded-lg"
-                />
-                <div className="flex-1">
-                  <h5 className="font-medium text-gray-900">{item.name}</h5>
-                  <p className="text-sm text-gray-600">
-                    {item.quantity} × {item.price.toFixed(2)}€
-                  </p>
-                </div>
-                <p className="font-medium text-gray-900">
-                  {(item.price * item.quantity).toFixed(2)}€
-                </p>
-              </div>
-            ))}
-            <div className="border-t pt-3">
-              <div className="flex justify-between items-center font-medium text-lg">
-                <span>Total</span>
-                <span>{order.totalAmount.toFixed(2)}€</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Gestion du statut */}
-      {config.nextStatus && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Changer le statut</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="statusNote">Note (optionnelle)</Label>
-              <Textarea
-                id="statusNote"
-                value={statusNote}
-                onChange={(e) => setStatusNote(e.target.value)}
-                placeholder="Ajouter une note sur ce changement de statut..."
-                rows={2}
-              />
-            </div>
-            <Button 
-              onClick={() => handleStatusUpdate(config.nextStatus!)}
-              disabled={isUpdating}
-              className="w-full"
-            >
-              {isUpdating ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Icon className="w-4 h-4 mr-2" />
-              )}
-              Passer à "{getOrderStatusConfig(config.nextStatus).label}" {/* ← CHANGEMENT ICI */}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Notes admin */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Notes administrateur</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Textarea
-            value={adminNotes}
-            onChange={(e) => setAdminNotes(e.target.value)}
-            placeholder="Notes internes pour cette commande..."
-            rows={3}
-          />
-          <Button onClick={handleNotesUpdate} variant="outline">
-            Sauvegarder les notes
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Timeline */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Historique</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {order.timeline.map((step, index) => {
-              const stepConfig = getOrderStatusConfig(step.status); // ← CHANGEMENT ICI
-              const StepIcon = stepConfig.icon;
-              
-              return (
-                <div key={index} className="flex items-start space-x-3">
-                  <div className={`p-2 rounded-full ${stepConfig.color}`}>
-                    <StepIcon className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{stepConfig.label}</p>
-                    <p className="text-sm text-gray-600">{formatDate(step.date)}</p>
-                    {step.note && (
-                      <p className="text-sm text-gray-500 mt-1">{step.note}</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
 }
 
 export default function AdminOrdersPage() {
@@ -493,7 +174,7 @@ export default function AdminOrdersPage() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-green-600"></div>
         </div>
       </AdminLayout>
     );
@@ -501,241 +182,263 @@ export default function AdminOrdersPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         
-        {/* Header */}
+        {/* Header - RESPONSIVE APPLIQUÉ */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestion des Commandes</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestion des Commandes</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
             Suivez et gérez toutes vos commandes
           </p>
         </div>
 
-        {/* Statistiques rapides */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {/* Statistiques rapides - RESPONSIVE APPLIQUÉ */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
           <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-sm text-gray-600">Total</p>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-xs sm:text-sm text-gray-600">Total</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-blue-600">{stats.payée}</p>
-              <p className="text-sm text-gray-600">Validées</p>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-blue-600">{stats.payée}</p>
+              <p className="text-xs sm:text-sm text-gray-600">Validées</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-purple-600">{stats.en_cours}</p>
-              <p className="text-sm text-gray-600">En création</p>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-purple-600">{stats.en_cours}</p>
+              <p className="text-xs sm:text-sm text-gray-600">En création</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-green-600">{stats.prête}</p>
-              <p className="text-sm text-gray-600">Prêtes</p>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-green-600">{stats.prête}</p>
+              <p className="text-xs sm:text-sm text-gray-600">Prêtes</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-orange-600">{stats.en_livraison}</p>
-              <p className="text-sm text-gray-600">En livraison</p>
+          <Card className="col-span-2 sm:col-span-3 md:col-span-1">
+            <CardContent className="p-3 sm:p-4 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-orange-600">{stats.en_livraison}</p>
+              <p className="text-xs sm:text-sm text-gray-600">En livraison</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filtres et recherche */}
+        {/* Filtres et recherche - RESPONSIVE APPLIQUÉ */}
         <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
-                    placeholder="Rechercher par numéro, nom client, email..."
+                    placeholder="Rechercher par numéro, nom ou email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 text-sm"
                   />
                 </div>
               </div>
-              <div className="md:w-48">
+              
+              <div className="w-full sm:w-48">
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger>
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les statuts</SelectItem>
                     <SelectItem value="payée">Payée</SelectItem>
                     <SelectItem value="en_creation">En création</SelectItem>
-                    <SelectItem value="prête">Prêtes</SelectItem>
+                    <SelectItem value="prête">Prête</SelectItem>
                     <SelectItem value="en_livraison">En livraison</SelectItem>
-                    <SelectItem value="livrée">Livrées</SelectItem>
+                    <SelectItem value="livrée">Livrée</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={fetchOrders} variant="outline">
+              
+              <Button onClick={fetchOrders} variant="outline" size="sm">
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Actualiser
+                <span className="hidden sm:inline">Actualiser</span>
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Liste des commandes */}
-        <div className="space-y-4">
-          {filteredOrders.map((order) => {
-            const config = getOrderStatusConfig(order.status); // ← CHANGEMENT ICI
-            const Icon = config.icon;
-            
-            return (
-              <Card key={order._id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex-shrink-0">
-                        <Badge className={config.color}>
-                          <Icon className="w-3 h-3 mr-1" />
-                          {config.label}
-                        </Badge>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          {order.orderNumber}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {order.customerInfo.name} • {formatDate(order.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900">
+        {/* Liste des commandes - RESPONSIVE APPLIQUÉ */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg sm:text-xl">
+              Commandes ({filteredOrders.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {filteredOrders.length === 0 ? (
+              <div className="text-center py-8 sm:py-12 px-4">
+                <Package className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-sm sm:text-base text-gray-500">Aucune commande trouvée</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                {/* Table responsive pour desktop */}
+                <table className="w-full hidden md:table">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Commande
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Client
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Montant
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Statut
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredOrders.map((order) => (
+                      <tr key={order._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {order.orderNumber}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {order.items.length} article(s)
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {order.customerInfo.name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {order.customerInfo.email}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                           {order.totalAmount.toFixed(2)}€
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {order.items.length} article(s)
-                        </p>
-                      </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge className={getStatusBadgeClass(order.status)}>
+                            {getStatusLabel(order.status)}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(order.createdAt).toLocaleDateString('fr-FR')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem onClick={() => setSelectedOrder(order)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Voir détails
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Modifier statut
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Download className="w-4 h-4 mr-2" />
+                                Télécharger
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-                      <div className="flex items-center space-x-2">
-                        {/* Action rapide de changement de statut */}
-                        {config.nextStatus && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleStatusUpdate(order._id, config.nextStatus!)}
-                          >
-                            → {getOrderStatusConfig(config.nextStatus).label} {/* ← CHANGEMENT ICI */}
-                          </Button>
-                        )}
-
-                        {/* Menu d'actions */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setSelectedOrder(order)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Voir détails
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => window.open(`mailto:${order.customerInfo.email}`)}
-                            >
-                              <Mail className="w-4 h-4 mr-2" />
-                              Contacter client
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => window.open(`tel:${order.customerInfo.phone}`)}
-                            >
-                              <Phone className="w-4 h-4 mr-2" />
-                              Appeler client
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Informations rapides */}
-                  <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-                    <div className="flex items-center space-x-4">
-                      <span className="flex items-center">
-                        <Calendar className="w-4 h-4 mr-1" />
-                        {new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}
-                      </span>
-                      <span className="flex items-center">
-                        {order.deliveryInfo.type === 'delivery' ? (
-                          <>
-                            <MapPin className="w-4 h-4 mr-1" />
-                            Livraison
-                          </>
-                        ) : (
-                          <>
-                            <Package className="w-4 h-4 mr-1" />
-                            Retrait
-                          </>
-                        )}
-                      </span>
-                    </div>
-                    
-                    <div className="flex -space-x-2">
-                      {order.items.slice(0, 3).map((item, index) => (
-                        <img
-                          key={item._id}
-                          src={item.image}
-                          alt={item.name}
-                          className="w-8 h-8 rounded-full border-2 border-white object-cover"
-                          style={{ zIndex: 3 - index }}
-                          title={item.name}
-                        />
-                      ))}
-                      {order.items.length > 3 && (
-                        <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-xs font-medium text-gray-600">
-                          +{order.items.length - 3}
+                {/* Cards responsive pour mobile/tablet */}
+                <div className="md:hidden space-y-3 sm:space-y-4 p-4 sm:p-6">
+                  {filteredOrders.map((order) => (
+                    <Card key={order._id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h3 className="font-medium text-sm text-gray-900">{order.orderNumber}</h3>
+                            <p className="text-xs text-gray-500">
+                              {new Date(order.createdAt).toLocaleDateString('fr-FR')} • {order.items.length} article(s)
+                            </p>
+                          </div>
+                          <Badge className={`${getStatusBadgeClass(order.status)} text-xs`}>
+                            {getStatusLabel(order.status)}
+                          </Badge>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                        
+                        <div className="space-y-2 mb-3">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Client:</span>
+                            <span className="font-medium">{order.customerInfo.name}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Montant:</span>
+                            <span className="font-bold text-green-600">{order.totalAmount.toFixed(2)}€</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex space-x-2">
+                          <Button size="sm" variant="outline" onClick={() => setSelectedOrder(order)} className="flex-1 text-xs">
+                            <Eye className="w-3 h-3 mr-1" />
+                            Détails
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="outline">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Modifier statut
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Download className="w-4 h-4 mr-2" />
+                                Télécharger
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {filteredOrders.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-12">
-              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Aucune commande trouvée
-              </h3>
-              <p className="text-gray-600">
-                {searchTerm || filterStatus !== 'all' 
-                  ? 'Aucune commande ne correspond à vos critères de recherche.'
-                  : 'Aucune commande pour le moment.'
-                }
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Dialog des détails de commande */}
-        <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        {/* Dialog pour les détails de commande - RESPONSIVE APPLIQUÉ */}
+        <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl">
                 Détails de la commande {selectedOrder?.orderNumber}
               </DialogTitle>
             </DialogHeader>
+            
             {selectedOrder && (
-              <OrderDetails 
+              <OrderDetailsDialog 
                 order={selectedOrder} 
                 onStatusUpdate={handleStatusUpdate}
               />
@@ -744,5 +447,151 @@ export default function AdminOrdersPage() {
         </Dialog>
       </div>
     </AdminLayout>
+  );
+}
+
+// Fonctions utilitaires
+function getStatusBadgeClass(status: OrderStatus): string {
+  const classes = {
+    'payée': 'bg-blue-100 text-blue-800',
+    'en_creation': 'bg-orange-100 text-orange-800',
+    'prête': 'bg-green-100 text-green-800',
+    'en_livraison': 'bg-purple-100 text-purple-800',
+    'livrée': 'bg-emerald-100 text-emerald-800',
+    'annulée': 'bg-red-100 text-red-800'
+  };
+  return classes[status] || 'bg-gray-100 text-gray-800';
+}
+
+function getStatusLabel(status: OrderStatus): string {
+  const labels = {
+    'payée': 'Payée',
+    'en_creation': 'En création',
+    'prête': 'Prête',
+    'en_livraison': 'En livraison',
+    'livrée': 'Livrée',
+    'annulée': 'Annulée'
+  };
+  return labels[status] || status;
+}
+
+// Composant pour les détails de commande - RESPONSIVE APPLIQUÉ
+function OrderDetailsDialog({ 
+  order, 
+  onStatusUpdate 
+}: { 
+  order: Order;
+  onStatusUpdate: (orderId: string, status: OrderStatus, note?: string) => void;
+}) {
+  const [newStatus, setNewStatus] = useState<OrderStatus>(order.status);
+  const [note, setNote] = useState('');
+
+  const handleUpdateStatus = () => {
+    if (newStatus !== order.status) {
+      onStatusUpdate(order._id, newStatus, note || undefined);
+      setNote('');
+    }
+  };
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      {/* Informations générales - RESPONSIVE APPLIQUÉ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <h4 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">Informations client</h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center">
+              <Mail className="w-4 h-4 mr-2 text-gray-400" />
+              <span>{order.customerInfo.name}</span>
+            </div>
+            <div className="flex items-center">
+              <Phone className="w-4 h-4 mr-2 text-gray-400" />
+              <span>{order.customerInfo.email}</span>
+            </div>
+            <div className="flex items-center">
+              <Phone className="w-4 h-4 mr-2 text-gray-400" />
+              <span>{order.customerInfo.phone}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <h4 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">Livraison</h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center">
+              <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+              <span>{order.deliveryInfo.type === 'delivery' ? 'Livraison' : 'Retrait'}</span>
+            </div>
+            {order.deliveryInfo.address && (
+              <div className="ml-6">
+                <p>{order.deliveryInfo.address.street}</p>
+                <p>{order.deliveryInfo.address.zipCode} {order.deliveryInfo.address.city}</p>
+              </div>
+            )}
+            <div className="flex items-center">
+              <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+              <span>{new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Articles - RESPONSIVE APPLIQUÉ */}
+      <div>
+        <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Articles ({order.items.length})</h4>
+        <div className="space-y-2 sm:space-y-3">
+          {order.items.map((item) => (
+            <div key={item._id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                <Package className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm sm:text-base truncate">{item.name}</p>
+                <p className="text-xs sm:text-sm text-gray-500">Quantité: {item.quantity}</p>
+              </div>
+              <p className="font-bold text-green-600 text-sm sm:text-base">{item.price.toFixed(2)}€</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Modification du statut - RESPONSIVE APPLIQUÉ */}
+      <div className="border-t pt-4">
+        <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Modifier le statut</h4>
+        <div className="space-y-3 sm:space-y-4">
+          <div>
+            <Label className="text-xs sm:text-sm">Nouveau statut</Label>
+            <Select value={newStatus} onValueChange={(value) => setNewStatus(value as OrderStatus)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="payée">Payée</SelectItem>
+                <SelectItem value="en_creation">En création</SelectItem>
+                <SelectItem value="prête">Prête</SelectItem>
+                <SelectItem value="en_livraison">En livraison</SelectItem>
+                <SelectItem value="livrée">Livrée</SelectItem>
+                <SelectItem value="annulée">Annulée</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <Label className="text-xs sm:text-sm">Note (optionnelle)</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Ajouter une note..."
+              className="text-sm"
+              rows={3}
+            />
+          </div>
+          
+          <Button onClick={handleUpdateStatus} disabled={newStatus === order.status} size="sm">
+            Mettre à jour le statut
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

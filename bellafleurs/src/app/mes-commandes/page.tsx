@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   Package, 
   Clock, 
@@ -16,7 +17,7 @@ import {
   ArrowLeft,
   Eye,
   Download,
-  AlertCircle  // ← AJOUT UNIQUEMENT DE CETTE LIGNE
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -126,24 +127,24 @@ const formatDate = (dateString: string) => {
   });
 };
 
-// Composant Timeline
+// Composant Timeline - RESPONSIVE APPLIQUÉ
 function OrderTimeline({ timeline }: { timeline: Order['timeline'] }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {timeline.map((step, index) => {
         const config = getStatusConfig(step.status);
         const Icon = config.icon;
         
         return (
-          <div key={index} className="flex items-start space-x-3">
-            <div className={`p-2 rounded-full ${config.color}`}>
-              <Icon className="w-4 h-4" />
+          <div key={index} className="flex items-start space-x-2 sm:space-x-3">
+            <div className={`p-1.5 sm:p-2 rounded-full ${config.color}`}>
+              <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
             </div>
             <div className="flex-1">
-              <p className="font-medium text-gray-900">{config.label}</p>
-              <p className="text-sm text-gray-600">{formatDate(step.date)}</p>
+              <p className="font-medium text-gray-900 text-sm sm:text-base">{config.label}</p>
+              <p className="text-xs sm:text-sm text-gray-600">{formatDate(step.date)}</p>
               {step.note && (
-                <p className="text-sm text-gray-500 mt-1">{step.note}</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">{step.note}</p>
               )}
             </div>
           </div>
@@ -153,22 +154,22 @@ function OrderTimeline({ timeline }: { timeline: Order['timeline'] }) {
   );
 }
 
-// Composant Détails de commande
+// Composant Détails de commande - RESPONSIVE APPLIQUÉ
 function OrderDetails({ order }: { order: Order }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* En-tête */}
-      <div className="border-b pb-4">
-        <div className="flex justify-between items-start">
+      <div className="border-b pb-3 sm:pb-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">
               Commande {order.orderNumber}
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-xs sm:text-sm text-gray-600">
               Passée le {formatDate(order.createdAt)}
             </p>
           </div>
-          <Badge className={getStatusConfig(order.status).color}>
+          <Badge className={`${getStatusConfig(order.status).color} text-xs sm:text-sm w-fit`}>
             {getStatusConfig(order.status).label}
           </Badge>
         </div>
@@ -176,22 +177,32 @@ function OrderDetails({ order }: { order: Order }) {
 
       {/* Articles */}
       <div>
-        <h4 className="font-medium text-gray-900 mb-3">Articles commandés</h4>
-        <div className="space-y-3">
+        <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Articles commandés</h4>
+        <div className="space-y-3 sm:space-y-4">
           {order.items.map((item) => (
-            <div key={item._id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-              <img
-                src={item.image}
-                alt={item.name}
-                className="w-16 h-16 object-cover rounded-lg"
-              />
-              <div className="flex-1">
-                <h5 className="font-medium text-gray-900">{item.name}</h5>
-                <p className="text-sm text-gray-600">Quantité: {item.quantity}</p>
+            <div key={item._id} className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 relative flex-shrink-0 rounded-lg overflow-hidden">
+                {item.image ? (
+                  <Image
+                    src={item.image}
+                    alt={item.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 48px, 64px"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                    <Package className="w-4 h-4 sm:w-6 sm:h-6 text-gray-400" />
+                  </div>
+                )}
               </div>
-              <p className="font-medium text-gray-900">
-                {(item.price * item.quantity).toFixed(2)}€
-              </p>
+              <div className="flex-1 min-w-0">
+                <h5 className="font-medium text-gray-900 text-sm sm:text-base truncate">{item.name}</h5>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-600">Quantité: {item.quantity}</p>
+                  <p className="font-medium text-green-600 text-sm sm:text-base">{item.price.toFixed(2)}€</p>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -199,49 +210,68 @@ function OrderDetails({ order }: { order: Order }) {
 
       {/* Informations de livraison */}
       <div>
-        <h4 className="font-medium text-gray-900 mb-3">Informations de livraison</h4>
-        <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-          <div className="flex items-center space-x-2">
-            <Calendar className="w-4 h-4 text-gray-500" />
-            <span className="text-sm text-gray-600">
-              {new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}
-            </span>
+        <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Livraison</h4>
+        <div className="p-3 sm:p-4 bg-gray-50 rounded-lg space-y-2 sm:space-y-3">
+          <div className="flex items-start space-x-2 sm:space-x-3">
+            <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+            <div>
+              {order.deliveryInfo.type === 'delivery' ? (
+                <div>
+                  <p className="text-sm sm:text-base text-gray-900">Livraison à domicile</p>
+                  <p className="text-xs sm:text-sm text-gray-600">{order.deliveryInfo.address?.street}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    {order.deliveryInfo.address?.zipCode} {order.deliveryInfo.address?.city}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm sm:text-base text-gray-900">Retrait en magasin</p>
+              )}
+            </div>
           </div>
-          
-          {order.deliveryInfo.type === 'delivery' && order.deliveryInfo.address ? (
-            <div className="flex items-start space-x-2">
-              <MapPin className="w-4 h-4 text-gray-500 mt-0.5" />
-              <div className="text-sm text-gray-600">
-                <p>{order.deliveryInfo.address.street}</p>
-                <p>{order.deliveryInfo.address.zipCode} {order.deliveryInfo.address.city}</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <Package className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-600">Retrait en boutique</span>
-            </div>
-          )}
-          
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
+            <p className="text-xs sm:text-sm text-gray-600">
+              {formatDate(order.deliveryInfo.date)}
+            </p>
+          </div>
           {order.deliveryInfo.notes && (
-            <div className="text-sm text-gray-600">
-              <strong>Note:</strong> {order.deliveryInfo.notes}
+            <div className="flex items-start space-x-2 sm:space-x-3">
+              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs sm:text-sm text-gray-600">{order.deliveryInfo.notes}</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Total et paiement */}
-      <div className="border-t pt-4">
-        <div className="flex justify-between items-center mb-2">
-          <span className="font-medium text-gray-900">Total</span>
-          <span className="text-lg font-bold text-gray-900">
+      {/* Informations client */}
+      <div>
+        <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Informations client</h4>
+        <div className="p-3 sm:p-4 bg-gray-50 rounded-lg space-y-2 sm:space-y-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
+            <p className="text-xs sm:text-sm text-gray-600 break-all sm:break-normal">{order.customerInfo.name}</p>
+          </div>
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
+            <p className="text-xs sm:text-sm text-gray-600">{order.customerInfo.email}</p>
+          </div>
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" />
+            <p className="text-xs sm:text-sm text-gray-600">{order.customerInfo.phone}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Total */}
+      <div className="border-t pt-3 sm:pt-4">
+        <div className="flex justify-between items-center">
+          <span className="font-medium text-gray-900 text-sm sm:text-base">Total</span>
+          <span className="font-bold text-green-600 text-base sm:text-lg">
             {order.totalAmount.toFixed(2)}€
           </span>
         </div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">Statut du paiement</span>
-          <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+        <div className="mt-2">
+          <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'} className="text-xs">
             {order.paymentStatus === 'paid' ? 'Payé' : 'En attente'}
           </Badge>
         </div>
@@ -249,7 +279,7 @@ function OrderDetails({ order }: { order: Order }) {
 
       {/* Timeline */}
       <div>
-        <h4 className="font-medium text-gray-900 mb-3">Suivi de commande</h4>
+        <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Suivi de commande</h4>
         <OrderTimeline timeline={order.timeline} />
       </div>
     </div>
@@ -291,9 +321,10 @@ export default function MesCommandesPage() {
       <>
         <Header />
         <main className="min-h-screen bg-gray-50 pt-16">
-          <div className="container mx-auto px-4 py-8">
+          {/* RESPONSIVE APPLIQUÉ */}
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-green-600"></div>
             </div>
           </div>
         </main>
@@ -306,16 +337,17 @@ export default function MesCommandesPage() {
     <ProtectedRoute requireAuth>
       <Header />
       <main className="min-h-screen bg-gray-50 pt-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* RESPONSIVE APPLIQUÉ */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           
-          {/* Header */}
-          <div className="mb-8">
-            <Link href="/mon-compte" className="inline-flex items-center text-green-600 hover:text-green-700 mb-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+          {/* Header - RESPONSIVE APPLIQUÉ */}
+          <div className="mb-6 sm:mb-8">
+            <Link href="/mon-compte" className="inline-flex items-center text-green-600 hover:text-green-700 mb-3 sm:mb-4 text-sm sm:text-base">
+              <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
               Retour au compte
             </Link>
-            <h1 className="text-3xl font-bold text-gray-900">Mes Commandes</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mes Commandes</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-2">
               Suivez l'état d'avancement de vos commandes
             </p>
           </div>
@@ -323,121 +355,116 @@ export default function MesCommandesPage() {
           {/* Liste des commandes */}
           {orders.length === 0 ? (
             <Card>
-              <CardContent className="text-center py-12">
-                <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {/* RESPONSIVE APPLIQUÉ */}
+              <CardContent className="text-center py-8 sm:py-12">
+                <Package className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-3 sm:mb-4" />
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
                   Aucune commande
                 </h3>
-                <p className="text-gray-600 mb-6">
+                <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
                   Vous n'avez pas encore passé de commande.
                 </p>
-                <Button asChild>
+                <Button asChild size="sm">
                   <Link href="/produits">Découvrir nos créations</Link>
                 </Button>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-6">
+            /* RESPONSIVE APPLIQUÉ */
+            <div className="space-y-4 sm:space-y-6">
               {orders.map((order) => {
                 const config = getStatusConfig(order.status);
                 const Icon = config.icon;
                 
                 return (
                   <Card key={order._id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">
+                    {/* RESPONSIVE APPLIQUÉ */}
+                    <CardHeader className="pb-3 sm:pb-4">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                        <div className="flex-1">
+                          <CardTitle className="text-base sm:text-lg">
                             Commande {order.orderNumber}
                           </CardTitle>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-xs sm:text-sm text-gray-600 mt-1">
                             {formatDate(order.createdAt)} • {order.items.length} article(s)
                           </p>
                         </div>
-                        <Badge className={config.color}>
+                        <Badge className={`${config.color} text-xs sm:text-sm w-fit`}>
                           <Icon className="w-3 h-3 mr-1" />
                           {config.label}
                         </Badge>
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex -space-x-2">
+                      {/* RESPONSIVE APPLIQUÉ */}
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
+                        <div className="flex items-center space-x-3 sm:space-x-4 flex-1">
+                          <div className="flex -space-x-1 sm:-space-x-2">
                             {order.items.slice(0, 3).map((item, index) => (
-                              <img
-                                key={item._id}
-                                src={item.image}
-                                alt={item.name}
-                                className="w-10 h-10 rounded-full border-2 border-white object-cover"
-                                style={{ zIndex: 3 - index }}
-                              />
+                              <div key={item._id} className="w-6 h-6 sm:w-8 sm:h-8 relative border-2 border-white rounded-full overflow-hidden flex-shrink-0">
+                                {item.image ? (
+                                  <Image
+                                    src={item.image}
+                                    alt={item.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="(max-width: 640px) 24px, 32px"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                    <Package className="w-2 h-2 sm:w-3 sm:h-3 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
                             ))}
                             {order.items.length > 3 && (
-                              <div className="w-10 h-10 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-xs font-medium text-gray-600">
-                                +{order.items.length - 3}
+                              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-200 border-2 border-white rounded-full flex items-center justify-center">
+                                <span className="text-xs font-medium text-gray-600">+{order.items.length - 3}</span>
                               </div>
                             )}
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-900">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                            <span className="font-bold text-green-600 text-sm sm:text-base">
                               {order.totalAmount.toFixed(2)}€
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {config.description}
-                            </p>
+                            </span>
+                            <span className="text-xs sm:text-sm text-gray-600">
+                              {order.deliveryInfo.type === 'delivery' ? 'Livraison' : 'Retrait'} • 
+                              {' '}{new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}
+                            </span>
                           </div>
                         </div>
-
-                        <div className="flex items-center space-x-2">
+                        
+                        <div className="flex space-x-2">
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button 
                                 variant="outline" 
                                 size="sm"
+                                className="text-xs sm:text-sm"
                                 onClick={() => setSelectedOrder(order)}
                               >
-                                <Eye className="w-4 h-4 mr-2" />
-                                Détails
+                                <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Détails</span>
+                                <span className="sm:hidden">Voir</span>
                               </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                               <DialogHeader>
-                                <DialogTitle>
-                                  Détails de la commande {order.orderNumber}
+                                <DialogTitle className="text-base sm:text-lg">
+                                  Détails de la commande
                                 </DialogTitle>
                               </DialogHeader>
-                              <OrderDetails order={order} />
+                              {selectedOrder && <OrderDetails order={selectedOrder} />}
                             </DialogContent>
                           </Dialog>
-                        </div>
-                      </div>
-
-                      {/* Informations rapides */}
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <div className="flex justify-between items-center text-sm text-gray-600">
-                          <div className="flex items-center space-x-4">
-                            <span className="flex items-center">
-                              <Calendar className="w-4 h-4 mr-1" />
-                              {new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}
-                            </span>
-                            <span className="flex items-center">
-                              {order.deliveryInfo.type === 'delivery' ? (
-                                <>
-                                  <MapPin className="w-4 h-4 mr-1" />
-                                  Livraison
-                                </>
-                              ) : (
-                                <>
-                                  <Package className="w-4 h-4 mr-1" />
-                                  Retrait
-                                </>
-                              )}
-                            </span>
-                          </div>
-                          <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}>
-                            {order.paymentStatus === 'paid' ? 'Payé' : 'En attente'}
-                          </Badge>
+                          
+                          {order.status === 'livrée' && (
+                            <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                              <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                              <span className="hidden sm:inline">Facture</span>
+                              <span className="sm:hidden">PDF</span>
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardContent>

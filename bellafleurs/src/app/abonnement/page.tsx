@@ -128,34 +128,34 @@ export default function AbonnementPage() {
       <Header />
       <main className="min-h-screen pt-16">
         
-        {/* Hero Section */}
-        <section className="bg-gradient-to-b from-primary-50 to-white py-20">
+        {/* Hero Section - RESPONSIVE APPLIQUÉ */}
+        <section className="bg-gradient-to-b from-primary-50 to-white py-12 sm:py-16 md:py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-4xl mx-auto">
-              <Badge className="mb-6 bg-primary-100 text-primary-700 hover:bg-primary-100">
+              <Badge className="mb-4 sm:mb-6 bg-primary-100 text-primary-700 hover:bg-primary-100">
                 🌸 Nouveauté 2024
               </Badge>
               
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
                 Abonnement Floral
               </h1>
               
-              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+              <p className="text-lg sm:text-xl text-gray-600 mb-6 sm:mb-8 leading-relaxed px-4 sm:px-0">
                 Recevez chaque mois une création florale unique, sélectionnée avec soin 
                 par notre fleuriste experte. Transformez votre quotidien en un jardin de bonheur.
               </p>
               
-              <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-600">
+              <div className="flex flex-wrap justify-center gap-4 sm:gap-6 text-sm text-gray-600">
                 <div className="flex items-center">
-                  <Truck className="w-5 h-5 text-primary-600 mr-2" />
+                  <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 mr-2" />
                   Livraison gratuite
                 </div>
                 <div className="flex items-center">
-                  <Calendar className="w-5 h-5 text-primary-600 mr-2" />
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 mr-2" />
                   Flexible et sans engagement
                 </div>
                 <div className="flex items-center">
-                  <Heart className="w-5 h-5 text-primary-600 mr-2" />
+                  <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 mr-2" />
                   Créations exclusives
                 </div>
               </div>
@@ -163,25 +163,25 @@ export default function AbonnementPage() {
           </div>
         </section>
 
-        {/* Sélecteur de fréquence */}
-        <section className="py-12 bg-white">
+        {/* Sélecteur de fréquence - RESPONSIVE APPLIQUÉ */}
+        <section className="py-8 sm:py-12 bg-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <div className="text-center mb-8 sm:mb-12">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">
                 Choisissez votre fréquence
               </h2>
-              <p className="text-gray-600">
+              <p className="text-sm sm:text-base text-gray-600">
                 Plus vous vous engagez, plus vous économisez
               </p>
             </div>
             
-            <div className="flex justify-center mb-12">
-              <div className="bg-gray-100 p-1 rounded-xl flex">
+            <div className="flex justify-center mb-8 sm:mb-12">
+              <div className="bg-gray-100 p-1 rounded-xl flex flex-col sm:flex-row w-full sm:w-auto">
                 {frequencies.map((frequency) => (
                   <button
                     key={frequency.id}
                     onClick={() => setSelectedFrequency(frequency.id)}
-                    className={`px-6 py-3 rounded-lg font-medium text-sm transition-all relative ${
+                    className={`px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all relative ${
                       selectedFrequency === frequency.id
                         ? 'bg-white text-primary-600 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
@@ -189,7 +189,7 @@ export default function AbonnementPage() {
                   >
                     {frequency.label}
                     {frequency.discount && (
-                      <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs">
+                      <Badge className="absolute -top-1 sm:-top-2 -right-1 sm:-right-2 bg-green-500 text-white text-xs scale-75 sm:scale-100">
                         -{frequency.discount}%
                       </Badge>
                     )}
@@ -198,8 +198,8 @@ export default function AbonnementPage() {
               </div>
             </div>
 
-            {/* Plans d'abonnement */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {/* Plans d'abonnement - RESPONSIVE APPLIQUÉ */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
               {plans.map((plan) => {
                 const discountedPrice = getDiscountedPrice(plan.price);
                 const totalPrice = getTotalPrice(plan.price);
@@ -210,93 +210,86 @@ export default function AbonnementPage() {
                     key={plan.id}
                     className={`relative transition-all duration-300 hover:shadow-xl ${
                       plan.popular 
-                        ? 'border-primary-500 shadow-lg scale-105' 
-                        : 'border-gray-200 hover:border-primary-300'
-                    } ${isSelected ? 'ring-2 ring-primary-500' : ''}`}
+                        ? 'ring-2 ring-primary-500 shadow-lg scale-105' 
+                        : 'hover:shadow-lg hover:scale-105'
+                    }`}
                   >
                     {plan.popular && (
                       <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                        <Badge className="bg-primary-600 text-white px-4 py-1">
-                          ⭐ Plus populaire
+                        <Badge className="bg-primary-500 text-white px-3 sm:px-4 py-1">
+                          ⭐ Le plus populaire
                         </Badge>
                       </div>
                     )}
                     
-                    <CardHeader className="text-center pb-4">
-                      <CardTitle className="text-2xl font-bold text-gray-900">
+                    <CardHeader className="text-center pb-4 sm:pb-6">
+                      <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
                         {plan.name}
                       </CardTitle>
-                      <p className="text-gray-600 text-sm mt-2">
+                      <p className="text-sm sm:text-base text-gray-600 mb-4">
                         {plan.description}
                       </p>
                       
-                      <div className="mt-6">
+                      <div className="space-y-2">
+                        <div className="flex items-baseline justify-center">
+                          <span className="text-3xl sm:text-4xl font-bold text-gray-900">
+                            {discountedPrice.toFixed(2)}€
+                          </span>
+                          <span className="text-sm sm:text-base text-gray-600 ml-2">
+                            {plan.frequency}
+                          </span>
+                        </div>
+                        
                         {selectedFrequency !== 'monthly' && (
-                          <div className="text-sm text-gray-500 line-through">
-                            {(plan.price * (frequencies.find(f => f.id === selectedFrequency)?.multiplier || 1)).toFixed(2)}€
+                          <div className="text-xs sm:text-sm text-gray-500">
+                            <span className="line-through">{plan.price.toFixed(2)}€</span>
+                            <span className="ml-2 text-green-600 font-medium">
+                              Économisez {((plan.price - discountedPrice) * frequencies.find(f => f.id === selectedFrequency)!.multiplier).toFixed(2)}€
+                            </span>
                           </div>
                         )}
-                        <div className="text-4xl font-bold text-primary-600">
-                          {totalPrice.toFixed(2)}€
+                        
+                        <div className="text-lg sm:text-xl font-semibold text-primary-600">
+                          Total: {totalPrice.toFixed(2)}€
                         </div>
-                        <div className="text-sm text-gray-600">
-                          {selectedFrequency === 'monthly' 
-                            ? plan.frequency
-                            : frequencies.find(f => f.id === selectedFrequency)?.label.toLowerCase()
-                          }
-                        </div>
-                        {selectedFrequency !== 'monthly' && (
-                          <div className="text-sm text-green-600 font-medium mt-1">
-                            Soit {discountedPrice.toFixed(2)}€/mois
-                          </div>
-                        )}
                       </div>
                     </CardHeader>
                     
-                    <CardContent className="space-y-6">
-                      {/* Ce qui est inclus */}
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="font-semibold text-gray-900 mb-3">Inclus :</h4>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Livraisons</span>
-                            <span className="font-medium">{plan.included.deliveries}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Valeur fleurs</span>
-                            <span className="font-medium">{plan.included.value}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Support</span>
-                            <span className="font-medium">{plan.included.support}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Fonctionnalités */}
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-3">Avantages :</h4>
-                        <ul className="space-y-2">
-                          {plan.features.map((feature, index) => (
-                            <li key={index} className="flex items-start text-sm">
-                              <Check className="w-4 h-4 text-primary-600 mr-2 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-600">{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      
+                    <CardContent className="pt-0">
                       <Button 
-                        className={`w-full h-12 ${
-                          plan.popular 
-                            ? 'bg-primary-600 hover:bg-primary-700' 
-                            : ''
-                        }`}
-                        variant={plan.popular ? 'default' : 'outline'}
+                        className="w-full mb-4 sm:mb-6" 
+                        variant={plan.popular ? "default" : "outline"}
                         onClick={() => setSelectedPlan(plan.id)}
                       >
-                        {isSelected ? 'Plan sélectionné' : 'Choisir ce plan'}
+                        {isSelected ? 'Sélectionné' : 'Choisir ce plan'}
                       </Button>
+                      
+                      <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+                        <div className="text-xs sm:text-sm font-medium text-gray-900 border-b pb-2">
+                          Ce qui est inclus :
+                        </div>
+                        {plan.features.map((feature, index) => (
+                          <div key={index} className="flex items-start">
+                            <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 mr-2 sm:mr-3 flex-shrink-0 mt-0.5" />
+                            <span className="text-xs sm:text-sm text-gray-700">{feature}</span>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="bg-gray-50 rounded-lg p-3 sm:p-4 space-y-2">
+                        <div className="flex justify-between text-xs sm:text-sm">
+                          <span className="text-gray-600">Livraisons:</span>
+                          <span className="font-medium">{plan.included.deliveries}</span>
+                        </div>
+                        <div className="flex justify-between text-xs sm:text-sm">
+                          <span className="text-gray-600">Valeur fleurs:</span>
+                          <span className="font-medium text-green-600">{plan.included.value}</span>
+                        </div>
+                        <div className="flex justify-between text-xs sm:text-sm">
+                          <span className="text-gray-600">Support:</span>
+                          <span className="font-medium">{plan.included.support}</span>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -305,104 +298,38 @@ export default function AbonnementPage() {
           </div>
         </section>
 
-        {/* Comment ça marche */}
-        <section className="py-20 bg-gray-50">
+        {/* Témoignages - RESPONSIVE APPLIQUÉ */}
+        <section className="py-12 sm:py-16 md:py-20 bg-gray-50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Comment ça marche ?
+            <div className="text-center mb-8 sm:mb-12">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">
+                Ce que disent nos abonnées
               </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Un processus simple pour recevoir vos plus belles créations florales
+              <p className="text-sm sm:text-base text-gray-600">
+                Découvrez pourquoi elles nous font confiance
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              {[
-                {
-                  step: '1',
-                  title: 'Choisissez votre abonnement',
-                  description: 'Sélectionnez le plan qui vous correspond le mieux',
-                  icon: '🎯'
-                },
-                {
-                  step: '2',
-                  title: 'Personnalisez vos préférences',
-                  description: 'Indiquez vos couleurs et styles préférés',
-                  icon: '🎨'
-                },
-                {
-                  step: '3',
-                  title: 'Recevez vos créations',
-                  description: 'Chaque mois, découvrez une nouvelle surprise florale',
-                  icon: '📦'
-                },
-                {
-                  step: '4',
-                  title: 'Profitez et partagez',
-                  description: 'Savourez la beauté et partagez vos photos',
-                  icon: '📸'
-                }
-              ].map((item, index) => (
-                <div key={index} className="text-center">
-                  <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                    {item.icon}
-                  </div>
-                  <div className="mb-2">
-                    <Badge className="bg-primary-600 text-white mb-3">
-                      Étape {item.step}
-                    </Badge>
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                    {item.title}
-                  </h3>
-                  <p className="text-gray-600">
-                    {item.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Témoignages */}
-        <section className="py-20 bg-white">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Ce que disent nos abonnés
-              </h2>
-              <p className="text-xl text-gray-600">
-                Plus de 500 clients nous font confiance chaque mois
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
               {testimonials.map((testimonial, index) => (
-                <Card key={index} className="p-6">
-                  <CardContent className="p-0">
-                    <div className="flex items-center mb-4">
-                      <div className="flex text-yellow-400 mr-2">
-                        {[...Array(testimonial.rating)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-current" />
+                <Card key={index} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center mb-3 sm:mb-4">
+                      <div className="flex text-yellow-400">
+                        {Array.from({ length: testimonial.rating }).map((_, i) => (
+                          <Star key={i} className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
                         ))}
                       </div>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="outline" className="ml-2 sm:ml-3 text-xs">
                         {testimonial.plan}
                       </Badge>
                     </div>
-                    
-                    <p className="text-gray-600 mb-4 italic">
+                    <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4 italic">
                       "{testimonial.comment}"
                     </p>
-                    
-                    <div className="border-t border-gray-100 pt-4">
-                      <div className="font-semibold text-gray-900">
-                        {testimonial.name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {testimonial.location}
-                      </div>
+                    <div className="text-xs sm:text-sm">
+                      <p className="font-semibold text-gray-900">{testimonial.name}</p>
+                      <p className="text-gray-600">{testimonial.location}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -411,27 +338,27 @@ export default function AbonnementPage() {
           </div>
         </section>
 
-        {/* CTA final */}
-        <section className="py-20 bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+        {/* CTA final - RESPONSIVE APPLIQUÉ */}
+        <section className="bg-gradient-to-r from-primary-600 to-primary-700 py-12 sm:py-16">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl font-bold mb-4">
-              Prêt à embellir votre quotidien ?
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 sm:mb-6">
+              Prêt(e) à transformer votre quotidien ?
             </h2>
-            <p className="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
+            <p className="text-lg sm:text-xl text-primary-100 mb-6 sm:mb-8 max-w-2xl mx-auto">
               Commencez votre abonnement floral dès aujourd'hui et recevez 
               votre première création dans 48h !
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="bg-white text-primary-600 hover:bg-gray-100 px-8">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+              <Button size="lg" className="bg-white text-primary-600 hover:bg-gray-100 px-6 sm:px-8">
                 Commencer mon abonnement
               </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-primary-600 px-8">
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-primary-600 px-6 sm:px-8">
                 Questions fréquentes
               </Button>
             </div>
             
-            <div className="mt-8 text-sm text-primary-100">
+            <div className="mt-6 sm:mt-8 text-xs sm:text-sm text-primary-100">
               ✓ Sans engagement • ✓ Pause à tout moment • ✓ Livraison gratuite
             </div>
           </div>

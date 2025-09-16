@@ -134,35 +134,35 @@ export default function MonComptePage() {
     <ProtectedRoute requireAuth>
       <Header />
       <main className="min-h-screen bg-gray-50 pt-16">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          {/* Header responsive */}
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
               Mon compte
             </h1>
-            <p className="text-gray-600">
+            <p className="text-sm sm:text-base text-gray-600">
               Gérez vos informations personnelles et vos préférences
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
             
-            {/* Sidebar - Statistiques */}
-            <div className="space-y-6">
+            {/* Sidebar - Statistiques responsive */}
+            <div className="space-y-4 sm:space-y-6">
               
-              {/* Carte de bienvenue */}
+              {/* Carte de bienvenue responsive */}
               <Card className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                      <span className="text-2xl font-bold">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-3 sm:space-y-0 sm:space-x-4">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-lg sm:text-2xl font-bold">
                         {profile.name.charAt(0)}
                       </span>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-bold">{profile.name}</h2>
-                      <p className="text-green-100">
+                    <div className="text-center sm:text-left">
+                      <h2 className="text-lg sm:text-xl font-bold">{profile.name}</h2>
+                      <p className="text-green-100 text-sm sm:text-base">
                         Membre depuis {new Date(profile.memberSince).toLocaleDateString('fr-FR', { 
                           month: 'long', 
                           year: 'numeric' 
@@ -173,68 +173,58 @@ export default function MonComptePage() {
                 </CardContent>
               </Card>
 
-              {/* Statistiques */}
+              {/* Statistiques responsive */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Vos statistiques</CardTitle>
+                <CardHeader className="pb-3 sm:pb-4">
+                  <CardTitle className="text-lg sm:text-xl">Vos statistiques</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3 sm:space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Commandes</span>
-                    <span className="font-bold text-lg">{profile.totalOrders}</span>
+                    <span className="text-sm sm:text-base text-gray-600">Commandes</span>
+                    <span className="font-bold text-base sm:text-lg">{profile.totalOrders}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Total dépensé</span>
-                    <span className="font-bold text-lg text-green-600">
+                    <span className="text-sm sm:text-base text-gray-600">Total dépensé</span>
+                    <span className="font-bold text-base sm:text-lg text-green-600">
                       {profile.totalSpent.toFixed(2)}€
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Points fidélité</span>
-                    <Badge className="bg-yellow-100 text-yellow-800">
+                    <span className="text-sm sm:text-base text-gray-600">Points fidélité</span>
+                    <Badge className="bg-yellow-100 text-yellow-800 text-xs sm:text-sm">
                       {profile.loyaltyPoints} pts
                     </Badge>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Programme fidélité */}
-              <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center text-yellow-800">
-                    <Gift className="w-5 h-5 mr-2" />
-                    Programme fidélité
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-yellow-700">Vos points</span>
-                      <span className="font-bold text-yellow-800">{profile.loyaltyPoints}</span>
-                    </div>
-                    <div className="w-full bg-yellow-200 rounded-full h-2">
-                      <div 
-                        className="bg-yellow-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(profile.loyaltyPoints % 500) / 5}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-yellow-700">
-                      {500 - (profile.loyaltyPoints % 500)} points pour obtenir une réduction de 25€
-                    </p>
+              {/* Navigation mobile visible uniquement sur petit écran */}
+              <Card className="lg:hidden">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm">
+                      <Gift className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                      Fidélité
+                    </Button>
+                    <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm">
+                      <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                      Paiements
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
+
             </div>
 
-            {/* Contenu principal */}
-            <div className="lg:col-span-2 space-y-6">
-              
+            {/* Contenu principal responsive */}
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+
               {/* Informations personnelles */}
               <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center">
-                      <User className="w-5 h-5 mr-2" />
+                <CardHeader className="pb-3 sm:pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <CardTitle className="text-lg sm:text-xl flex items-center">
+                      <User className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                       Informations personnelles
                     </CardTitle>
                     {!isEditing.personal ? (
@@ -242,8 +232,9 @@ export default function MonComptePage() {
                         variant="outline" 
                         size="sm"
                         onClick={() => setIsEditing(prev => ({ ...prev, personal: true }))}
+                        className="self-start sm:self-auto"
                       >
-                        <Edit className="w-4 h-4 mr-2" />
+                        <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                         Modifier
                       </Button>
                     ) : (
@@ -252,71 +243,82 @@ export default function MonComptePage() {
                           size="sm"
                           onClick={() => handleSave('personal')}
                           disabled={isLoading}
+                          className="text-xs sm:text-sm"
                         >
-                          <Save className="w-4 h-4 mr-2" />
+                          <Save className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                           Sauvegarder
                         </Button>
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => handleCancel('personal')}
+                          className="text-xs sm:text-sm"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                          Annuler
                         </Button>
                       </div>
                     )}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Nom complet</Label>
-                      {isEditing.personal ? (
-                        <Input
-                          id="name"
-                          value={profile.name}
-                          onChange={(e) => setProfile({...profile, name: e.target.value})}
-                        />
-                      ) : (
-                        <p className="py-2 text-gray-900">{profile.name}</p>
-                      )}
+                <CardContent className="space-y-4 sm:space-y-6">
+                  {!isEditing.personal ? (
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                        <div>
+                          <Label className="text-xs sm:text-sm text-gray-600">Nom complet</Label>
+                          <p className="font-medium text-sm sm:text-base">{profile.name}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs sm:text-sm text-gray-600">Email</Label>
+                          <p className="font-medium text-sm sm:text-base break-all sm:break-normal">{profile.email}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs sm:text-sm text-gray-600">Téléphone</Label>
+                        <p className="font-medium text-sm sm:text-base">{profile.phone}</p>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      {isEditing.personal ? (
-                        <Input
-                          id="email"
-                          type="email"
-                          value={profile.email}
-                          onChange={(e) => setProfile({...profile, email: e.target.value})}
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                        <div>
+                          <Label className="text-xs sm:text-sm">Nom complet</Label>
+                          <Input 
+                            value={profile.name}
+                            onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs sm:text-sm">Email</Label>
+                          <Input 
+                            type="email"
+                            value={profile.email}
+                            onChange={(e) => setProfile(prev => ({ ...prev, email: e.target.value }))}
+                            className="text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs sm:text-sm">Téléphone</Label>
+                        <Input 
+                          value={profile.phone}
+                          onChange={(e) => setProfile(prev => ({ ...prev, phone: e.target.value }))}
+                          className="text-sm"
                         />
-                      ) : (
-                        <p className="py-2 text-gray-900">{profile.email}</p>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="phone">Téléphone</Label>
-                    {isEditing.personal ? (
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={profile.phone}
-                        onChange={(e) => setProfile({...profile, phone: e.target.value})}
-                      />
-                    ) : (
-                      <p className="py-2 text-gray-900">{profile.phone}</p>
-                    )}
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
               {/* Adresse */}
               <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center">
-                      <MapPin className="w-5 h-5 mr-2" />
+                <CardHeader className="pb-3 sm:pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <CardTitle className="text-lg sm:text-xl flex items-center">
+                      <MapPin className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                       Adresse de livraison
                     </CardTitle>
                     {!isEditing.address ? (
@@ -324,8 +326,9 @@ export default function MonComptePage() {
                         variant="outline" 
                         size="sm"
                         onClick={() => setIsEditing(prev => ({ ...prev, address: true }))}
+                        className="self-start sm:self-auto"
                       >
-                        <Edit className="w-4 h-4 mr-2" />
+                        <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                         Modifier
                       </Button>
                     ) : (
@@ -334,199 +337,147 @@ export default function MonComptePage() {
                           size="sm"
                           onClick={() => handleSave('address')}
                           disabled={isLoading}
+                          className="text-xs sm:text-sm"
                         >
-                          <Save className="w-4 h-4 mr-2" />
+                          <Save className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                           Sauvegarder
                         </Button>
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => handleCancel('address')}
+                          className="text-xs sm:text-sm"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                          Annuler
                         </Button>
                       </div>
                     )}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="street">Adresse</Label>
-                    {isEditing.address ? (
-                      <Input
-                        id="street"
-                        value={profile.address.street}
-                        onChange={(e) => setProfile({
-                          ...profile, 
-                          address: {...profile.address, street: e.target.value}
-                        })}
-                      />
-                    ) : (
-                      <p className="py-2 text-gray-900">{profile.address.street}</p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="zipCode">Code postal</Label>
-                      {isEditing.address ? (
-                        <Input
-                          id="zipCode"
-                          value={profile.address.zipCode}
-                          onChange={(e) => setProfile({
-                            ...profile, 
-                            address: {...profile.address, zipCode: e.target.value}
-                          })}
-                        />
-                      ) : (
-                        <p className="py-2 text-gray-900">{profile.address.zipCode}</p>
-                      )}
+                <CardContent>
+                  {!isEditing.address ? (
+                    <div className="space-y-2">
+                      <p className="font-medium text-sm sm:text-base">{profile.address.street}</p>
+                      <p className="text-sm sm:text-base text-gray-600">
+                        {profile.address.zipCode} {profile.address.city}
+                      </p>
+                      <p className="text-sm sm:text-base text-gray-600">{profile.address.country}</p>
                     </div>
-                    <div>
-                      <Label htmlFor="city">Ville</Label>
-                      {isEditing.address ? (
-                        <Input
-                          id="city"
-                          value={profile.address.city}
-                          onChange={(e) => setProfile({
-                            ...profile, 
-                            address: {...profile.address, city: e.target.value}
-                          })}
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-xs sm:text-sm">Rue</Label>
+                        <Input 
+                          value={profile.address.street}
+                          onChange={(e) => setProfile(prev => ({
+                            ...prev,
+                            address: { ...prev.address, street: e.target.value }
+                          }))}
+                          className="text-sm"
                         />
-                      ) : (
-                        <p className="py-2 text-gray-900">{profile.address.city}</p>
-                      )}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                        <div>
+                          <Label className="text-xs sm:text-sm">Code postal</Label>
+                          <Input 
+                            value={profile.address.zipCode}
+                            onChange={(e) => setProfile(prev => ({
+                              ...prev,
+                              address: { ...prev.address, zipCode: e.target.value }
+                            }))}
+                            className="text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs sm:text-sm">Ville</Label>
+                          <Input 
+                            value={profile.address.city}
+                            onChange={(e) => setProfile(prev => ({
+                              ...prev,
+                              address: { ...prev.address, city: e.target.value }
+                            }))}
+                            className="text-sm"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
               {/* Préférences */}
               <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center">
-                      <Bell className="w-5 h-5 mr-2" />
-                      Préférences de communication
-                    </CardTitle>
-                    {!isEditing.preferences ? (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setIsEditing(prev => ({ ...prev, preferences: true }))}
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Modifier
-                      </Button>
-                    ) : (
-                      <div className="flex space-x-2">
-                        <Button 
-                          size="sm"
-                          onClick={() => handleSave('preferences')}
-                          disabled={isLoading}
-                        >
-                          <Save className="w-4 h-4 mr-2" />
-                          Sauvegarder
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleCancel('preferences')}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                <CardHeader className="pb-3 sm:pb-4">
+                  <CardTitle className="text-lg sm:text-xl flex items-center">
+                    <Bell className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    Notifications
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={profile.preferences.newsletter}
-                        onChange={(e) => setProfile({
-                          ...profile,
-                          preferences: {...profile.preferences, newsletter: e.target.checked}
-                        })}
-                        disabled={!isEditing.preferences}
-                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                      />
-                      <div>
-                        <span className="font-medium text-gray-900">Newsletter hebdomadaire</span>
-                        <p className="text-sm text-gray-600">Recevez nos conseils floraux et nouveautés</p>
-                      </div>
-                    </label>
-                    
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={profile.preferences.emailPromotions}
-                        onChange={(e) => setProfile({
-                          ...profile,
-                          preferences: {...profile.preferences, emailPromotions: e.target.checked}
-                        })}
-                        disabled={!isEditing.preferences}
-                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                      />
-                      <div>
-                        <span className="font-medium text-gray-900">Offres spéciales</span>
-                        <p className="text-sm text-gray-600">Soyez informé(e) de nos promotions exclusives</p>
-                      </div>
-                    </label>
-                    
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={profile.preferences.sms}
-                        onChange={(e) => setProfile({
-                          ...profile,
-                          preferences: {...profile.preferences, sms: e.target.checked}
-                        })}
-                        disabled={!isEditing.preferences}
-                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                      />
-                      <div>
-                        <span className="font-medium text-gray-900">Notifications SMS</span>
-                        <p className="text-sm text-gray-600">Recevez des SMS pour le suivi de vos commandes</p>
-                      </div>
-                    </label>
+                <CardContent className="space-y-4 sm:space-y-6">
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={profile.preferences.newsletter}
+                      onChange={(e) => setProfile(prev => ({
+                        ...prev,
+                        preferences: { ...prev.preferences, newsletter: e.target.checked }
+                      }))}
+                      className="mt-1 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900 text-sm sm:text-base">Newsletter</span>
+                      <p className="text-xs sm:text-sm text-gray-600">Recevez nos conseils et promotions exclusives</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={profile.preferences.sms}
+                      onChange={(e) => setProfile(prev => ({
+                        ...prev,
+                        preferences: { ...prev.preferences, sms: e.target.checked }
+                      }))}
+                      className="mt-1 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    <div className="flex-1">
+                      <span className="font-medium text-gray-900 text-sm sm:text-base">Notifications SMS</span>
+                      <p className="text-xs sm:text-sm text-gray-600">Recevez des SMS pour le suivi de vos commandes</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Commandes récentes */}
               <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Commandes récentes</CardTitle>
-                    <Button variant="outline" size="sm" asChild>
-                      <a href="/mes-commandes">Voir toutes</a>
+                <CardHeader className="pb-3 sm:pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <CardTitle className="text-lg sm:text-xl">Commandes récentes</CardTitle>
+                    <Button variant="outline" size="sm" asChild className="self-start sm:self-auto">
+                      <a href="/mes-commandes" className="text-xs sm:text-sm">Voir toutes</a>
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {recentOrders.map((order) => (
-                      <div key={order.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                      <div key={order.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors gap-3 sm:gap-0">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <span className="font-medium text-gray-900">{order.id}</span>
-                            <Badge className={getStatusColor(order.status)}>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                            <span className="font-medium text-gray-900 text-sm sm:text-base">{order.id}</span>
+                            <Badge className={`${getStatusColor(order.status)} text-xs w-fit`}>
                               {getStatusLabel(order.status)}
                             </Badge>
                           </div>
-                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-600">
                             <span>{order.date}</span>
                             <span>{order.items} article{order.items > 1 ? 's' : ''}</span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-bold text-lg text-green-600">
+                          <span className="font-bold text-green-600 text-sm sm:text-base">
                             {order.total.toFixed(2)}€
-                          </div>
-                          <Button variant="outline" size="sm" className="mt-2">
-                            Détails
-                          </Button>
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -534,54 +485,6 @@ export default function MonComptePage() {
                 </CardContent>
               </Card>
 
-              {/* Sécurité */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Lock className="w-5 h-5 mr-2" />
-                    Sécurité du compte
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div>
-                      <h4 className="font-medium text-gray-900">Mot de passe</h4>
-                      <p className="text-sm text-gray-600">Dernière modification il y a 3 mois</p>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      Changer
-                    </Button>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                    <div>
-                      <h4 className="font-medium text-gray-900">Authentification à deux facteurs</h4>
-                      <p className="text-sm text-gray-600">Sécurisez davantage votre compte</p>
-                    </div>
-                    <Badge variant="secondary">Désactivée</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Suppression du compte */}
-              <Card className="border-red-200 bg-red-50">
-                <CardHeader>
-                  <CardTitle className="text-red-800">Zone dangereuse</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-red-900">Supprimer mon compte</h4>
-                      <p className="text-sm text-red-700">
-                        Cette action est irréversible et supprimera toutes vos données
-                      </p>
-                    </div>
-                    <Button variant="destructive" size="sm">
-                      Supprimer
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>
