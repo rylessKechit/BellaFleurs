@@ -1,4 +1,4 @@
-// src/app/admin/commandes/page.tsx - Bouton "Voir détails" direct
+// src/app/admin/commandes/page.tsx - Version corrigée avec bouton facture
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -98,6 +98,8 @@ export default function AdminOrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  // AJOUT: État pour le téléchargement de facture
+  const [isDownloadingInvoice, setIsDownloadingInvoice] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -143,6 +145,48 @@ export default function AdminOrdersPage() {
     } catch (error: any) {
       console.error('Erreur:', error);
       toast.error('Erreur lors de la mise à jour du statut');
+    }
+  };
+
+  // AJOUT: Fonction pour télécharger la facture côté admin
+  const handleDownloadInvoice = async (orderId: string, orderNumber: string) => {
+    try {
+      setIsDownloadingInvoice(orderId);
+      
+      const response = await fetch(`/api/admin/orders/${orderId}/invoice`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Erreur lors de la génération de la facture');
+      }
+
+      // Récupérer le contenu HTML de la facture
+      const htmlContent = await response.text();
+      
+      // Créer un blob et déclencher le téléchargement
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `facture-admin-${orderNumber}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Nettoyer l'URL
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Facture téléchargée avec succès !');
+      
+    } catch (error: any) {
+      console.error('Erreur téléchargement facture:', error);
+      toast.error(error.message || 'Erreur lors du téléchargement de la facture');
+    } finally {
+      setIsDownloadingInvoice(null);
     }
   };
 
@@ -318,107 +362,152 @@ export default function AdminOrdersPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredOrders.map((order) => (
-                        <tr key={order._id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {order.orderNumber}
+                      {filteredOrders.map((order) => {
+                        // AJOUT: Vérifier si cette commande est en cours de téléchargement
+                        const isDownloading = isDownloadingInvoice === order._id;
+                        
+                        return (
+                          <tr key={order._id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {order.orderNumber}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {order.items.length} article{order.items.length > 1 ? 's' : ''}
+                                </div>
                               </div>
-                              <div className="text-sm text-gray-500">
-                                {order.items.length} article{order.items.length > 1 ? 's' : ''}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {order.customerInfo.name}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {order.customerInfo.email}
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {order.customerInfo.name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {order.totalAmount.toFixed(2)}€
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {getStatusBadge(order.status)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {formatDate(order.createdAt)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              {/* MODIFICATION: Ajout du bouton facture */}
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => setSelectedOrder(order)}
+                                >
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  Voir détails
+                                </Button>
+                                
+                                {order.status === 'livrée' && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleDownloadInvoice(order._id, order.orderNumber)}
+                                    disabled={isDownloading}
+                                  >
+                                    {isDownloading ? (
+                                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Download className="w-4 h-4 mr-2" />
+                                    )}
+                                    {isDownloading ? 'Génération...' : 'Facture'}
+                                  </Button>
+                                )}
                               </div>
-                              <div className="text-sm text-gray-500">
-                                {order.customerInfo.email}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {order.totalAmount.toFixed(2)}€
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {getStatusBadge(order.status)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDate(order.createdAt)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            {/* MODIFICATION: Bouton direct au lieu du dropdown */}
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setSelectedOrder(order)}
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              Voir détails
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
 
                 {/* Cards pour mobile et tablet - RESPONSIVE APPLIQUÉ */}
                 <div className="lg:hidden space-y-3 sm:space-y-4 p-4 sm:p-6">
-                  {filteredOrders.map((order) => (
-                    <Card key={order._id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4 sm:p-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h3 className="font-semibold text-sm sm:text-base text-gray-900">
-                                {order.orderNumber}
-                              </h3>
-                              {getStatusBadge(order.status)}
-                            </div>
-                            
-                            <div className="space-y-1">
-                              <p className="text-sm text-gray-600">
-                                <strong>{order.customerInfo.name}</strong>
-                              </p>
-                              <p className="text-xs sm:text-sm text-gray-500">
-                                {order.customerInfo.email}
-                              </p>
-                            </div>
+                  {filteredOrders.map((order) => {
+                    // AJOUT: Vérifier si cette commande est en cours de téléchargement
+                    const isDownloading = isDownloadingInvoice === order._id;
+                    
+                    return (
+                      <Card key={order._id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-4 sm:p-6">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <h3 className="font-semibold text-sm sm:text-base text-gray-900">
+                                  {order.orderNumber}
+                                </h3>
+                                {getStatusBadge(order.status)}
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <p className="text-sm text-gray-600">
+                                  <strong>{order.customerInfo.name}</strong>
+                                </p>
+                                <p className="text-xs sm:text-sm text-gray-500">
+                                  {order.customerInfo.email}
+                                </p>
+                              </div>
 
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-500">
-                                {order.items.length} article{order.items.length > 1 ? 's' : ''}
-                              </span>
-                              <span className="font-bold text-green-600">
-                                {order.totalAmount.toFixed(2)}€
-                              </span>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-500">
+                                  {order.items.length} article{order.items.length > 1 ? 's' : ''}
+                                </span>
+                                <span className="font-bold text-green-600">
+                                  {order.totalAmount.toFixed(2)}€
+                                </span>
+                              </div>
+                              
+                              <p className="text-xs text-gray-500">
+                                {formatDate(order.createdAt)}
+                              </p>
                             </div>
                             
-                            <p className="text-xs text-gray-500">
-                              {formatDate(order.createdAt)}
-                            </p>
+                            {/* MODIFICATION: Ajout du bouton facture pour mobile */}
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => setSelectedOrder(order)}
+                                className="w-full sm:w-auto"
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                Voir détails
+                              </Button>
+                              
+                              {order.status === 'livrée' && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleDownloadInvoice(order._id, order.orderNumber)}
+                                  disabled={isDownloading}
+                                  className="w-full sm:w-auto"
+                                >
+                                  {isDownloading ? (
+                                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Download className="w-4 h-4 mr-2" />
+                                  )}
+                                  {isDownloading ? 'Génération...' : 'Facture'}
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                          
-                          {/* MODIFICATION: Bouton direct pour mobile aussi */}
-                          <div className="flex justify-center sm:block">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => setSelectedOrder(order)}
-                              className="w-full sm:w-auto"
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              Voir détails
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </>
             )}

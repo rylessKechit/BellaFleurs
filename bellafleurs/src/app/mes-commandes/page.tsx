@@ -17,7 +17,8 @@ import {
   ArrowLeft,
   Eye,
   Download,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -290,6 +291,8 @@ export default function MesCommandesPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  // AJOUT: État pour le téléchargement de facture
+  const [isDownloadingInvoice, setIsDownloadingInvoice] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -313,6 +316,48 @@ export default function MesCommandesPage() {
       toast.error('Impossible de charger vos commandes');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // AJOUT: Fonction pour télécharger la facture
+  const handleDownloadInvoice = async (orderId: string, orderNumber: string) => {
+    try {
+      setIsDownloadingInvoice(orderId);
+      
+      const response = await fetch(`/api/orders/${orderId}/invoice`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Erreur lors de la génération de la facture');
+      }
+
+      // Récupérer le contenu HTML de la facture
+      const htmlContent = await response.text();
+      
+      // Créer un blob et déclencher le téléchargement
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `facture-${orderNumber}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Nettoyer l'URL
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Facture téléchargée avec succès !');
+      
+    } catch (error: any) {
+      console.error('Erreur téléchargement facture:', error);
+      toast.error(error.message || 'Erreur lors du téléchargement de la facture');
+    } finally {
+      setIsDownloadingInvoice(null);
     }
   };
 
@@ -375,6 +420,8 @@ export default function MesCommandesPage() {
               {orders.map((order) => {
                 const config = getStatusConfig(order.status);
                 const Icon = config.icon;
+                // AJOUT: Vérifier si cette commande est en cours de téléchargement
+                const isDownloading = isDownloadingInvoice === order._id;
                 
                 return (
                   <Card key={order._id} className="hover:shadow-md transition-shadow">
@@ -458,11 +505,26 @@ export default function MesCommandesPage() {
                             </DialogContent>
                           </Dialog>
                           
+                          {/* MODIFICATION: Bouton facture fonctionnel */}
                           {order.status === 'livrée' && (
-                            <Button variant="outline" size="sm" className="text-xs sm:text-sm">
-                              <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                              <span className="hidden sm:inline">Facture</span>
-                              <span className="sm:hidden">PDF</span>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-xs sm:text-sm"
+                              onClick={() => handleDownloadInvoice(order._id, order.orderNumber)}
+                              disabled={isDownloading}
+                            >
+                              {isDownloading ? (
+                                <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin" />
+                              ) : (
+                                <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                              )}
+                              <span className="hidden sm:inline">
+                                {isDownloading ? 'Génération...' : 'Facture'}
+                              </span>
+                              <span className="sm:hidden">
+                                {isDownloading ? '...' : 'PDF'}
+                              </span>
                             </Button>
                           )}
                         </div>
