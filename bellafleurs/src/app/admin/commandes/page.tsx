@@ -1,4 +1,4 @@
-// src/app/admin/commandes/page.tsx - Version corrigée
+// src/app/admin/commandes/page.tsx - Version corrigée - RESPONSIVE APPLIQUÉ
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -126,7 +126,7 @@ export default function AdminOrdersPage() {
 
   const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus, note?: string) => {
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}/status`, {
+      const response = await fetch(`/api/admin/orders/${orderId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -134,13 +134,9 @@ export default function AdminOrdersPage() {
       });
 
       if (response.ok) {
-        toast.success('Statut mis à jour avec succès');
+        toast.success('Statut de la commande mis à jour');
         fetchOrders();
-        // Mettre à jour l'ordre sélectionné si c'est le même
-        if (selectedOrder && selectedOrder._id === orderId) {
-          const updatedOrder = { ...selectedOrder, status: newStatus };
-          setSelectedOrder(updatedOrder);
-        }
+        setSelectedOrder(null);
       } else {
         throw new Error('Erreur lors de la mise à jour');
       }
@@ -161,13 +157,42 @@ export default function AdminOrdersPage() {
     return matchesSearch && matchesStatus;
   });
 
-  // Statistiques rapides
+  // Statistiques
   const stats = {
-    total: orders.length,
     payée: orders.filter(o => o.status === 'payée').length,
-    en_cours: orders.filter(o => o.status === 'en_creation').length,
+    en_creation: orders.filter(o => o.status === 'en_creation').length,
     prête: orders.filter(o => o.status === 'prête').length,
     en_livraison: orders.filter(o => o.status === 'en_livraison').length
+  };
+
+  const getStatusBadge = (status: OrderStatus) => {
+    const config = {
+      'payée': { label: 'Payée', className: 'bg-green-100 text-green-800' },
+      'en_creation': { label: 'En création', className: 'bg-blue-100 text-blue-800' },
+      'prête': { label: 'Prête', className: 'bg-orange-100 text-orange-800' },
+      'en_livraison': { label: 'En livraison', className: 'bg-purple-100 text-purple-800' },
+      'livrée': { label: 'Livrée', className: 'bg-emerald-100 text-emerald-800' },
+      'annulée': { label: 'Annulée', className: 'bg-red-100 text-red-800' }
+    };
+
+    const statusConfig = config[status] || {
+      label: status,
+      className: 'bg-gray-100 text-gray-800'
+    };
+
+    return (
+      <Badge className={`${statusConfig.className} text-xs`}>
+        {statusConfig.label}
+      </Badge>
+    );
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   };
 
   if (isLoading) {
@@ -196,20 +221,14 @@ export default function AdminOrdersPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
           <Card>
             <CardContent className="p-3 sm:p-4 text-center">
-              <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-xs sm:text-sm text-gray-600">Total</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3 sm:p-4 text-center">
               <p className="text-lg sm:text-2xl font-bold text-blue-600">{stats.payée}</p>
               <p className="text-xs sm:text-sm text-gray-600">Validées</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3 sm:p-4 text-center">
-              <p className="text-lg sm:text-2xl font-bold text-purple-600">{stats.en_cours}</p>
-              <p className="text-xs sm:text-sm text-gray-600">En création</p>
+              <p className="text-lg sm:text-2xl font-bold text-orange-600">{stats.en_creation}</p>
+              <p className="text-xs sm:text-sm text-gray-600">En cours</p>
             </CardContent>
           </Card>
           <Card>
@@ -218,9 +237,9 @@ export default function AdminOrdersPage() {
               <p className="text-xs sm:text-sm text-gray-600">Prêtes</p>
             </CardContent>
           </Card>
-          <Card className="col-span-2 sm:col-span-3 md:col-span-1">
+          <Card>
             <CardContent className="p-3 sm:p-4 text-center">
-              <p className="text-lg sm:text-2xl font-bold text-orange-600">{stats.en_livraison}</p>
+              <p className="text-lg sm:text-2xl font-bold text-purple-600">{stats.en_livraison}</p>
               <p className="text-xs sm:text-sm text-gray-600">En livraison</p>
             </CardContent>
           </Card>
@@ -232,20 +251,18 @@ export default function AdminOrdersPage() {
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Rechercher par numéro, nom ou email..."
+                    placeholder="Rechercher une commande..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 text-sm"
+                    className="pl-10 text-sm sm:text-base"
                   />
                 </div>
               </div>
-              
               <div className="w-full sm:w-48">
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger>
-                    <Filter className="w-4 h-4 mr-2" />
+                  <SelectTrigger className="text-sm sm:text-base">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -258,11 +275,6 @@ export default function AdminOrdersPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
-              <Button onClick={fetchOrders} variant="outline" size="sm">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Actualiser</span>
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -270,9 +282,7 @@ export default function AdminOrdersPage() {
         {/* Liste des commandes - RESPONSIVE APPLIQUÉ */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg sm:text-xl">
-              Commandes ({filteredOrders.length})
-            </CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Commandes ({filteredOrders.length})</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {filteredOrders.length === 0 ? (
@@ -281,317 +291,295 @@ export default function AdminOrdersPage() {
                 <p className="text-sm sm:text-base text-gray-500">Aucune commande trouvée</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                {/* Table responsive pour desktop */}
-                <table className="w-full hidden md:table">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Commande
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Client
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Montant
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Statut
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredOrders.map((order) => (
-                      <tr key={order._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {order.orderNumber}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {order.items.length} article(s)
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {order.customerInfo.name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {order.customerInfo.email}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                          {order.totalAmount.toFixed(2)}€
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge className={getStatusBadgeClass(order.status)}>
-                            {getStatusLabel(order.status)}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(order.createdAt).toLocaleDateString('fr-FR')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem onClick={() => setSelectedOrder(order)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                Voir détails
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Modifier statut
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Download className="w-4 h-4 mr-2" />
-                                Télécharger
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
+              <>
+                {/* Table responsive pour desktop - RESPONSIVE APPLIQUÉ */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Commande
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Client
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Montant
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Statut
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredOrders.map((order) => (
+                        <tr key={order._id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {order.orderNumber}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {order.items.length} article{order.items.length > 1 ? 's' : ''}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {order.customerInfo.name}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {order.customerInfo.email}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {order.totalAmount.toFixed(2)}€
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {getStatusBadge(order.status)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatDate(order.createdAt)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setSelectedOrder(order)}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  Voir détails
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusUpdate(order._id, 'en_creation')}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Modifier statut
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                {/* Cards responsive pour mobile/tablet */}
-                <div className="md:hidden space-y-3 sm:space-y-4 p-4 sm:p-6">
+                {/* Cards pour mobile et tablet - RESPONSIVE APPLIQUÉ */}
+                <div className="lg:hidden space-y-3 sm:space-y-4 p-4 sm:p-6">
                   {filteredOrders.map((order) => (
                     <Card key={order._id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h3 className="font-medium text-sm text-gray-900">{order.orderNumber}</h3>
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-semibold text-sm sm:text-base text-gray-900">
+                                {order.orderNumber}
+                              </h3>
+                              {getStatusBadge(order.status)}
+                            </div>
+                            
+                            <div className="space-y-1">
+                              <p className="text-sm text-gray-600">
+                                <strong>{order.customerInfo.name}</strong>
+                              </p>
+                              <p className="text-xs sm:text-sm text-gray-500">
+                                {order.customerInfo.email}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-gray-500">
+                                {order.items.length} article{order.items.length > 1 ? 's' : ''}
+                              </span>
+                              <span className="font-bold text-green-600">
+                                {order.totalAmount.toFixed(2)}€
+                              </span>
+                            </div>
+                            
                             <p className="text-xs text-gray-500">
-                              {new Date(order.createdAt).toLocaleDateString('fr-FR')} • {order.items.length} article(s)
+                              {formatDate(order.createdAt)}
                             </p>
                           </div>
-                          <Badge className={`${getStatusBadgeClass(order.status)} text-xs`}>
-                            {getStatusLabel(order.status)}
-                          </Badge>
-                        </div>
-                        
-                        <div className="space-y-2 mb-3">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Client:</span>
-                            <span className="font-medium">{order.customerInfo.name}</span>
+                          
+                          <div className="flex sm:flex-col gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => setSelectedOrder(order)}
+                              className="flex-1 sm:flex-none"
+                            >
+                              <Eye className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                              <span className="hidden sm:inline">Détails</span>
+                            </Button>
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline" className="flex-1 sm:flex-none">
+                                  <MoreHorizontal className="w-3 h-3 sm:w-4 sm:h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleStatusUpdate(order._id, 'en_creation')}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Modifier statut
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Montant:</span>
-                            <span className="font-bold text-green-600">{order.totalAmount.toFixed(2)}€</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex space-x-2">
-                          <Button size="sm" variant="outline" onClick={() => setSelectedOrder(order)} className="flex-1 text-xs">
-                            <Eye className="w-3 h-3 mr-1" />
-                            Détails
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="outline">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Modifier statut
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Download className="w-4 h-4 mr-2" />
-                                Télécharger
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
-              </div>
+              </>
             )}
           </CardContent>
         </Card>
 
-        {/* Dialog pour les détails de commande - RESPONSIVE APPLIQUÉ */}
-        <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Dialog de détail commande - RESPONSIVE APPLIQUÉ */}
+        <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+          <DialogContent className="max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-lg sm:text-xl">
-                Détails de la commande {selectedOrder?.orderNumber}
+                Commande {selectedOrder?.orderNumber}
               </DialogTitle>
             </DialogHeader>
             
             {selectedOrder && (
-              <OrderDetailsDialog 
-                order={selectedOrder} 
-                onStatusUpdate={handleStatusUpdate}
-              />
+              <div className="space-y-4 sm:space-y-6">
+                {/* Statut et informations générales - RESPONSIVE APPLIQUÉ */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base sm:text-lg">Statut</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {getStatusBadge(selectedOrder.status)}
+                        <div className="space-y-2">
+                          <Label className="text-sm">Changer le statut :</Label>
+                          <Select
+                            value={selectedOrder.status}
+                            onValueChange={(value) => handleStatusUpdate(selectedOrder._id, value as OrderStatus)}
+                          >
+                            <SelectTrigger className="text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="payée">Payée</SelectItem>
+                              <SelectItem value="en_creation">En création</SelectItem>
+                              <SelectItem value="prête">Prête</SelectItem>
+                              <SelectItem value="en_livraison">En livraison</SelectItem>
+                              <SelectItem value="livrée">Livrée</SelectItem>
+                              <SelectItem value="annulée">Annulée</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base sm:text-lg">Informations client</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="w-4 h-4 text-gray-500" />
+                        <span>{selectedOrder.customerInfo.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="w-4 h-4 text-gray-500" />
+                        <span>{selectedOrder.customerInfo.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="w-4 h-4 text-gray-500" />
+                        <span>{selectedOrder.customerInfo.phone}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Articles commandés - RESPONSIVE APPLIQUÉ */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Articles commandés</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 sm:space-y-4">
+                      {selectedOrder.items.map((item, index) => (
+                        <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 bg-gray-50 rounded-lg">
+                          <img
+                            src={item.image || '/api/placeholder/80/80'}
+                            alt={item.name}
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover mx-auto sm:mx-0"
+                          />
+                          <div className="flex-1 text-center sm:text-left">
+                            <h4 className="font-medium text-sm sm:text-base">{item.name}</h4>
+                            <p className="text-xs sm:text-sm text-gray-600">Quantité: {item.quantity}</p>
+                          </div>
+                          <div className="text-center sm:text-right">
+                            <p className="font-bold text-sm sm:text-base">{(item.price * item.quantity).toFixed(2)}€</p>
+                            <p className="text-xs text-gray-500">{item.price.toFixed(2)}€ x {item.quantity}</p>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <div className="border-t pt-3 flex justify-between items-center font-bold text-base sm:text-lg">
+                        <span>Total:</span>
+                        <span className="text-green-600">{selectedOrder.totalAmount.toFixed(2)}€</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Informations de livraison - RESPONSIVE APPLIQUÉ */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base sm:text-lg">Livraison</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="w-4 h-4 text-gray-500" />
+                        <span>Date: {formatDate(selectedOrder.deliveryInfo.date)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Truck className="w-4 h-4 text-gray-500" />
+                        <span>Type: {selectedOrder.deliveryInfo.type === 'delivery' ? 'Livraison' : 'Retrait'}</span>
+                      </div>
+                      {selectedOrder.deliveryInfo.address && (
+                        <div className="flex items-start gap-2 text-sm">
+                          <MapPin className="w-4 h-4 text-gray-500 mt-0.5" />
+                          <div>
+                            <div>{selectedOrder.deliveryInfo.address.street}</div>
+                            <div>{selectedOrder.deliveryInfo.address.zipCode} {selectedOrder.deliveryInfo.address.city}</div>
+                          </div>
+                        </div>
+                      )}
+                      {selectedOrder.deliveryInfo.notes && (
+                        <div className="text-sm">
+                          <strong>Notes:</strong> {selectedOrder.deliveryInfo.notes}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
           </DialogContent>
         </Dialog>
       </div>
     </AdminLayout>
-  );
-}
-
-// Fonctions utilitaires
-function getStatusBadgeClass(status: OrderStatus): string {
-  const classes = {
-    'payée': 'bg-blue-100 text-blue-800',
-    'en_creation': 'bg-orange-100 text-orange-800',
-    'prête': 'bg-green-100 text-green-800',
-    'en_livraison': 'bg-purple-100 text-purple-800',
-    'livrée': 'bg-emerald-100 text-emerald-800',
-    'annulée': 'bg-red-100 text-red-800'
-  };
-  return classes[status] || 'bg-gray-100 text-gray-800';
-}
-
-function getStatusLabel(status: OrderStatus): string {
-  const labels = {
-    'payée': 'Payée',
-    'en_creation': 'En création',
-    'prête': 'Prête',
-    'en_livraison': 'En livraison',
-    'livrée': 'Livrée',
-    'annulée': 'Annulée'
-  };
-  return labels[status] || status;
-}
-
-// Composant pour les détails de commande - RESPONSIVE APPLIQUÉ
-function OrderDetailsDialog({ 
-  order, 
-  onStatusUpdate 
-}: { 
-  order: Order;
-  onStatusUpdate: (orderId: string, status: OrderStatus, note?: string) => void;
-}) {
-  const [newStatus, setNewStatus] = useState<OrderStatus>(order.status);
-  const [note, setNote] = useState('');
-
-  const handleUpdateStatus = () => {
-    if (newStatus !== order.status) {
-      onStatusUpdate(order._id, newStatus, note || undefined);
-      setNote('');
-    }
-  };
-
-  return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Informations générales - RESPONSIVE APPLIQUÉ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <h4 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">Informations client</h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center">
-              <Mail className="w-4 h-4 mr-2 text-gray-400" />
-              <span>{order.customerInfo.name}</span>
-            </div>
-            <div className="flex items-center">
-              <Phone className="w-4 h-4 mr-2 text-gray-400" />
-              <span>{order.customerInfo.email}</span>
-            </div>
-            <div className="flex items-center">
-              <Phone className="w-4 h-4 mr-2 text-gray-400" />
-              <span>{order.customerInfo.phone}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div>
-          <h4 className="font-medium text-gray-900 mb-2 text-sm sm:text-base">Livraison</h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center">
-              <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-              <span>{order.deliveryInfo.type === 'delivery' ? 'Livraison' : 'Retrait'}</span>
-            </div>
-            {order.deliveryInfo.address && (
-              <div className="ml-6">
-                <p>{order.deliveryInfo.address.street}</p>
-                <p>{order.deliveryInfo.address.zipCode} {order.deliveryInfo.address.city}</p>
-              </div>
-            )}
-            <div className="flex items-center">
-              <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-              <span>{new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Articles - RESPONSIVE APPLIQUÉ */}
-      <div>
-        <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Articles ({order.items.length})</h4>
-        <div className="space-y-2 sm:space-y-3">
-          {order.items.map((item) => (
-            <div key={item._id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                <Package className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm sm:text-base truncate">{item.name}</p>
-                <p className="text-xs sm:text-sm text-gray-500">Quantité: {item.quantity}</p>
-              </div>
-              <p className="font-bold text-green-600 text-sm sm:text-base">{item.price.toFixed(2)}€</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Modification du statut - RESPONSIVE APPLIQUÉ */}
-      <div className="border-t pt-4">
-        <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">Modifier le statut</h4>
-        <div className="space-y-3 sm:space-y-4">
-          <div>
-            <Label className="text-xs sm:text-sm">Nouveau statut</Label>
-            <Select value={newStatus} onValueChange={(value) => setNewStatus(value as OrderStatus)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="payée">Payée</SelectItem>
-                <SelectItem value="en_creation">En création</SelectItem>
-                <SelectItem value="prête">Prête</SelectItem>
-                <SelectItem value="en_livraison">En livraison</SelectItem>
-                <SelectItem value="livrée">Livrée</SelectItem>
-                <SelectItem value="annulée">Annulée</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <Label className="text-xs sm:text-sm">Note (optionnelle)</Label>
-            <Textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Ajouter une note..."
-              className="text-sm"
-              rows={3}
-            />
-          </div>
-          
-          <Button onClick={handleUpdateStatus} disabled={newStatus === order.status} size="sm">
-            Mettre à jour le statut
-          </Button>
-        </div>
-      </div>
-    </div>
   );
 }

@@ -93,7 +93,7 @@ const initialForm: ProductForm = {
   motsClesSEO: []
 };
 
-// Composant d'upload d'images
+// Composant d'upload d'images - RESPONSIVE APPLIQUÉ
 function ImageUpload({ 
   images, 
   onImagesChange, 
@@ -141,27 +141,27 @@ function ImageUpload({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
         {images.map((image, index) => (
           <div key={index} className="relative group">
             <img
               src={image}
               alt={`Image ${index + 1}`}
-              className="w-full h-32 object-cover rounded-lg"
+              className="w-full h-20 sm:h-24 md:h-32 object-cover rounded-lg"
             />
             <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center">
               <Button
                 size="sm"
                 variant="destructive"
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 sm:p-2"
                 onClick={() => removeImage(index)}
               >
-                <X className="w-4 h-4" />
+                <X className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
             </div>
             {index === 0 && (
-              <Badge className="absolute bottom-2 left-2 bg-green-600">
+              <Badge className="absolute bottom-1 sm:bottom-2 left-1 sm:left-2 bg-green-600 text-xs">
                 Principale
               </Badge>
             )}
@@ -169,9 +169,9 @@ function ImageUpload({
         ))}
         
         {images.length < maxImages && (
-          <label className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-green-500 transition-colors">
-            <Upload className="w-6 h-6 text-gray-400 mb-2" />
-            <span className="text-sm text-gray-600">Ajouter</span>
+          <label className="w-full h-20 sm:h-24 md:h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-green-500 transition-colors">
+            <Upload className="w-4 h-4 sm:w-6 sm:h-6 text-gray-400 mb-1 sm:mb-2" />
+            <span className="text-xs sm:text-sm text-gray-600 text-center px-1">Ajouter</span>
             <input
               type="file"
               multiple
@@ -185,7 +185,7 @@ function ImageUpload({
       </div>
       
       {uploading && (
-        <div className="text-center text-sm text-gray-600">
+        <div className="text-center text-xs sm:text-sm text-gray-600">
           Upload en cours...
         </div>
       )}
@@ -193,7 +193,7 @@ function ImageUpload({
   );
 }
 
-// Composant de formulaire produit
+// Composant de formulaire produit - RESPONSIVE APPLIQUÉ
 function ProductForm({ 
   product, 
   isEdit = false, 
@@ -314,25 +314,26 @@ function ProductForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Informations de base */}
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+      {/* Informations de base - RESPONSIVE APPLIQUÉ */}
       <Card>
         <CardHeader>
-          <CardTitle>Informations de base</CardTitle>
+          <CardTitle className="text-base sm:text-lg">Informations de base</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <Label htmlFor="name">Nom du produit *</Label>
+              <Label htmlFor="name" className="text-sm sm:text-base">Nom du produit *</Label>
               <Input
                 id="name"
                 value={form.name}
                 onChange={(e) => setForm({...form, name: e.target.value})}
                 placeholder="Ex: Bouquet de roses rouges"
+                className="text-sm sm:text-base"
               />
             </div>
             <div>
-              <Label htmlFor="price">Prix (€) *</Label>
+              <Label htmlFor="price" className="text-sm sm:text-base">Prix (€) *</Label>
               <Input
                 id="price"
                 type="number"
@@ -341,29 +342,31 @@ function ProductForm({
                 value={form.price}
                 onChange={(e) => setForm({...form, price: parseFloat(e.target.value) || 0})}
                 placeholder="45.90"
+                className="text-sm sm:text-base"
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="description">Description *</Label>
+            <Label htmlFor="description" className="text-sm sm:text-base">Description *</Label>
             <Textarea
               id="description"
               value={form.description}
               onChange={(e) => setForm({...form, description: e.target.value})}
               placeholder="Décrivez votre création florale..."
               rows={4}
+              className="text-sm sm:text-base"
             />
           </div>
 
-          {/* Catégorie uniquement */}
+          {/* Catégorie uniquement - RESPONSIVE APPLIQUÉ */}
           <div>
-            <Label>Catégorie *</Label>
+            <Label className="text-sm sm:text-base">Catégorie *</Label>
             <Select 
               value={form.category} 
               onValueChange={(value) => setForm({...form, category: value})}
             >
-              <SelectTrigger>
+              <SelectTrigger className="text-sm sm:text-base">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -378,35 +381,37 @@ function ProductForm({
         </CardContent>
       </Card>
 
-      {/* Tags et SEO */}
+      {/* Tags et SEO - RESPONSIVE APPLIQUÉ */}
       <Card>
         <CardHeader>
-          <CardTitle>Tags et SEO</CardTitle>
+          <CardTitle className="text-base sm:text-lg">Tags et SEO</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4">
           
           {/* Tags */}
           <div>
-            <Label htmlFor="tags">Tags</Label>
+            <Label htmlFor="tags" className="text-sm sm:text-base">Tags</Label>
             <div className="space-y-2">
-              <div className="flex space-x-2">
+              <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
                 <Input
                   id="tags"
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={handleTagKeyDown}
                   placeholder="Tapez un tag et appuyez sur Entrée ou virgule"
+                  className="text-sm sm:text-base flex-1"
                 />
-                <Button type="button" onClick={addTag} variant="outline" size="sm">
-                  <Plus className="w-4 h-4" />
+                <Button type="button" onClick={addTag} variant="outline" size="sm" className="w-full sm:w-auto">
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                  <span className="sm:inline">Ajouter</span>
                 </Button>
               </div>
               <p className="text-xs text-gray-500">
                 Séparez les tags par une virgule (,) ou appuyez sur Entrée
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1 sm:gap-2">
                 {form.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1 text-xs">
                     {tag}
                     <button
                       type="button"
@@ -421,28 +426,30 @@ function ProductForm({
             </div>
           </div>
 
-          {/* Mots-clés SEO */}
+          {/* Mots-clés SEO - RESPONSIVE APPLIQUÉ */}
           <div>
-            <Label htmlFor="motsClesSEO">Mots-clés SEO</Label>
+            <Label htmlFor="motsClesSEO" className="text-sm sm:text-base">Mots-clés SEO</Label>
             <div className="space-y-2">
-              <div className="flex space-x-2">
+              <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
                 <Input
                   id="motsClesSEO"
                   value={motsClesInput}
                   onChange={(e) => setMotsClesInput(e.target.value)}
                   onKeyDown={handleMotCleKeyDown}
                   placeholder="Tapez un mot-clé et appuyez sur Entrée ou virgule"
+                  className="text-sm sm:text-base flex-1"
                 />
-                <Button type="button" onClick={addMotCle} variant="outline" size="sm">
-                  <Plus className="w-4 h-4" />
+                <Button type="button" onClick={addMotCle} variant="outline" size="sm" className="w-full sm:w-auto">
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                  <span className="sm:inline">Ajouter</span>
                 </Button>
               </div>
               <p className="text-xs text-gray-500">
                 Séparez les mots-clés par une virgule (,) ou appuyez sur Entrée
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1 sm:gap-2">
                 {form.motsClesSEO.map((motCle, index) => (
-                  <Badge key={index} variant="outline" className="flex items-center gap-1">
+                  <Badge key={index} variant="outline" className="flex items-center gap-1 text-xs">
                     {motCle}
                     <button
                       type="button"
@@ -459,44 +466,45 @@ function ProductForm({
         </CardContent>
       </Card>
 
-      {/* Images */}
+      {/* Images - RESPONSIVE APPLIQUÉ */}
       <Card>
         <CardHeader>
-          <CardTitle>Images *</CardTitle>
+          <CardTitle className="text-base sm:text-lg">Images *</CardTitle>
         </CardHeader>
         <CardContent>
           <ImageUpload images={images} onImagesChange={setImages} />
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-xs sm:text-sm text-gray-500 mt-2">
             La première image sera utilisée comme image principale
           </p>
         </CardContent>
       </Card>
 
-      {/* Détails optionnels */}
+      {/* Détails optionnels - RESPONSIVE APPLIQUÉ */}
       <Card>
         <CardHeader>
-          <CardTitle>Détails optionnels</CardTitle>
+          <CardTitle className="text-base sm:text-lg">Détails optionnels</CardTitle>
         </CardHeader>
         <CardContent>
           <div>
-            <Label htmlFor="entretien">Instructions d'entretien</Label>
+            <Label htmlFor="entretien" className="text-sm sm:text-base">Instructions d'entretien</Label>
             <Textarea
               id="entretien"
               value={form.entretien}
               onChange={(e) => setForm({...form, entretien: e.target.value})}
               placeholder="Comment entretenir ce produit..."
               rows={3}
+              className="text-sm sm:text-base"
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Actions */}
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+      {/* Actions - RESPONSIVE APPLIQUÉ */}
+      <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+        <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
           Annuler
         </Button>
-        <Button type="submit" disabled={isSaving}>
+        <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
           {isSaving ? 'Sauvegarde...' : (isEdit ? 'Modifier' : 'Créer')}
         </Button>
       </DialogFooter>
@@ -644,7 +652,7 @@ export default function AdminProductsPage() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-green-600"></div>
         </div>
       </AdminLayout>
     );
@@ -652,26 +660,26 @@ export default function AdminProductsPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         
-        {/* Header */}
-        <div className="flex justify-between items-center">
+        {/* Header - RESPONSIVE APPLIQUÉ */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestion des Produits</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestion des Produits</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
               Créez et gérez vos créations florales
             </p>
           </div>
-          <Button onClick={openCreateDialog}>
+          <Button onClick={openCreateDialog} className="self-start sm:self-auto">
             <Plus className="w-4 h-4 mr-2" />
             Nouveau Produit
           </Button>
         </div>
 
-        {/* Filtres et recherche */}
+        {/* Filtres et recherche - RESPONSIVE APPLIQUÉ */}
         <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -679,13 +687,13 @@ export default function AdminProductsPage() {
                     placeholder="Rechercher un produit..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 text-sm sm:text-base"
                   />
                 </div>
               </div>
-              <div className="md:w-48">
+              <div className="w-full sm:w-48">
                 <Select value={filterCategory} onValueChange={setFilterCategory}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-sm sm:text-base">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -702,18 +710,18 @@ export default function AdminProductsPage() {
           </CardContent>
         </Card>
 
-        {/* Liste des produits */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Liste des produits - RESPONSIVE APPLIQUÉ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {filteredProducts.map((product) => (
             <Card key={product._id} className="hover:shadow-md transition-shadow">
               <div className="relative">
                 <img
                   src={product.images[0] || '/api/placeholder/300/200'}
                   alt={product.name}
-                  className="w-full h-48 object-cover rounded-t-lg"
+                  className="w-full h-32 sm:h-40 md:h-48 object-cover rounded-t-lg"
                 />
                 <Badge 
-                  className={`absolute top-2 right-2 ${
+                  className={`absolute top-2 right-2 text-xs ${
                     product.isActive ? 'bg-green-600' : 'bg-gray-600'
                   }`}
                 >
@@ -721,15 +729,15 @@ export default function AdminProductsPage() {
                 </Badge>
               </div>
               
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-gray-900 truncate">
+                  <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate flex-1 mr-2">
                     {product.name}
                   </h3>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="w-4 h-4" />
+                      <Button variant="ghost" size="sm" className="p-1 sm:p-2">
+                        <MoreHorizontal className="w-3 h-3 sm:w-4 sm:h-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -754,15 +762,15 @@ export default function AdminProductsPage() {
                   </DropdownMenu>
                 </div>
                 
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                <p className="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-2">
                   {product.description}
                 </p>
                 
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-lg font-bold text-green-600">
+                  <span className="text-base sm:text-lg font-bold text-green-600">
                     {product.price.toFixed(2)}€
                   </span>
-                  <Badge variant="outline">
+                  <Badge variant="outline" className="text-xs">
                     {product.category}
                   </Badge>
                 </div>
@@ -788,12 +796,12 @@ export default function AdminProductsPage() {
 
         {filteredProducts.length === 0 && (
           <Card>
-            <CardContent className="text-center py-12">
-              <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <CardContent className="text-center py-8 sm:py-12">
+              <ImageIcon className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
                 Aucun produit trouvé
               </h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
                 {searchTerm || filterCategory !== 'all' 
                   ? 'Aucun produit ne correspond à vos critères de recherche.'
                   : 'Commencez par créer votre premier produit.'
@@ -809,11 +817,11 @@ export default function AdminProductsPage() {
           </Card>
         )}
 
-        {/* Dialog de création/modification */}
+        {/* Dialog de création/modification - RESPONSIVE APPLIQUÉ */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl">
                 {editingProduct ? 'Modifier le produit' : 'Nouveau produit'}
               </DialogTitle>
             </DialogHeader>
