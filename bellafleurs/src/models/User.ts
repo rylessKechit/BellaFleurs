@@ -1,7 +1,7 @@
+// src/models/User.ts - Index corrigés
 import mongoose, { Schema, Model, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-// Interface pour le document User (sans les méthodes)
 export interface IUser extends Document {
   name: string;
   email: string;
@@ -20,23 +20,19 @@ export interface IUser extends Document {
   updatedAt: Date;
 }
 
-// Interface pour les méthodes d'instance
 export interface IUserMethods {
   comparePassword(candidatePassword: string): Promise<boolean>;
   toPublicJSON(): Omit<IUser, 'password'>;
 }
 
-// Interface pour les méthodes statiques
 export interface IUserModel extends Model<IUser, {}, IUserMethods> {
   findByEmail(email: string): Promise<IUserDocument | null>;
   findAdmins(): Promise<IUserDocument[]>;
   findClients(): Promise<IUserDocument[]>;
 }
 
-// Type combiné pour le document avec méthodes
 export type IUserDocument = IUser & IUserMethods;
 
-// Schéma pour l'adresse
 const AddressSchema = new Schema({
   street: {
     type: String,
@@ -65,7 +61,6 @@ const AddressSchema = new Schema({
   }
 }, { _id: false });
 
-// Schéma principal User
 const UserSchema = new Schema<IUser, IUserModel, IUserMethods>({
   name: {
     type: String,
@@ -77,7 +72,7 @@ const UserSchema = new Schema<IUser, IUserModel, IUserMethods>({
   email: {
     type: String,
     required: [true, 'Email is required'],
-    unique: true,
+    // CORRECTION: Retirer unique: true d'ici car on définit l'index séparément
     trim: true,
     lowercase: true,
     match: [
@@ -88,7 +83,7 @@ const UserSchema = new Schema<IUser, IUserModel, IUserMethods>({
   password: {
     type: String,
     minlength: [6, 'Password must be at least 6 characters'],
-    select: false // Par défaut, ne pas inclure le mot de passe dans les requêtes
+    select: false
   },
   role: {
     type: String,
@@ -134,21 +129,17 @@ const UserSchema = new Schema<IUser, IUserModel, IUserMethods>({
   }
 });
 
-// Index pour les performances
-UserSchema.index({ email: 1 });
+// CORRECTION: Index définis UNE SEULE FOIS ici
+UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ role: 1 });
 UserSchema.index({ createdAt: -1 });
 
 // Middleware pre-save pour hasher le mot de passe
 UserSchema.pre('save', async function(next) {
-  // Ne hasher que si le mot de passe a été modifié
   if (!this.isModified('password')) return next();
-  
-  // Si pas de mot de passe (OAuth), passer
   if (!this.password) return next();
 
   try {
-    // Hasher le mot de passe
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
     next();
@@ -196,7 +187,6 @@ UserSchema.virtual('isEmailVerified').get(function() {
   return !!this.emailVerified;
 });
 
-// Éviter la recompilation du modèle
 const User = (mongoose.models.User as IUserModel) || 
   mongoose.model<IUser, IUserModel>('User', UserSchema);
 

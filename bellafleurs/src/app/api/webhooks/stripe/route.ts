@@ -1,10 +1,11 @@
-// src/app/api/webhooks/stripe/route.ts
+// src/app/api/webhooks/stripe/route.ts - Version avec emails
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { stripe } from '@/lib/stripe';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import Cart from '@/models/Cart';
+import { sendOrderConfirmation, sendNewOrderNotification } from '@/lib/email';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -52,6 +53,16 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
       return;
     }
 
+    // Vérifier si la commande existe déjà
+    const existingOrder = await Order.findOne({ 
+      stripePaymentIntentId: paymentIntent.id 
+    });
+    
+    if (existingOrder) {
+      console.log('⚠️ Commande déjà existante:', existingOrder.orderNumber);
+      return;
+    }
+
     // Générer le numéro de commande
     const orderNumber = await Order.generateOrderNumber();
 
@@ -76,72 +87,119 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
         email: metadata.customer_email,
         phone: metadata.customer_phone || ''
       },
-      timeline: [{
-        status: 'payée',
-        date: new Date(),
-        note: 'Commande payée et créée automatiquement'
-      }]
+      timeline: [
+        {
+          status: 'payée',
+          date: new Date(),
+          note: 'Commande créée et payée via Stripe'
+        }
+      ]
     };
 
+    // Créer la commande en base
     const order = new Order(orderData);
     await order.save();
+    
+    console.log('✅ Commande créée:', order.orderNumber);
 
-    console.log('✅ Commande créée:', {
-      orderId: order._id,
-      orderNumber: order.orderNumber,
-      amount: paymentIntent.amount_received / 100
-    });
+    // Vider le panier si l'utilisateur est connecté
+    if (metadata.user_id && metadata.user_id !== 'guest') {
+      try {
+        await Cart.deleteOne({ user: metadata.user_id });
+        console.log('🛒 Panier vidé pour l\'utilisateur:', metadata.user_id);
+      } catch (error) {
+        console.warn('⚠️ Erreur lors du vidage du panier:', error);
+      }
+    }
 
-  } catch (error) {
-    console.error('❌ Erreur création commande:', error);
+    // ✅ ENVOYER LES EMAILS DE NOTIFICATION
+    try {
+      // 1. Email de confirmation au client
+      console.log('📧 Envoi email de confirmation...');
+      const confirmationSent = await sendOrderConfirmation(order);
+      if (confirmationSent) {
+        console.log('✅ Email de confirmation envoyé au client');
+      } else {
+        console.error('❌ Échec envoi email de confirmation');
+      }
+
+      // 2. Notification à l'admin
+      console.log('📧 Envoi notification admin...');
+      const adminNotificationSent = await sendNewOrderNotification(order);
+      if (adminNotificationSent) {
+        console.log('✅ Notification admin envoyée');
+      } else {
+        console.error('❌ Échec notification admin');
+      }
+
+      // Mettre à jour la commande avec le statut d'envoi des emails
+      await Order.findByIdAndUpdate(order._id, {
+        emailsSent: {
+          confirmation: confirmationSent,
+          adminNotification: adminNotificationSent,
+          sentAt: new Date()
+        }
+      });
+
+    } catch (emailError) {
+      console.error('❌ Erreur envoi emails:', emailError);
+      // Ne pas faire échouer le webhook pour autant
+    }
+
+  } catch (error: any) {
+    console.error('❌ Erreur handlePaymentIntentSucceeded:', error);
     throw error;
   }
 }
 
-function parseAddressFromMetadata(addressString: string) {
-  const parts = addressString.split(', ');
-  if (parts.length >= 2) {
-    const street = parts[0];
-    const cityZip = parts[1].split(' ');
-    const zipCode = cityZip.pop() || '';
-    const city = cityZip.join(' ');
-    
-    return { street, city, zipCode, complement: '' };
+// Fonctions utilitaires pour parser les métadonnées
+function parseItemsFromMetadata(itemsString: string): any[] {
+  try {
+    // Format: "item1:qty1x€price1|item2:qty2x€price2"
+    return itemsString.split('|').map(itemStr => {
+      const [name, qtyPrice] = itemStr.split(':');
+      const [qtyStr, priceStr] = qtyPrice.split('x');
+      const quantity = parseInt(qtyStr);
+      const price = parseFloat(priceStr.replace('€', ''));
+      
+      return {
+        name: name.trim(),
+        quantity,
+        price,
+        image: '' // Pas d'image dans les métadonnées
+      };
+    });
+  } catch (error) {
+    console.error('Erreur parsing items:', error);
+    return [];
   }
-  
-  return { street: addressString, city: '', zipCode: '', complement: '' };
 }
 
-function parseItemsFromMetadata(itemsString: string) {
-  if (!itemsString) return [];
-  
-  return itemsString.split('|').map((item, index) => {
-    const parts = item.split(':');
-    if (parts.length === 2) {
-      const name = parts[0];
-      const quantityPrice = parts[1];
-      const match = quantityPrice.match(/(\d+)x([\d.]+)€/);
+function parseAddressFromMetadata(addressString: string): any {
+  try {
+    // Format simple: "street, city zipCode"
+    const parts = addressString.split(',');
+    if (parts.length >= 2) {
+      const street = parts[0].trim();
+      const cityZip = parts[1].trim().split(' ');
+      const zipCode = cityZip.pop() || '';
+      const city = cityZip.join(' ');
       
-      if (match) {
-        const quantity = parseInt(match[1]);
-        const price = parseFloat(match[2]);
-        
-        return {
-          product: `temp_product_${index}`,
-          name,
-          price,
-          quantity,
-          image: ''
-        };
-      }
+      return {
+        street,
+        city,
+        zipCode,
+        complement: ''
+      };
     }
-    
-    return {
-      product: `temp_product_${index}`,
-      name: item,
-      price: 0,
-      quantity: 1,
-      image: ''
-    };
-  });
+  } catch (error) {
+    console.error('Erreur parsing address:', error);
+  }
+  
+  return {
+    street: addressString,
+    city: '',
+    zipCode: '',
+    complement: ''
+  };
 }

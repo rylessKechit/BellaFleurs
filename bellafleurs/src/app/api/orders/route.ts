@@ -1,4 +1,4 @@
-// src/app/api/orders/route.ts
+// src/app/api/orders/route.ts - Version avec emails
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -6,9 +6,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
+import Cart from '@/models/Cart';
+import { sendOrderConfirmation, sendNewOrderNotification } from '@/lib/email';
 import { z } from 'zod';
 
-// Schéma de validation pour la création de commande
 const createOrderSchema = z.object({
   items: z.array(z.object({
     product: z.string(),
@@ -16,39 +17,38 @@ const createOrderSchema = z.object({
     price: z.number().positive(),
     quantity: z.number().int().positive(),
     image: z.string().optional()
-  })).min(1),
+  })).min(1, 'Au moins un article requis'),
   customerInfo: z.object({
-    name: z.string().min(2),
-    email: z.string().email(),
-    phone: z.string().min(10)
+    name: z.string().min(1, 'Nom requis'),
+    email: z.string().email('Email invalide'),
+    phone: z.string().min(1, 'Téléphone requis')
   }),
   deliveryInfo: z.object({
     type: z.enum(['delivery', 'pickup']),
     address: z.object({
-      street: z.string().min(1),
-      city: z.string().min(1),
-      zipCode: z.string().regex(/^\d{5}$/),
+      street: z.string(),
+      city: z.string(),
+      zipCode: z.string(),
       complement: z.string().optional()
     }).optional(),
-    date: z.string().or(z.date()),
+    date: z.date().or(z.string()),
     notes: z.string().optional()
   }),
-  paymentMethod: z.enum(['card', 'paypal']).default('card'),
   totalAmount: z.number().positive(),
-  stripePaymentIntentId: z.string().optional(),
-  paymentStatus: z.enum(['pending', 'paid', 'failed']).default('pending'),
-  status: z.enum(['payée', 'en_creation', 'prête', 'en_livraison', 'livrée', 'annulée']).default('payée')
+  paymentMethod: z.string().default('card'),
+  paymentStatus: z.enum(['pending', 'paid']).default('pending'),
+  status: z.enum(['payée', 'en_creation', 'prête', 'en_livraison', 'livrée']).default('payée'),
+  stripePaymentIntentId: z.string().optional()
 });
 
-// POST /api/orders - Créer une commande (fallback)
-export async function POST(request: NextRequest) {
+// POST - Créer une nouvelle commande
+export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
     await connectDB();
 
-    // Vérifier l'authentification (optionnel pour les invités)
-    const session = await getServerSession(authOptions);
-    
-    const body = await request.json();
+    // Valider les données
+    const body = await req.json();
     const validationResult = createOrderSchema.safeParse(body);
     
     if (!validationResult.success) {
@@ -62,16 +62,20 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { items, customerInfo, deliveryInfo, paymentMethod, totalAmount, stripePaymentIntentId, paymentStatus, status } = validationResult.data;
+    const orderData = validationResult.data;
 
     // Vérifier si une commande avec ce Payment Intent existe déjà
-    if (stripePaymentIntentId) {
-      const existingOrder = await Order.findOne({ stripePaymentIntentId });
+    if (orderData.stripePaymentIntentId) {
+      const existingOrder = await Order.findOne({ 
+        stripePaymentIntentId: orderData.stripePaymentIntentId 
+      });
+      
       if (existingOrder) {
+        console.log('⚠️ Commande déjà existante via Payment Intent:', existingOrder.orderNumber);
         return NextResponse.json({
           success: true,
-          message: 'Commande déjà existante',
-          data: { order: existingOrder }
+          data: { order: existingOrder },
+          message: 'Commande déjà existante'
         });
       }
     }
@@ -80,55 +84,71 @@ export async function POST(request: NextRequest) {
     const orderNumber = await Order.generateOrderNumber();
 
     // Créer la commande
-    const order = new Order({
+    const newOrder = new Order({
+      ...orderData,
       orderNumber,
       user: session?.user?.id || null,
-      items,
-      totalAmount,
-      status,
-      paymentStatus,
-      paymentMethod,
-      stripePaymentIntentId,
       deliveryInfo: {
-        ...deliveryInfo,
-        date: new Date(deliveryInfo.date)
+        ...orderData.deliveryInfo,
+        date: new Date(orderData.deliveryInfo.date)
       },
-      customerInfo,
-      timeline: [{
-        status,
-        date: new Date(),
-        note: 'Commande créée'
-      }]
+      timeline: [
+        {
+          status: orderData.status || 'payée',
+          date: new Date(),
+          note: 'Commande créée'
+        }
+      ]
     });
 
-    await order.save();
+    await newOrder.save();
+    
+    console.log('✅ Commande créée côté client:', newOrder.orderNumber);
 
-    console.log('✅ Commande créée:', {
-      id: order._id,
-      orderNumber: order.orderNumber,
-      via: 'API fallback'
-    });
+    // Vider le panier si l'utilisateur est connecté
+    if (session?.user?.id) {
+      try {
+        await Cart.deleteOne({ user: session.user.id });
+        console.log('🛒 Panier vidé');
+      } catch (error) {
+        console.warn('⚠️ Erreur vidage panier:', error);
+      }
+    }
+
+    // ✅ ENVOYER LES EMAILS - NOUVELLEMENT AJOUTÉ
+    try {
+      // Email de confirmation au client
+      console.log('📧 Envoi email de confirmation (fallback)...');
+      const confirmationSent = await sendOrderConfirmation(newOrder);
+      
+      // Notification à l'admin
+      console.log('📧 Envoi notification admin (fallback)...');
+      const adminNotificationSent = await sendNewOrderNotification(newOrder);
+
+      // Mettre à jour les statuts d'email
+      await Order.findByIdAndUpdate(newOrder._id, {
+        emailsSent: {
+          confirmation: confirmationSent,
+          adminNotification: adminNotificationSent,
+          sentAt: new Date()
+        }
+      });
+
+      console.log(`📧 Emails envoyés - Confirmation: ${confirmationSent}, Admin: ${adminNotificationSent}`);
+
+    } catch (emailError) {
+      console.error('❌ Erreur envoi emails (fallback):', emailError);
+      // Ne pas faire échouer la création de commande pour autant
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Commande créée avec succès',
-      data: { order }
+      data: { order: newOrder },
+      message: 'Commande créée avec succès'
     }, { status: 201 });
 
   } catch (error: any) {
-    console.error('❌ Order creation error:', error);
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Données invalides',
-          code: 'VALIDATION_ERROR',
-          details: error.errors
-        }
-      }, { status: 400 });
-    }
-
+    console.error('❌ Orders POST error:', error);
     return NextResponse.json({
       success: false,
       error: {
@@ -139,11 +159,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/orders - Récupérer les commandes
-export async function GET(request: NextRequest) {
+// GET - Récupérer les commandes de l'utilisateur connecté
+export async function GET(req: NextRequest) {
   try {
-    await connectDB();
-
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({
@@ -155,33 +173,29 @@ export async function GET(request: NextRequest) {
       }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
+    await connectDB();
+
+    const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status');
+
+    const query: any = { user: session.user.id };
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
     const skip = (page - 1) * limit;
 
-    let filters: any = {};
-
-    if (session.user.role !== 'admin') {
-      filters.user = session.user.id;
-    }
-
-    if (status && status !== 'all') {
-      filters.status = status;
-    }
-
-    const orders = await Order.find(filters)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate('user', 'name email')
-      .select('-__v');
-
-    const total = await Order.countDocuments(filters);
-    const totalPages = Math.ceil(total / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
+    const [orders, total] = await Promise.all([
+      Order.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('items.product', 'name images')
+        .lean(),
+      Order.countDocuments(query)
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -191,11 +205,7 @@ export async function GET(request: NextRequest) {
           page,
           limit,
           total,
-          totalPages,
-          hasNextPage,
-          hasPrevPage,
-          nextPage: hasNextPage ? page + 1 : null,
-          prevPage: hasPrevPage ? page - 1 : null
+          pages: Math.ceil(total / limit)
         }
       }
     });

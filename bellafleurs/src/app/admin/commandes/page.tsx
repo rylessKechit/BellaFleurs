@@ -1,4 +1,4 @@
-// src/app/admin/commandes/page.tsx - Version corrigée - RESPONSIVE APPLIQUÉ
+// src/app/admin/commandes/page.tsx - Bouton "Voir détails" direct
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -126,7 +126,7 @@ export default function AdminOrdersPage() {
 
   const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus, note?: string) => {
     try {
-      const response = await fetch(`/api/admin/orders/${orderId}`, {
+      const response = await fetch(`/api/admin/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -350,23 +350,15 @@ export default function AdminOrdersPage() {
                             {formatDate(order.createdAt)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setSelectedOrder(order)}>
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  Voir détails
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleStatusUpdate(order._id, 'en_creation')}>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Modifier statut
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            {/* MODIFICATION: Bouton direct au lieu du dropdown */}
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setSelectedOrder(order)}
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              Voir détails
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -411,30 +403,17 @@ export default function AdminOrdersPage() {
                             </p>
                           </div>
                           
-                          <div className="flex sm:flex-col gap-2">
+                          {/* MODIFICATION: Bouton direct pour mobile aussi */}
+                          <div className="flex justify-center sm:block">
                             <Button 
                               size="sm" 
                               variant="outline"
                               onClick={() => setSelectedOrder(order)}
-                              className="flex-1 sm:flex-none"
+                              className="w-full sm:w-auto"
                             >
-                              <Eye className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                              <span className="hidden sm:inline">Détails</span>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Voir détails
                             </Button>
-                            
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button size="sm" variant="outline" className="flex-1 sm:flex-none">
-                                  <MoreHorizontal className="w-3 h-3 sm:w-4 sm:h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleStatusUpdate(order._id, 'en_creation')}>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Modifier statut
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
                           </div>
                         </div>
                       </CardContent>
