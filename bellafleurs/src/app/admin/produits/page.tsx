@@ -526,7 +526,7 @@ export default function AdminProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/products', {
+      const response = await fetch('/api/admin/products', {
         method: 'GET',
         credentials: 'include'
       });
@@ -553,8 +553,8 @@ export default function AdminProductsPage() {
       };
 
       const url = editingProduct 
-        ? `/api/products/${editingProduct._id}`
-        : '/api/products';
+        ? `/api/admin/products/${editingProduct._id}`
+        : '/api/admin/products';
       
       const method = editingProduct ? 'PUT' : 'POST';
 
@@ -584,7 +584,7 @@ export default function AdminProductsPage() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
 
     try {
-      const response = await fetch(`/api/products/${productId}`, {
+      const response = await fetch(`/api/admin/products/${productId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -603,7 +603,7 @@ export default function AdminProductsPage() {
 
   const handleToggleActive = async (productId: string, isActive: boolean) => {
     try {
-      const response = await fetch(`/api/products/${productId}`, {
+      const response = await fetch(`/api/admin/products/${productId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -768,7 +768,7 @@ export default function AdminProductsPage() {
                 
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-base sm:text-lg font-bold text-green-600">
-                    {product.price.toFixed(2)}€
+                    {typeof product.price === 'number' ? product.price.toFixed(2) : '0.00'}€
                   </span>
                   <Badge variant="outline" className="text-xs">
                     {product.category}
