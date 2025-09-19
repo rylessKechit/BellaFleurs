@@ -1,7 +1,7 @@
 // src/models/Cart.ts
 import mongoose, { Schema, Model, Document } from 'mongoose';
 
-// Interface pour un item du panier
+// Interface pour un item du panier - MISE À JOUR AVEC VARIANTS
 export interface ICartItem {
   product: mongoose.Types.ObjectId;
   name: string;
@@ -9,14 +9,17 @@ export interface ICartItem {
   quantity: number;
   image: string;
   addedAt: Date;
+  // NOUVEAU : Support variants
+  variantId?: string;
+  variantName?: string;
 }
 
-// Interface pour les méthodes d'instance
+// Interface pour les méthodes d'instance - MISE À JOUR
 export interface ICartMethods {
   calculateTotals(): void;
-  addItem(productId: string, quantity: number): Promise<ICart>;
-  removeItem(productId: string): Promise<ICart>;
-  updateQuantity(productId: string, quantity: number): Promise<ICart>;
+  addItem(productId: string, quantity: number, variantId?: string, variantName?: string, variantPrice?: number): Promise<ICart>;
+  removeItem(productId: string, variantId?: string): Promise<ICart>;
+  updateQuantity(productId: string, quantity: number, variantId?: string): Promise<ICart>;
   clearItems(): Promise<ICart>;
 }
 
@@ -36,7 +39,7 @@ export interface ICart extends Document, ICartMethods {
   itemsCount?: number;
 }
 
-// Interface pour les méthodes statiques - CORRECTION PRINCIPALE
+// Interface pour les méthodes statiques
 export interface ICartModel extends Model<ICart, {}, ICartMethods> {
   findByUser(userId: string): Promise<ICart | null>;
   findBySession(sessionId: string): Promise<ICart | null>;
@@ -47,7 +50,7 @@ export interface ICartModel extends Model<ICart, {}, ICartMethods> {
 // Type pour le document complet
 export type ICartDocument = ICart & ICartMethods;
 
-// Schéma pour les items du panier
+// Schéma pour les items du panier - MISE À JOUR AVEC VARIANTS
 const CartItemSchema = new Schema({
   product: {
     type: Schema.Types.ObjectId,
@@ -77,6 +80,16 @@ const CartItemSchema = new Schema({
   addedAt: {
     type: Date,
     default: Date.now
+  },
+  // NOUVEAU : Champs variants
+  variantId: {
+    type: String,
+    required: false
+  },
+  variantName: {
+    type: String,
+    required: false,
+    trim: true
   }
 }, { _id: false });
 
@@ -86,7 +99,8 @@ const CartSchema = new Schema<ICart, ICartModel, ICartMethods>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: false,
-    sparse: true
+    sparse: true,
+    index: true
   },
   sessionId: {
     type: String,
@@ -126,7 +140,6 @@ CartSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Middleware pre-save pour calculer les totaux
 CartSchema.pre<ICart>('save', function(next) {
-  // **CORRECTION** : Appel de la méthode avec le bon contexte
   (this as any).calculateTotals();
   
   // Mettre à jour l'expiration pour les paniers actifs
@@ -146,14 +159,22 @@ CartSchema.virtual('itemsCount').get(function(this: ICart) {
   return this.items.reduce((total, item) => total + item.quantity, 0);
 });
 
-// **CORRECTION** : Méthodes d'instance avec le bon typage
+// Méthodes d'instance - MISE À JOUR AVEC VARIANTS
 CartSchema.methods.calculateTotals = function(this: ICart) {
   this.totalItems = this.items.reduce((total: number, item: ICartItem) => total + item.quantity, 0);
   this.totalAmount = this.items.reduce((total: number, item: ICartItem) => total + (item.price * item.quantity), 0);
   this.totalAmount = Math.round(this.totalAmount * 100) / 100;
 };
 
-CartSchema.methods.addItem = async function(this: ICart, productId: string, quantity: number = 1) {
+// MISE À JOUR : addItem avec support variants
+CartSchema.methods.addItem = async function(
+  this: ICart, 
+  productId: string, 
+  quantity: number = 1, 
+  variantId?: string,
+  variantName?: string,
+  variantPrice?: number
+) {
   // Import sécurisé du modèle Product
   const getProductModel = () => {
     try {
@@ -174,58 +195,72 @@ CartSchema.methods.addItem = async function(this: ICart, productId: string, quan
     throw new Error('Produit non disponible');
   }
   
-  const existingItemIndex = this.items.findIndex(
-    (item: any) => {
-      const itemProductId = item.product._id 
-        ? item.product._id.toString()  // Si populé
-        : item.product.toString();     // Si ObjectId simple
-      return itemProductId === productId;
-    }
-  );
+  if (quantity > 50) {
+    throw new Error('Quantité maximale par article: 50');
+  }
+
+  // NOUVEAU : Clé unique pour différencier les variants
+  const getItemKey = (pId: string, vId?: string) => vId ? `${pId}-${vId}` : pId;
+  const itemKey = getItemKey(productId, variantId);
+  
+  // Chercher un item existant avec la même clé (produit + variant)
+  const existingItemIndex = this.items.findIndex((item: any) => {
+    const itemProductId = item.product._id 
+      ? item.product._id.toString()
+      : item.product.toString();
+    const existingItemKey = getItemKey(itemProductId, item.variantId);
+    return existingItemKey === itemKey;
+  });
+  
+  // Prix à utiliser (variant ou produit)
+  const priceToUse = variantPrice || product.price || 0;
   
   if (existingItemIndex >= 0) {
-    const newQuantity = this.items[existingItemIndex].quantity + quantity;
+    // MISE À JOUR : Item existant
+    this.items[existingItemIndex].quantity += quantity;
+    this.items[existingItemIndex].price = priceToUse;
     
-    if (newQuantity > 50) {
-      throw new Error('Quantité maximale par article: 50');
+    if (this.items[existingItemIndex].quantity > 50) {
+      this.items[existingItemIndex].quantity = 50;
     }
-    
-    this.items[existingItemIndex].quantity = newQuantity;
-    this.items[existingItemIndex].price = product.price;
   } else {
+    // NOUVEAU : Nouvel item avec support variants
+    const displayName = variantName ? `${product.name} - ${variantName}` : product.name;
+    
     this.items.push({
       product: new mongoose.Types.ObjectId(productId),
-      name: product.name,
-      price: product.price,
-      quantity,
+      name: displayName,
+      price: priceToUse,
+      quantity: quantity,
       image: product.images[0] || '',
-      addedAt: new Date()
-    } as any);
+      addedAt: new Date(),
+      variantId: variantId,
+      variantName: variantName
+    } as ICartItem);
   }
   
   return this.save();
 };
 
-CartSchema.methods.removeItem = async function(this: ICart, productId: string) {
-  const initialLength = this.items.length;
+// MISE À JOUR : removeItem avec support variants
+CartSchema.methods.removeItem = async function(this: ICart, productId: string, variantId?: string) {
+  const getItemKey = (pId: string, vId?: string) => vId ? `${pId}-${vId}` : pId;
+  const itemKey = getItemKey(productId, variantId);
   
   this.items = this.items.filter((item: any) => {
-    // Gestion des cas populate et non-populate
     const itemProductId = item.product._id 
-      ? item.product._id.toString()  // Si populé (objet complet)
-      : item.product.toString();     // Si ObjectId simple
-    
-    return itemProductId !== productId;
+      ? item.product._id.toString()
+      : item.product.toString();
+    const existingItemKey = getItemKey(itemProductId, item.variantId);
+    return existingItemKey !== itemKey;
   });
   
   return this.save();
 };
 
-CartSchema.methods.updateQuantity = async function(this: ICart, productId: string, quantity: number) {
-  if (quantity <= 0) {
-    return this.removeItem(productId);
-  }
-  
+// MISE À JOUR : updateQuantity avec support variants
+CartSchema.methods.updateQuantity = async function(this: ICart, productId: string, quantity: number, variantId?: string) {
+  // Import sécurisé du modèle Product
   const getProductModel = () => {
     try {
       return mongoose.model('Product');
@@ -245,14 +280,16 @@ CartSchema.methods.updateQuantity = async function(this: ICart, productId: strin
     throw new Error('Quantité maximale par article: 50');
   }
   
-  const itemIndex = this.items.findIndex(
-    (item: any) => {
-      const itemProductId = item.product._id 
-        ? item.product._id.toString()  // Si populé
-        : item.product.toString();     // Si ObjectId simple
-      return itemProductId === productId;
-    }
-  );
+  const getItemKey = (pId: string, vId?: string) => vId ? `${pId}-${vId}` : pId;
+  const itemKey = getItemKey(productId, variantId);
+  
+  const itemIndex = this.items.findIndex((item: any) => {
+    const itemProductId = item.product._id 
+      ? item.product._id.toString()
+      : item.product.toString();
+    const existingItemKey = getItemKey(itemProductId, item.variantId);
+    return existingItemKey === itemKey;
+  });
   
   if (itemIndex >= 0) {
     this.items[itemIndex].quantity = quantity;
@@ -267,7 +304,7 @@ CartSchema.methods.clearItems = async function(this: ICart) {
   return this.save();
 };
 
-// **CORRECTION** : Méthodes statiques avec le bon typage
+// Méthodes statiques
 CartSchema.statics.findByUser = function(this: ICartModel, userId: string) {
   return this.findOne({ user: userId }).populate('items.product');
 };

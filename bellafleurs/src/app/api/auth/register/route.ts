@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { name, email, password, phone, address } = validatedFields.data;
+    const { name, email, password } = validatedFields.data;
 
     // Connexion à la base de données
     await connectDB();
@@ -50,8 +50,6 @@ export async function POST(request: NextRequest) {
       name,
       email,
       password,
-      phone,
-      address,
       role: 'client', // Par défaut, nouveau utilisateur = client
     });
 

@@ -179,11 +179,6 @@ ProductSchema.pre('save', function(next) {
   next();
 });
 
-// Virtuals
-ProductSchema.virtual('isInStock').get(function() {
-  return this.isActive;
-});
-
 ProductSchema.virtual('mainImage').get(function() {
   return this.images && this.images.length > 0 ? this.images[0] : null;
 });
@@ -318,14 +313,6 @@ ProductSchema.statics.findByCategory = function(category: string) {
   return this.find({ category, isActive: true });
 };
 
-ProductSchema.statics.findInStock = function() {
-  return this.find({ isActive: true });
-};
-
-ProductSchema.statics.findLowStock = function() {
-  return this.find({ isActive: true });
-};
-
 ProductSchema.statics.searchProducts = function(
   filters: ProductFilters = {},
   pagination: PaginationParams = { page: 1, limit: 12 }
@@ -377,8 +364,6 @@ ProductSchema.statics.searchProducts = function(
 interface IProductModel extends Model<IProduct> {
   findActive(): Promise<IProduct[]>;
   findByCategory(category: string): Promise<IProduct[]>;
-  findInStock(): Promise<IProduct[]>;
-  findLowStock(): Promise<IProduct[]>;
   searchProducts(
     filters?: ProductFilters,
     pagination?: PaginationParams

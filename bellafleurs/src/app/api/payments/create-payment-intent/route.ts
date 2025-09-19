@@ -1,55 +1,40 @@
-// src/app/api/payments/create-payment-intent/route.ts
+// src/app/api/payments/create-payment-intent/route.ts - Version avec support variants
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { stripe, formatAmountForStripe, handleStripeError } from '@/lib/stripe';
-import { z } from 'zod';
+import { stripe } from '@/lib/stripe';
+import { createOrderSchema } from '@/lib/validations';
 
-// Schéma de validation pour la création du Payment Intent
-const createPaymentIntentSchema = z.object({
-  amount: z.number().min(50, 'Montant minimum: 0.50€').max(99999999, 'Montant trop élevé'),
-  currency: z.string().default('eur'),
-  customerEmail: z.string().email().optional(),
-  orderData: z.object({
-    items: z.array(z.object({
-      product: z.string(),
-      name: z.string(),
-      price: z.number(),
-      quantity: z.number(),
-      image: z.string().optional()
-    })),
-    customerInfo: z.object({
-      name: z.string(),
-      email: z.string().email(),
-      phone: z.string()
-    }),
-    deliveryInfo: z.object({
-      type: z.enum(['delivery', 'pickup']),
-      address: z.object({
-        street: z.string(),
-        city: z.string(),
-        zipCode: z.string(),
-        complement: z.string().optional()
-      }).optional(),
-      date: z.date().or(z.string()),
-      notes: z.string().optional()
-    }),
-    paymentMethod: z.string(),
-    totalAmount: z.number()
-  })
-});
+// Fonction d'aide pour gérer les erreurs Stripe
+function handleStripeError(error: any) {
+  const errorMessages: Record<string, string> = {
+    'card_declined': 'Votre carte a été refusée',
+    'insufficient_funds': 'Fonds insuffisants',
+    'expired_card': 'Votre carte a expiré',
+    'incorrect_cvc': 'Code de sécurité incorrect',
+    'processing_error': 'Erreur de traitement, veuillez réessayer',
+    'amount_too_large': 'Montant trop élevé',
+    'amount_too_small': 'Montant trop faible'
+  };
 
-// POST /api/payments/create-payment-intent
+  return {
+    message: errorMessages[error.code] || 'Erreur de paiement',
+    code: error.code || 'STRIPE_ERROR'
+  };
+}
+
+// POST /api/payments/create-payment-intent - Créer un Payment Intent avec variants
 export async function POST(req: NextRequest) {
   try {
-    // Vérifier l'authentification (optionnel pour les invités)
     const session = await getServerSession(authOptions);
-
-    // Valider les données d'entrée
     const body = await req.json();
-    const validationResult = createPaymentIntentSchema.safeParse(body);
-    
+
+    console.log('🔄 Création Payment Intent...');
+
+    // Validation des données avec Zod
+    const validationResult = createOrderSchema.safeParse(body);
     if (!validationResult.success) {
+      console.error('❌ Validation failed:', validationResult.error.errors);
       return NextResponse.json({
         success: false,
         error: {
@@ -60,20 +45,61 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const { amount, currency, customerEmail, orderData } = validationResult.data;
+    const orderData = validationResult.data;
 
-    // Préparer les métadonnées pour Stripe (limité à 500 caractères par clé)
+    // Calculs et validation
+    const calculatedTotal = orderData.items.reduce(
+      (sum, item) => sum + (item.price * item.quantity), 0
+    );
+
+    if (Math.abs(calculatedTotal - orderData.totalAmount) > 0.01) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          message: 'Incohérence dans le total de la commande',
+          code: 'AMOUNT_MISMATCH'
+        }
+      }, { status: 400 });
+    }
+
+    // Conversion pour Stripe (centimes)
+    const amount = Math.round(orderData.totalAmount * 100);
+    const currency = 'eur';
+    const customerEmail = session?.user?.email;
+
+    if (amount < 50) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          message: 'Montant minimum : 0.50€',
+          code: 'AMOUNT_TOO_SMALL'
+        }
+      }, { status: 400 });
+    }
+
+    if (amount > 999999) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          message: 'Montant maximum dépassé',
+          code: 'AMOUNT_TOO_LARGE'
+        }
+      }, { status: 400 });
+    }
+
+    // MÉTADONNÉES STRIPE AVEC SUPPORT VARIANTS
     const metadata: Record<string, string> = {
       // Informations client
-      customer_name: orderData.customerInfo.name.substring(0, 490),
-      customer_email: orderData.customerInfo.email.substring(0, 490),
-      customer_phone: orderData.customerInfo.phone.substring(0, 490),
+      customer_name: orderData.customerInfo.name,
+      customer_email: orderData.customerInfo.email,
+      customer_phone: orderData.customerInfo.phone,
       
       // Informations livraison
       delivery_type: orderData.deliveryInfo.type,
-      delivery_date: new Date(orderData.deliveryInfo.date).toISOString(),
-      delivery_address: orderData.deliveryInfo.address ? 
-        `${orderData.deliveryInfo.address.street}, ${orderData.deliveryInfo.address.city} ${orderData.deliveryInfo.address.zipCode}`.substring(0, 490) : '',
+      delivery_date: orderData.deliveryInfo.date.toISOString(),
+      delivery_address: orderData.deliveryInfo.address 
+        ? `${orderData.deliveryInfo.address.street}, ${orderData.deliveryInfo.address.city} ${orderData.deliveryInfo.address.zipCode}`.substring(0, 490)
+        : '',
       
       // Informations commande
       total_amount: orderData.totalAmount.toString(),
@@ -87,30 +113,57 @@ export async function POST(req: NextRequest) {
       delivery_notes: orderData.deliveryInfo.notes?.substring(0, 490) || ''
     };
 
-    // Ajouter les items (format condensé)
-    const itemsMetadata = orderData.items.map(item => 
-      `${item.name}:${item.quantity}x${item.price}€`
-    ).join('|');
-    metadata.items = itemsMetadata.substring(0, 490);
+    // NOUVEAU : Ajouter les items avec variants (format amélioré)
+    const itemsWithVariants = orderData.items.map(item => {
+      let itemString = `${item.name}:${item.quantity}x${item.price}€`;
+      
+      // AJOUT : Inclure les informations de variant si présentes
+      if (item.variantId && item.variantName) {
+        itemString += `[${item.variantName}]`;
+      }
+      
+      return itemString;
+    }).join('|');
+    
+    metadata.items = itemsWithVariants.substring(0, 490);
+
+    // NOUVEAU : Métadonnées spécifiques aux variants (si présents)
+    const hasVariants = orderData.items.some(item => item.variantId);
+    if (hasVariants) {
+      metadata.has_variants = 'true';
+      
+      // Compter les items avec variants
+      const variantItems = orderData.items.filter(item => item.variantId);
+      metadata.variant_items_count = variantItems.length.toString();
+      
+      // Liste des variants (format condensé)
+      const variantsList = variantItems
+        .map(item => `${item.variantId}:${item.variantName}`)
+        .join('|');
+      metadata.variants = variantsList.substring(0, 490);
+    }
 
     // Créer le Payment Intent avec Stripe
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount, // Déjà en centimes
+      amount: amount,
       currency: currency,
       automatic_payment_methods: {
         enabled: true,
       },
       receipt_email: customerEmail || orderData.customerInfo.email,
       metadata: metadata,
-      description: `Commande Bella Fleurs - ${orderData.customerInfo.name}`,
+      description: `Commande Bella Fleurs - ${orderData.customerInfo.name}${hasVariants ? ' (avec variants)' : ''}`,
     });
 
-    // Log pour le debug (à retirer en production)
+    // Log pour le debug
+    const variantItems = orderData.items.filter(item => item.variantId);
     console.log('✅ Payment Intent créé:', {
       paymentIntentId: paymentIntent.id,
       amount: amount,
       currency: currency,
-      customer: orderData.customerInfo.name
+      customer: orderData.customerInfo.name,
+      hasVariants: hasVariants,
+      itemsWithVariants: variantItems.length || 0
     });
 
     return NextResponse.json({
@@ -174,7 +227,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: false,
         error: {
-          message: 'Payment Intent ID requis',
+          message: 'ID Payment Intent requis',
           code: 'MISSING_PAYMENT_INTENT_ID'
         }
       }, { status: 400 });
@@ -188,10 +241,11 @@ export async function GET(req: NextRequest) {
       data: {
         paymentIntent: {
           id: paymentIntent.id,
-          status: paymentIntent.status,
+          client_secret: paymentIntent.client_secret,
           amount: paymentIntent.amount,
           currency: paymentIntent.currency,
-          client_secret: paymentIntent.client_secret
+          status: paymentIntent.status,
+          metadata: paymentIntent.metadata
         }
       }
     });
@@ -215,7 +269,7 @@ export async function GET(req: NextRequest) {
       success: false,
       error: {
         message: 'Erreur lors de la récupération du paiement',
-        code: 'PAYMENT_INTENT_GET_ERROR'
+        code: 'PAYMENT_INTENT_FETCH_ERROR'
       }
     }, { status: 500 });
   }

@@ -1,4 +1,4 @@
-// src/app/api/cart/[productId]/route.ts - Version MongoDB complète
+// src/app/api/cart/[productId]/route.ts - Version MongoDB complète avec variants
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -14,7 +14,7 @@ interface RouteParams {
   };
 }
 
-// PUT /api/cart/[productId] - Mettre à jour la quantité
+// PUT /api/cart/[productId] - Mettre à jour la quantité (avec support variants)
 export async function PUT(
   request: NextRequest,
   { params }: RouteParams
@@ -23,7 +23,7 @@ export async function PUT(
     await connectDB();
     
     const session = await getServerSession(authOptions);
-    const { quantity } = await request.json();
+    const { quantity, variantId } = await request.json(); // NOUVEAU : variantId
     const { productId } = params;
 
     const sessionId = session?.user?.id || request.cookies.get('cart_session')?.value;
@@ -66,57 +66,42 @@ export async function PUT(
       }, { status: 404 });
     }
 
-    // Vérifier si le produit existe dans le panier
-    const itemIndex = cart.items.findIndex(
-      (item: any) => {
-        const itemProductId = item.product._id 
-          ? item.product._id.toString()  // Si populé
-          : item.product.toString();     // Si ObjectId simple
-        return itemProductId === productId;
-      }
-    );
+    // MISE À JOUR : Chercher l'item avec support variants
+    const getItemKey = (pId: string, vId?: string) => vId ? `${pId}-${vId}` : pId;
+    const targetItemKey = getItemKey(productId, variantId);
     
+    const itemIndex = cart.items.findIndex((item: any) => {
+      const itemProductId = item.product._id 
+        ? item.product._id.toString()
+        : item.product.toString();
+      const existingItemKey = getItemKey(itemProductId, item.variantId);
+      return existingItemKey === targetItemKey;
+    });
+
     if (itemIndex === -1) {
       return NextResponse.json({
         success: false,
         error: {
-          message: 'Produit introuvable dans le panier',
-          code: 'PRODUCT_NOT_IN_CART'
+          message: 'Article introuvable dans le panier',
+          code: 'ITEM_NOT_FOUND'
         }
       }, { status: 404 });
     }
 
-    // Vérifier le stock disponible du produit
-    const product = await Product.findById(productId);
-    if (!product) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Produit introuvable',
-          code: 'PRODUCT_NOT_FOUND'
-        }
-      }, { status: 404 });
-    }
-
-    // Mettre à jour la quantité via la méthode du modèle
-    await cart.updateQuantity(productId, quantity);
+    // Mettre à jour la quantité
+    await cart.updateQuantity(productId, quantity, variantId);
 
     return NextResponse.json({
       success: true,
       data: {
-        cart: {
-          id: cart._id,
-          items: cart.items,
-          totalItems: cart.totalItems,
-          totalAmount: cart.totalAmount,
-          isEmpty: cart.isEmpty
-        },
-        message: 'Quantité mise à jour'
+        message: 'Quantité mise à jour',
+        cartItemsCount: cart.totalItems,
+        cartTotal: cart.totalAmount
       }
     });
 
   } catch (error: any) {
-    console.error('❌ Cart UPDATE error:', error);
+    console.error('❌ Cart PUT error:', error);
     return NextResponse.json({
       success: false,
       error: {
@@ -127,7 +112,7 @@ export async function PUT(
   }
 }
 
-// DELETE /api/cart/[productId] - Supprimer un article
+// DELETE /api/cart/[productId] - Supprimer un article du panier (avec support variants)
 export async function DELETE(
   request: NextRequest,
   { params }: RouteParams
@@ -137,6 +122,10 @@ export async function DELETE(
     
     const session = await getServerSession(authOptions);
     const { productId } = params;
+    
+    // NOUVEAU : Récupérer variantId depuis query params
+    const url = new URL(request.url);
+    const variantId = url.searchParams.get('variantId') || undefined;
 
     const sessionId = session?.user?.id || request.cookies.get('cart_session')?.value;
     
@@ -168,40 +157,15 @@ export async function DELETE(
       }, { status: 404 });
     }
 
-    // Vérifier si le produit existe dans le panier
-    const itemExists = cart.items.some(
-      (item: any) => {
-        const itemProductId = item.product._id 
-          ? item.product._id.toString()  // Si populé
-          : item.product.toString();     // Si ObjectId simple
-        return itemProductId === productId;
-      }
-    );
-
-    if (!itemExists) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Produit introuvable dans le panier',
-          code: 'PRODUCT_NOT_IN_CART'
-        }
-      }, { status: 404 });
-    }
-
-    // Supprimer l'article via la méthode du modèle
-    await cart.removeItem(productId);
+    // NOUVEAU : Supprimer avec support variants
+    await cart.removeItem(productId, variantId);
 
     return NextResponse.json({
       success: true,
       data: {
-        cart: {
-          id: cart._id,
-          items: cart.items,
-          totalItems: cart.totalItems,
-          totalAmount: cart.totalAmount,
-          isEmpty: cart.isEmpty
-        },
-        message: 'Produit supprimé du panier'
+        message: 'Article supprimé du panier',
+        cartItemsCount: cart.totalItems,
+        cartTotal: cart.totalAmount
       }
     });
 

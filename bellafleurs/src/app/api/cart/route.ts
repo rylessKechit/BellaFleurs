@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Populer les informations des produits
-    await cart.populate('items.product', 'name images price isActive');
+    await cart.populate('items.product', 'name images price isActive hasVariants variants');
 
     // Formatter les données pour le frontend
     const formattedItems = cart.items.map((item: any) => ({
@@ -56,7 +56,10 @@ export async function GET(request: NextRequest) {
       price: item.price,
       quantity: item.quantity,
       image: item.image,
-      isActive: item.product?.isActive || false
+      isActive: item.product?.isActive || false,
+      // NOUVEAU : Support variants
+      variantId: item.variantId,
+      variantName: item.variantName
     }));
 
     return NextResponse.json({
@@ -88,7 +91,8 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     const body = await request.json();
     
-    const { productId, quantity = 1 } = body;
+    // NOUVEAU : Support variantId
+    const { productId, quantity = 1, variantId } = body;
 
     // Validation
     if (!productId) {
@@ -111,57 +115,103 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Vérifier que le produit existe et est actif
+    // Récupérer le produit et vérifier les variants
     const product = await Product.findById(productId);
-    if (!product || !product.isActive) {
+    if (!product) {
       return NextResponse.json({
         success: false,
         error: {
-          message: 'Produit introuvable ou indisponible',
+          message: 'Produit introuvable',
           code: 'PRODUCT_NOT_FOUND'
         }
       }, { status: 404 });
     }
 
-    // Gérer la session
-    let sessionId = session?.user?.id;
-    let response = NextResponse.json({ 
-      success: true, 
-      message: 'Produit ajouté au panier',
-      data: { productId, quantity, productName: product.name }
-    });
+    if (!product.isActive) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          message: 'Produit non disponible',
+          code: 'PRODUCT_UNAVAILABLE'
+        }
+      }, { status: 400 });
+    }
+
+    // NOUVEAU : Validation des variants
+    let variantPrice = product.price || 0;
+    let variantName = '';
     
-    if (!sessionId) {
-      sessionId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      response.cookies.set('cart_session', sessionId, {
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours
+    if (product.hasVariants) {
+      if (variantId === undefined || variantId === null) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            message: 'Variant requis pour ce produit',
+            code: 'VARIANT_REQUIRED'
+          }
+        }, { status: 400 });
+      }
+
+      const variantIndex = parseInt(variantId);
+      if (isNaN(variantIndex) || !product.variants[variantIndex]) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            message: 'Variant invalide',
+            code: 'INVALID_VARIANT'
+          }
+        }, { status: 400 });
+      }
+
+      const selectedVariant = product.variants[variantIndex];
+      if (!selectedVariant.isActive) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            message: 'Variant non disponible',
+            code: 'VARIANT_UNAVAILABLE'
+          }
+        }, { status: 400 });
+      }
+
+      variantPrice = selectedVariant.price;
+      variantName = selectedVariant.name;
+    }
+
+    // Créer/récupérer le panier
+    const sessionIdForCart = session?.user?.id || request.cookies.get('cart_session')?.value;
+    let cart = null;
+    
+    if (session?.user?.id) {
+      cart = await Cart.findOrCreateCart(session.user.id);
+    } else {
+      const cartSessionId = sessionIdForCart || `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      cart = await Cart.findOrCreateCart(undefined, cartSessionId);
+    }
+
+    // NOUVEAU : Ajouter item avec variant
+    await cart.addItem(productId, quantity, variantId, variantName, variantPrice);
+
+    const response = NextResponse.json({
+      success: true,
+      data: {
+        message: 'Produit ajouté au panier',
+        cartItemsCount: cart.totalItems,
+        cartTotal: cart.totalAmount
+      }
+    });
+
+    // Cookie de session pour les invités
+    if (!session?.user?.id) {
+      const cartSessionId = cart.sessionId || `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      response.cookies.set('cart_session', cartSessionId, {
+        maxAge: 7 * 24 * 60 * 60, // 7 jours
+        path: '/',
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax'
       });
     }
-
-    // Trouver ou créer le panier
-    let cart = null;
-    if (session?.user?.id) {
-      cart = await Cart.findByUser(session.user.id);
-    } else {
-      cart = await Cart.findBySession(sessionId);
-    }
-
-    if (!cart) {
-      // Créer un nouveau panier
-      cart = new Cart({
-        user: session?.user?.id || undefined,
-        sessionId: !session?.user?.id ? sessionId : undefined,
-        items: [],
-        totalItems: 0,
-        totalAmount: 0
-      });
-    }
-
-    // Ajouter le produit au panier via la méthode du modèle
-    await cart.addItem(productId, quantity);
 
     return response;
 

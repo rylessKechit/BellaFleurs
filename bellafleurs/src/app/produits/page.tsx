@@ -6,42 +6,53 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { 
   Search, 
+  Filter, 
   Grid3X3, 
   List, 
+  ChevronRight,
+  Star,
   ShoppingCart,
   Heart,
-  Star,
-  Package,
   AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
 
+// Types pour les variants
+interface ProductVariant {
+  name: string;
+  price: number;
+  description?: string;
+  image?: string;
+  isActive: boolean;
+  order: number;
+}
+
 interface Product {
   _id: string;
   name: string;
   description: string;
-  price: number;
+  price?: number;
+  hasVariants: boolean;
+  variants: ProductVariant[];
+  displayPrice?: number;
+  displayPriceFormatted?: string;
+  priceRangeFormatted?: string;
   images: string[];
   category: string;
   isActive: boolean;
-  tags: string[];
-  slug?: string;
+  tags?: string[];
   averageRating?: number;
   reviewsCount?: number;
+  slug?: string;
+  createdAt?: string;
 }
 
 interface ApiResponse {
@@ -49,27 +60,17 @@ interface ApiResponse {
   data: {
     products: Product[];
     pagination?: {
-      currentPage: number;
       totalPages: number;
-      totalCount: number;
-      limit: number;
-      hasNextPage: boolean;
-      hasPrevPage: boolean;
-      nextPage: number | null;
-      prevPage: number | null;
+      page: number;
+      total: number;
     };
-  };
-  error?: {
-    message: string;
-    code: string;
   };
 }
 
-// Catégories fixes
 const CATEGORIES = [
   'Bouquets',
   'Fleurs de saisons',
-  'Compositions piquées', 
+  'Compositions piquées',
   'Roses',
   'Orchidées',
   'Deuil',
@@ -79,33 +80,54 @@ const CATEGORIES = [
 export default function ProductsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
-  // États
+  const { incrementCartCount } = useCart();
+
+  // États existants
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all');
-  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'name');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sortBy, setSortBy] = useState('-createdAt');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [addingToCart, setAddingToCart] = useState<string[]>([]);
 
-  // Charger les produits depuis l'API
+  // Charger les produits
   useEffect(() => {
     fetchProducts();
-  }, [searchTerm, selectedCategory, sortBy, currentPage]);
+  }, [currentPage, selectedCategory, sortBy]);
+
+  // Initialiser les filtres depuis l'URL
+  useEffect(() => {
+    const category = searchParams.get('category');
+    const search = searchParams.get('search');
+    
+    if (category && CATEGORIES.includes(category)) {
+      setSelectedCategory(category);
+    }
+    if (search) {
+      setSearchTerm(search);
+    }
+  }, [searchParams]);
 
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
       
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (selectedCategory && selectedCategory !== 'all') params.append('category', selectedCategory);
-      if (sortBy) params.append('sort', sortBy);
-      params.append('page', currentPage.toString());
-      params.append('limit', '12');
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: '12',
+        sort: sortBy
+      });
+
+      if (selectedCategory !== 'all') {
+        params.append('category', selectedCategory);
+      }
+
+      if (searchTerm.trim()) {
+        params.append('search', searchTerm.trim());
+      }
 
       const response = await fetch(`/api/products?${params.toString()}`);
       
@@ -146,11 +168,15 @@ export default function ProductsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const { incrementCartCount } = useCart();
-
-  // Ajouter au panier (implémentation originale)
-  const addToCart = async (productId: string, productName: string) => {
+  // FONCTION AJOUT PANIER AMÉLIORÉE AVEC VARIANTS
+  const addToCart = async (productId: string, productName: string, hasVariants: boolean) => {
     if (addingToCart.includes(productId)) return;
+    
+    // Pour les produits avec variants, rediriger vers la page produit
+    if (hasVariants) {
+      router.push(`/produits/${productId}`);
+      return;
+    }
     
     try {
       setAddingToCart(prev => [...prev, productId]);
@@ -164,6 +190,7 @@ export default function ProductsPage() {
         body: JSON.stringify({
           productId: productId,
           quantity: 1
+          // Pas de variantId pour produit simple
         })
       });
 
@@ -184,9 +211,38 @@ export default function ProductsPage() {
     }
   };
 
-  // Composant carte produit avec responsive amélioré
+  // COMPOSANT CARTE PRODUIT AMÉLIORÉ AVEC VARIANTS
   const ProductCard = ({ product }: { product: Product }) => {
+    const [isHovered, setIsHovered] = useState(false);
     const isAdding = addingToCart.includes(product._id);
+
+    // Obtenir le prix à afficher selon variants
+    const getDisplayPrice = () => {
+      if (!product.hasVariants) {
+        return product.displayPriceFormatted || formatPrice(product.price || 0);
+      }
+      return product.priceRangeFormatted || 'Prix non disponible';
+    };
+
+    // Obtenir l'URL du produit
+    const getProductUrl = () => {
+      return product.slug ? `/produits/${product.slug}` : `/produits/${product._id}`;
+    };
+
+    // Gestion clic ajout panier
+    const handleAddToCart = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      addToCart(product._id, product.name, product.hasVariants);
+    };
+
+    // Formater le prix
+    const formatPrice = (price: number): string => {
+      return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR'
+      }).format(price);
+    };
 
     if (viewMode === 'list') {
       return (
@@ -194,82 +250,119 @@ export default function ProductsPage() {
           <CardContent className="p-3 sm:p-4 md:p-6">
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Image */}
-              <div className="flex-shrink-0 w-full sm:w-32 md:w-48">
+              <Link href={getProductUrl()} className="flex-shrink-0 w-full sm:w-32 md:w-48">
                 <div className="aspect-square relative overflow-hidden rounded-lg">
                   <Image
-                    src={product.images?.[0] || '/placeholder-product.jpg'}
+                    src={product.images?.[0] || '/api/placeholder/300/300'}
                     alt={product.name}
                     fill
-                    className="object-cover hover:scale-105 transition-transform duration-300"
+                    className="object-cover transition-transform duration-300 hover:scale-105"
                     sizes="(max-width: 640px) 100vw, (max-width: 768px) 128px, 192px"
                   />
+                  {/* Badges overlay */}
+                  <div className="absolute top-2 left-2 flex flex-col gap-1">
+                    {product.hasVariants && (
+                      <Badge variant="secondary" className="text-xs">
+                        Multi-tailles
+                      </Badge>
+                    )}
+                    {!product.isActive && (
+                      <Badge variant="destructive" className="text-xs">
+                        Épuisé
+                      </Badge>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </Link>
 
               {/* Contenu */}
               <div className="flex-1 min-w-0">
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
                   <div className="flex-1 min-w-0">
-                    <Link 
-                      href={`/produits/${product._id}`}
-                      className="block group"
-                    >
-                      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 group-hover:text-green-600 transition-colors line-clamp-2">
+                    <Link href={getProductUrl()}>
+                      <h3 className="font-semibold text-lg text-gray-900 hover:text-primary-600 transition-colors line-clamp-2">
                         {product.name}
                       </h3>
                     </Link>
-                    
-                    <Badge variant="secondary" className="mb-2 text-xs">
-                      {product.category}
-                    </Badge>
-                    
-                    <p className="text-sm sm:text-base text-gray-600 mb-3 line-clamp-2 sm:line-clamp-3">
-                      {product.description}
+                    <p className="text-sm text-gray-600 mt-1">{product.category}</p>
+                  </div>
+                  
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xl font-bold text-primary-600">
+                      {getDisplayPrice()}
                     </p>
-                    
-                    {product.tags && product.tags.length > 0 && (
-                      <div className="hidden sm:flex flex-wrap gap-1 mb-3">
-                        {product.tags.slice(0, 3).map((tag, index) => (
-                          <span key={index} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
+                    {product.hasVariants && (
+                      <p className="text-xs text-gray-500">
+                        {product.variants?.filter(v => v.isActive).length || 0} taille{(product.variants?.filter(v => v.isActive).length || 0) > 1 ? 's' : ''}
+                      </p>
                     )}
                   </div>
+                </div>
 
-                  {/* Prix et actions */}
-                  <div className="flex flex-row sm:flex-col items-center sm:items-end gap-3 sm:gap-2">
-                    <p className="text-xl sm:text-2xl font-bold text-green-600">
-                      {product.price.toFixed(2)} €
-                    </p>
-                    
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="w-8 h-8 sm:w-10 sm:h-10 p-0"
-                      >
-                        <Heart className="w-4 h-4" />
-                      </Button>
-                      
-                      <Button 
-                        onClick={() => addToCart(product._id, product.name)}
-                        disabled={isAdding}
-                        size="sm"
-                        className="px-3 sm:px-4"
-                      >
-                        {isAdding ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                        ) : (
-                          <>
-                            <ShoppingCart className="w-4 h-4 mr-2" />
-                            <span className="hidden sm:inline">Ajouter</span>
-                          </>
-                        )}
-                      </Button>
+                <p className="text-gray-600 text-sm line-clamp-2 mb-4">
+                  {product.description}
+                </p>
+
+                {/* Tags et variants */}
+                <div className="space-y-3">
+                  {/* Tags */}
+                  {product.tags && product.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {product.tags.slice(0, 3).map((tag, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                      {product.tags.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{product.tags.length - 3}
+                        </Badge>
+                      )}
                     </div>
-                  </div>
+                  )}
+
+                  {/* Variants preview */}
+                  {product.hasVariants && product.variants && product.variants.length > 0 && (
+                    <div className="border-t pt-3">
+                      <p className="text-xs text-gray-500 mb-2">Tailles disponibles :</p>
+                      <div className="flex flex-wrap gap-1">
+                        {product.variants.slice(0, 3).map((variant, index) => (
+                          <Badge 
+                            key={index} 
+                            variant={variant.isActive ? "default" : "secondary"} 
+                            className="text-xs"
+                          >
+                            {variant.name}
+                          </Badge>
+                        ))}
+                        {product.variants.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{product.variants.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 mt-4">
+                  <Button 
+                    onClick={handleAddToCart}
+                    disabled={!product.isActive || isAdding}
+                    className="flex-1 sm:flex-initial"
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    {isAdding 
+                      ? 'Ajout...' 
+                      : product.hasVariants 
+                        ? 'Choisir' 
+                        : 'Ajouter'
+                    }
+                  </Button>
+                  <Button variant="outline" size="icon">
+                    <Heart className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -278,77 +371,155 @@ export default function ProductsPage() {
       );
     }
 
-    // Vue grille (responsive améliorée)
+    // Mode grille
     return (
-      <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300">
-        <div className="aspect-square relative overflow-hidden">
-          <Image
-            src={product.images?.[0] || '/placeholder-product.jpg'}
-            alt={product.name}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          />
-          
-          {/* Overlay actions - visible sur hover desktop, toujours visible mobile */}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center opacity-100 sm:opacity-0 group-hover:opacity-100">
-            <div className="flex gap-2">
-              <Button 
-                variant="secondary" 
-                size="sm"
-                className="bg-white/90 hover:bg-white backdrop-blur-sm w-8 h-8 sm:w-10 sm:h-10 p-0"
+      <Card 
+        className="group cursor-pointer transition-all duration-300 hover:shadow-lg overflow-hidden"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <Link href={getProductUrl()}>
+          <div className="relative overflow-hidden">
+            {/* Image principale */}
+            <div className="aspect-square bg-gray-100 relative">
+              <Image
+                src={product.images?.[0] || '/api/placeholder/300/300'}
+                alt={product.name}
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+              />
+              
+              {/* Badges */}
+              <div className="absolute top-3 left-3 flex flex-col gap-1">
+                {product.hasVariants && (
+                  <Badge variant="secondary" className="text-xs bg-white/90">
+                    Multi-tailles
+                  </Badge>
+                )}
+                {!product.isActive && (
+                  <Badge variant="destructive" className="text-xs">
+                    Épuisé
+                  </Badge>
+                )}
+              </div>
+
+              {/* Bouton favori */}
+              <button
+                className="absolute top-3 right-3 p-2 bg-white/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toast.success('Ajouté aux favoris');
+                }}
               >
                 <Heart className="w-4 h-4" />
-              </Button>
-              
-              <Button 
-                onClick={() => addToCart(product._id, product.name)}
-                disabled={isAdding}
-                size="sm"
-                className="bg-white/90 hover:bg-white text-green-600 hover:text-green-700 backdrop-blur-sm px-3 sm:px-4"
-              >
-                {isAdding ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600" />
-                ) : (
-                  <>
-                    <ShoppingCart className="w-4 h-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Ajouter</span>
-                  </>
-                )}
-              </Button>
+              </button>
+
+              {/* Overlay avec bouton d'action */}
+              <div className={`absolute inset-0 bg-black/20 flex items-center justify-center transition-opacity duration-300 ${
+                isHovered ? 'opacity-100' : 'opacity-0'
+              }`}>
+                <Button 
+                  onClick={handleAddToCart}
+                  disabled={!product.isActive || isAdding}
+                  className="transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300"
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  {isAdding 
+                    ? 'Ajout...' 
+                    : product.hasVariants 
+                      ? 'Choisir une taille' 
+                      : 'Ajouter au panier'
+                  }
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </Link>
 
-        <CardContent className="p-3 sm:p-4">
-          <Badge variant="secondary" className="mb-2 text-xs">
-            {product.category}
-          </Badge>
-          
-          <Link 
-            href={`/produits/${product._id}`}
-            className="block group/link"
-          >
-            <h3 className="font-semibold text-gray-900 mb-2 group-hover/link:text-green-600 transition-colors line-clamp-2 text-sm sm:text-base">
-              {product.name}
-            </h3>
-          </Link>
-          
-          <p className="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-2">
-            {product.description}
-          </p>
-          
-          <div className="flex items-center justify-between">
-            <p className="text-lg sm:text-xl font-bold text-green-600">
-              {product.price.toFixed(2)} €
-            </p>
-            
-            {product.averageRating && (
-              <div className="flex items-center gap-1">
-                <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-xs sm:text-sm text-gray-600">
-                  {product.averageRating.toFixed(1)}
+        {/* Contenu carte */}
+        <CardContent className="p-4">
+          <div className="space-y-3">
+            {/* Titre et catégorie */}
+            <div>
+              <Link href={getProductUrl()}>
+                <h3 className="font-semibold text-gray-900 hover:text-primary-600 transition-colors line-clamp-2 mb-1">
+                  {product.name}
+                </h3>
+              </Link>
+              <p className="text-sm text-gray-600">{product.category}</p>
+            </div>
+
+            {/* Prix et variants info */}
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-bold text-primary-600">
+                {getDisplayPrice()}
+              </span>
+              {product.hasVariants && (
+                <span className="text-xs text-gray-500">
+                  {product.variants?.filter(v => v.isActive).length || 0} taille{(product.variants?.filter(v => v.isActive).length || 0) > 1 ? 's' : ''}
                 </span>
+              )}
+            </div>
+
+            {/* Rating */}
+            {product.averageRating && product.averageRating > 0 && (
+              <div className="flex items-center gap-1">
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`w-4 h-4 ${
+                        star <= product.averageRating! 
+                          ? 'text-yellow-400 fill-yellow-400' 
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-gray-600">
+                  ({product.reviewsCount || 0})
+                </span>
+              </div>
+            )}
+
+            {/* Tags */}
+            {product.tags && product.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {product.tags.slice(0, 2).map((tag, index) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+                {product.tags.length > 2 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{product.tags.length - 2}
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            {/* Variants preview */}
+            {product.hasVariants && product.variants && product.variants.length > 0 && (
+              <div className="pt-2 border-t">
+                <p className="text-xs text-gray-500 mb-2">Tailles :</p>
+                <div className="flex flex-wrap gap-1">
+                  {product.variants.slice(0, 3).map((variant, index) => (
+                    <Badge 
+                      key={index} 
+                      variant={variant.isActive ? "default" : "secondary"} 
+                      className="text-xs"
+                    >
+                      {variant.name}
+                    </Badge>
+                  ))}
+                  {product.variants.length > 3 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{product.variants.length - 3}
+                    </Badge>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -360,41 +531,53 @@ export default function ProductsPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-gray-50 pt-16">
-        {/* Header de page avec padding responsive */}
-        <div className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Nos créations</h1>
-                <p className="text-sm sm:text-base text-gray-600 mt-1">Découvrez notre collection de fleurs</p>
-              </div>
-              
-              {/* Barre de recherche responsive */}
-              <form onSubmit={handleSearch} className="flex gap-2 max-w-md w-full sm:w-auto">
-                <Input
-                  placeholder="Rechercher..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="min-w-0"
-                />
-                <Button type="submit" size="sm" className="px-3 sm:px-4">
-                  <Search className="w-4 h-4" />
-                </Button>
-              </form>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
+      <main className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          {/* Header et breadcrumb */}
+          <div className="mb-8">
+            <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+              <Link href="/" className="hover:text-primary-600">Accueil</Link>
+              <ChevronRight className="w-4 h-4" />
+              <span className="text-gray-900">Produits</span>
+            </nav>
             
-            {/* Sidebar filtres - Hidden sur mobile par défaut */}
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+              Nos créations florales
+            </h1>
+            <p className="text-gray-600 max-w-2xl">
+              Découvrez notre collection de bouquets, compositions et arrangements floraux créés avec passion.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            
+            {/* Sidebar filtres */}
             <div className="lg:col-span-1">
-              <Card className="lg:sticky lg:top-24">
-                <CardContent className="p-4 sm:p-6">
+              <Card className="sticky top-8">
+                <CardContent className="p-4 sm:p-6 space-y-6">
+                  
+                  {/* Recherche */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Recherche
+                    </label>
+                    <form onSubmit={handleSearch} className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Rechercher..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button type="submit" size="sm">
+                        <Search className="w-4 h-4" />
+                      </Button>
+                    </form>
+                  </div>
+
                   {/* Catégories */}
-                  <div className="mb-6">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Catégories
                     </label>
@@ -407,7 +590,7 @@ export default function ProductsPage() {
                             : 'hover:bg-gray-100 text-gray-700'
                         }`}
                       >
-                        Toutes les catégories
+                        Tous les produits
                       </button>
                       {CATEGORIES.map((category) => (
                         <button
@@ -451,7 +634,7 @@ export default function ProductsPage() {
             {/* Contenu principal */}
             <div className="lg:col-span-3">
               
-              {/* Barre d'outils responsive */}
+              {/* Barre d'outils */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div className="text-sm text-gray-600">
                   {isLoading ? 'Chargement...' : `${products.length} produit${products.length > 1 ? 's' : ''} trouvé${products.length > 1 ? 's' : ''}`}
@@ -515,18 +698,18 @@ export default function ProductsPage() {
                 </Card>
               ) : (
                 <>
-                  {/* Grille de produits responsive */}
-                  <div className={`grid gap-4 sm:gap-6 ${
+                  {/* Grille/Liste de produits */}
+                  <div className={`${
                     viewMode === 'grid' 
-                      ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3' 
-                      : 'grid-cols-1'
+                      ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6' 
+                      : 'space-y-6'
                   }`}>
                     {products.map((product) => (
                       <ProductCard key={product._id} product={product} />
                     ))}
                   </div>
 
-                  {/* Pagination responsive */}
+                  {/* Pagination */}
                   {totalPages > 1 && (
                     <div className="mt-8 sm:mt-12 flex justify-center">
                       <div className="flex items-center gap-1 sm:gap-2">

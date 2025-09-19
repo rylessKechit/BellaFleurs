@@ -201,7 +201,6 @@ export async function POST(req: NextRequest) {
       tags,
       entretien,
       careInstructions,
-      difficulty,
       composition,
       motsClesSEO
     } = validatedData;

@@ -63,11 +63,6 @@ export const metadata: Metadata = {
     description: 'Découvrez nos créations florales uniques et bouquets sur mesure.',
     images: ['/images/og-image.jpg'],
   },
-  icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
-  },
   manifest: '/manifest.json',
   viewport: {
     width: 'device-width',

@@ -84,7 +84,6 @@ interface ShopSettings {
     emailEnabled: boolean;
     smsEnabled: boolean;
     orderNotifications: boolean;
-    stockAlerts: boolean;
   };
   
   // Maintenance
@@ -132,7 +131,6 @@ const initialSettings: ShopSettings = {
     emailEnabled: true,
     smsEnabled: false,
     orderNotifications: true,
-    stockAlerts: true
   },
   maintenance: {
     enabled: false,
@@ -333,21 +331,6 @@ export default function AdminParametresPage() {
             </Button>
           </div>
         </div>
-
-        {/* Info stockage local */}
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-start space-x-3">
-              <Database className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <h3 className="font-medium text-blue-900 text-sm sm:text-base">Stockage temporaire</h3>
-                <p className="text-xs sm:text-sm text-blue-700 mt-1">
-                  Les paramètres sont actuellement sauvegardés localement. Une API de configuration sera intégrée prochainement.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Onglets */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -966,22 +949,6 @@ export default function AdminParametresPage() {
                       onCheckedChange={(checked) => setSettings(prev => ({
                         ...prev,
                         notifications: { ...prev.notifications, orderNotifications: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 sm:p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-sm sm:text-base">Alertes de stock</h3>
-                      <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                        Être alerté quand un produit est en rupture
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.notifications.stockAlerts}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        notifications: { ...prev.notifications, stockAlerts: checked }
                       }))}
                     />
                   </div>

@@ -260,14 +260,6 @@ export default function CartPage() {
                           <p className="text-lg font-bold text-green-600 mb-3">
                             {item.price.toFixed(2)} € <span className="text-sm font-normal text-gray-500">/ unité</span>
                           </p>
-                          
-                          {/* Stock warning */}
-                          {!item.isActive && (
-                            <div className="flex items-center gap-2 text-orange-600 mb-3 justify-center sm:justify-start">
-                              <AlertTriangle className="w-4 h-4" />
-                              <span className="text-sm">Produit plus disponible</span>
-                            </div>
-                          )}
 
                           {/* Contrôles quantité et suppression */}
                           <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">

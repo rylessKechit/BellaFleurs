@@ -1,4 +1,4 @@
-// src/app/api/webhooks/stripe/route.ts - Version avec emails
+// src/app/api/webhooks/stripe/route.ts - Version avec support variants
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { stripe } from '@/lib/stripe';
@@ -66,11 +66,14 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
     // Générer le numéro de commande
     const orderNumber = await Order.generateOrderNumber();
 
+    // NOUVEAU : Parser les items avec variants
+    const items = parseItemsWithVariantsFromMetadata(metadata.items || '', metadata);
+
     // Reconstituer les données depuis les métadonnées
     const orderData = {
       orderNumber,
       user: metadata.user_id !== 'guest' ? metadata.user_id : null,
-      items: parseItemsFromMetadata(metadata.items || ''),
+      items: items,
       totalAmount: parseFloat(metadata.total_amount || '0'),
       status: 'payée',
       paymentStatus: 'paid',
@@ -91,7 +94,9 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
         {
           status: 'payée',
           date: new Date(),
-          note: 'Commande créée et payée via Stripe'
+          note: metadata.has_variants === 'true' 
+            ? `Commande créée et payée via Stripe (${metadata.variant_items_count || 0} items avec variants)`
+            : 'Commande créée et payée via Stripe'
         }
       ]
     };
@@ -101,6 +106,15 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
     await order.save();
     
     console.log('✅ Commande créée:', order.orderNumber);
+    
+    // Log des variants si présents
+    if (metadata.has_variants === 'true') {
+      console.log('🔧 Variants détectés:', {
+        hasVariants: true,
+        variantItemsCount: metadata.variant_items_count || 0,
+        totalItems: items.length
+      });
+    }
 
     // Vider le panier si l'utilisateur est connecté
     if (metadata.user_id && metadata.user_id !== 'guest') {
@@ -112,7 +126,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
       }
     }
 
-    // ✅ ENVOYER LES EMAILS DE NOTIFICATION
+    // ENVOYER LES EMAILS DE NOTIFICATION
     try {
       // 1. Email de confirmation au client
       console.log('📧 Envoi email de confirmation...');
@@ -152,25 +166,80 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
   }
 }
 
-// Fonctions utilitaires pour parser les métadonnées
+// FONCTION MISE À JOUR : Parser les items avec variants depuis les métadonnées
+function parseItemsWithVariantsFromMetadata(itemsString: string, metadata: any): any[] {
+  try {
+    // Format avec variants: "Bouquet roses:2x25€[Grand]|Composition:1x45€"
+    // Format simple: "Bouquet roses:2x25€|Composition:1x45€"
+    
+    const items = itemsString.split('|').map((itemStr, index) => {
+      // Parse le format de base
+      const [nameAndVariant, qtyPrice] = itemStr.split(':');
+      const [qtyStr, priceStr] = qtyPrice.split('x');
+      const quantity = parseInt(qtyStr);
+      const price = parseFloat(priceStr.replace('€', ''));
+      
+      // Extraire le nom et le variant
+      let name = nameAndVariant;
+      let variantName: string | undefined = undefined;
+      let variantId: string | undefined = undefined;
+      
+      // Vérifier si il y a un variant [Nom]
+      const variantMatch = nameAndVariant.match(/^(.+)\[([^\]]+)\]$/);
+      if (variantMatch) {
+        name = variantMatch[1];
+        variantName = variantMatch[2];
+        
+        // Essayer de récupérer l'ID du variant depuis les métadonnées
+        if (metadata.has_variants === 'true' && metadata.variants) {
+          const variants = metadata.variants.split('|');
+          const variantInfo = variants.find((v: string) => v.endsWith(`:${variantName}`));
+          if (variantInfo) {
+            variantId = variantInfo.split(':')[0];
+          }
+        }
+      }
+      
+      return {
+        product: `product_${index}`, // ID temporaire, sera remplacé si nécessaire
+        name: name.trim(),
+        price: price,
+        quantity: quantity,
+        image: '', // Pas d'image dans les métadonnées
+        // NOUVEAU : Support variants
+        variantId: variantId,
+        variantName: variantName
+      };
+    });
+
+    return items;
+  } catch (error) {
+    console.error('❌ Erreur parsing items avec variants:', error);
+    // Fallback vers l'ancienne méthode
+    return parseItemsFromMetadata(itemsString);
+  }
+}
+
+// Fonction utilitaire legacy (fallback)
 function parseItemsFromMetadata(itemsString: string): any[] {
   try {
     // Format: "item1:qty1x€price1|item2:qty2x€price2"
-    return itemsString.split('|').map(itemStr => {
+    return itemsString.split('|').map((itemStr, index) => {
       const [name, qtyPrice] = itemStr.split(':');
       const [qtyStr, priceStr] = qtyPrice.split('x');
       const quantity = parseInt(qtyStr);
       const price = parseFloat(priceStr.replace('€', ''));
       
       return {
+        product: `product_${index}`,
         name: name.trim(),
         quantity,
         price,
-        image: '' // Pas d'image dans les métadonnées
+        image: ''
       };
     });
   } catch (error) {
-    console.error('Erreur parsing items:', error);
+    console.error('❌ Erreur parsing items legacy:', error);
     return [];
   }
 }
@@ -193,7 +262,7 @@ function parseAddressFromMetadata(addressString: string): any {
       };
     }
   } catch (error) {
-    console.error('Erreur parsing address:', error);
+    console.error('❌ Erreur parsing address:', error);
   }
   
   return {
