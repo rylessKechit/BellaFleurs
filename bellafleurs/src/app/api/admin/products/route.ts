@@ -1,85 +1,47 @@
-// src/app/api/admin/products/route.ts - API admin pour lister les produits avec variants
+// src/app/api/admin/products/route.ts - Version corrigée avec variable request
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { z } from 'zod';
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
-import { createProductSchema } from '@/lib/validations';
+import { checkAdminAccess } from '@/lib/auth-helpers';
+import { formatProductResponse } from '@/lib/utils/formatProductResponse';
 import { IProduct, IProductVariant } from '@/../types';
-import { z } from 'zod';
 
-// Helper pour vérifier les droits admin
-async function checkAdminAccess(): Promise<boolean> {
-  try {
-    const session = await getServerSession(authOptions);
-    return session?.user?.role === 'admin';
-  } catch (error) {
-    console.error('Auth check error:', error);
-    return false;
+// Validation Zod (garde le schema existant)
+const productVariantSchema = z.object({
+  name: z.string().min(1, 'Nom de la variante requis'),
+  price: z.number().min(0.01, 'Prix minimum: 0,01€'),
+  description: z.string().optional(),
+  image: z.string().optional(),
+  isActive: z.boolean().default(true),
+  order: z.number().default(0)
+});
+
+const createProductSchema = z.object({
+  name: z.string().min(1, 'Nom requis'),
+  description: z.string().min(10, 'Description trop courte'),
+  price: z.number().min(0.01).optional(),
+  hasVariants: z.boolean().default(false),
+  variants: z.array(productVariantSchema).default([]),
+  category: z.string().min(1, 'Catégorie requise'),
+  images: z.array(z.string().url()).min(1, 'Au moins une image requise'),
+  tags: z.array(z.string()).default([]),
+  entretien: z.string().optional(),
+  careInstructions: z.string().optional(),
+  composition: z.string().optional(),
+  motsClesSEO: z.array(z.string()).default([])
+}).refine((data) => {
+  // Si hasVariants = true, variants requis et pas de prix simple
+  if (data.hasVariants) {
+    return data.variants.length > 0;
   }
-}
-
-// Helper pour formater un produit avec gestion des variants
-function formatProductResponse(product: any) {
-  let displayPrice: number;
-  let priceRangeFormatted: string;
-  
-  if (!product.hasVariants) {
-    displayPrice = product.price || 0;
-    priceRangeFormatted = new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(displayPrice);
-  } else {
-    const activeVariants = product.variants.filter((v: IProductVariant) => v.isActive);
-    
-    if (activeVariants.length === 0) {
-      displayPrice = 0;
-      priceRangeFormatted = 'Prix non disponible';
-    } else {
-      const prices = activeVariants.map((v: IProductVariant) => v.price);
-      const minPrice = Math.min(...prices);
-      const maxPrice = Math.max(...prices);
-      
-      displayPrice = activeVariants[0].price;
-      
-      const formatter = new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'EUR'
-      });
-      
-      if (minPrice === maxPrice) {
-        priceRangeFormatted = formatter.format(minPrice);
-      } else {
-        priceRangeFormatted = `${formatter.format(minPrice)} - ${formatter.format(maxPrice)}`;
-      }
-    }
-  }
-
-  const displayPriceFormatted = new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR'
-  }).format(displayPrice);
-
-  return {
-    ...product,
-    displayPrice,
-    displayPriceFormatted,
-    priceRangeFormatted,
-  };
-}
-
-// Helper pour générer un slug unique
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-}
+  // Si hasVariants = false, prix simple requis
+  return data.price !== undefined && data.price > 0;
+}, {
+  message: "Produit avec variants: variants requis. Produit simple: prix requis."
+});
 
 // GET /api/admin/products - Récupérer tous les produits (admin)
 export async function GET(req: NextRequest) {
@@ -140,7 +102,7 @@ export async function GET(req: NextRequest) {
       Product.countDocuments(query)
     ]);
 
-    // Formater les produits avec les prix d'affichage
+    // 🔧 CORRECTION : Utiliser le formateur unifié
     const formattedProducts = products.map((product: any) => formatProductResponse(product));
 
     return NextResponse.json({
@@ -171,7 +133,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/admin/products - Créer un nouveau produit (admin)
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) { // 🔧 CORRECTION : variable request
   try {
     if (!await checkAdminAccess()) {
       return NextResponse.json({
@@ -185,10 +147,20 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    const body = await req.json();
+    const body = await request.json(); // 🔧 CORRECTION : utiliser request
     
-    // Validation avec le schéma
-    const validatedData = createProductSchema.parse(body);
+    // Validation avec Zod
+    const validationResult = createProductSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          message: 'Données invalides',
+          code: 'VALIDATION_ERROR',
+          details: validationResult.error.errors
+        }
+      }, { status: 400 });
+    }
 
     const {
       name,
@@ -196,45 +168,23 @@ export async function POST(req: NextRequest) {
       price,
       hasVariants,
       variants,
-      images,
       category,
+      images,
       tags,
       entretien,
       careInstructions,
       composition,
       motsClesSEO
-    } = validatedData;
+    } = validationResult.data;
 
-    // Validation côté serveur
-    if (!hasVariants && (!price || price <= 0)) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Le prix est requis pour les produits sans variants',
-          code: 'MISSING_PRICE'
-        }
-      }, { status: 400 });
-    }
-
-    if (hasVariants && (!variants || variants.length === 0)) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Au moins une variante est requise pour les produits avec variants',
-          code: 'MISSING_VARIANTS'
-        }
-      }, { status: 400 });
-    }
-
-    // Génération du slug unique
-    const baseSlug = generateSlug(name);
-    let slug = baseSlug;
-    let counter = 1;
-    
-    while (await Product.findOne({ slug })) {
-      slug = `${baseSlug}-${counter}`;
-      counter++;
-    }
+    // Générer le slug
+    const slug = name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
 
     // Traitement des variants si applicable
     let processedVariants: IProductVariant[] = [];
@@ -279,6 +229,7 @@ export async function POST(req: NextRequest) {
     const product = new Product(productData);
     await product.save();
 
+    // 🔧 CORRECTION : Utiliser le formateur unifié
     const formattedProduct = formatProductResponse(product.toObject());
 
     return NextResponse.json({

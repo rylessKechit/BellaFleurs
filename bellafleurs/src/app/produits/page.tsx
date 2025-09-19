@@ -169,11 +169,10 @@ export default function ProductsPage() {
   };
 
   // FONCTION AJOUT PANIER AMÉLIORÉE AVEC VARIANTS
-  const addToCart = async (productId: string, productName: string, hasVariants: boolean) => {
-    if (addingToCart.includes(productId)) return;
-    
-    // Pour les produits avec variants, rediriger vers la page produit
+  const addToCart = async (productId: string, productName: string, hasVariants: boolean = false) => {
+    // 🔧 CORRECTION : Rediriger vers page détails si produit a des variants
     if (hasVariants) {
+      toast.info(`${productName} a plusieurs tailles - voir les détails`);
       router.push(`/produits/${productId}`);
       return;
     }
@@ -225,15 +224,28 @@ export default function ProductsPage() {
     };
 
     // Obtenir l'URL du produit
-    const getProductUrl = () => {
-      return product.slug ? `/produits/${product.slug}` : `/produits/${product._id}`;
-    };
+  const getProductUrl = () => {
+    // 🔍 VÉRIFICATION : Quel URL est généré ?
+    console.log('🔗 Génération URL pour produit:', {
+      id: product._id,
+      slug: product.slug,
+      hasSlug: !!product.slug
+    });
+    
+    // Priorité au slug si disponible
+    if (product.slug) {
+      return `/produits/${product.slug}`;
+    }
+    
+    // Sinon utiliser l'ID MongoDB
+    return `/produits/${product._id}`;
+  };
 
     // Gestion clic ajout panier
     const handleAddToCart = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      addToCart(product._id, product.name, product.hasVariants);
+      addToCart(product._id, product.name, product.hasVariants); // 🔧 Ajout du paramètre hasVariants
     };
 
     // Formater le prix

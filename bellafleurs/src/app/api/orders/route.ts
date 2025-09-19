@@ -49,9 +49,16 @@ export async function POST(req: NextRequest) {
 
     // Valider les données
     const body = await req.json();
+    
+    // 🔧 CORRECTION : Convertir deliveryInfo.date string -> Date AVANT validation
+    if (body.deliveryInfo?.date && typeof body.deliveryInfo.date === 'string') {
+      body.deliveryInfo.date = new Date(body.deliveryInfo.date);
+    }
+
     const validationResult = createOrderSchema.safeParse(body);
     
     if (!validationResult.success) {
+      console.error('❌ Validation errors:', validationResult.error.errors);
       return NextResponse.json({
         success: false,
         error: {
@@ -83,15 +90,13 @@ export async function POST(req: NextRequest) {
     // Générer le numéro de commande
     const orderNumber = await Order.generateOrderNumber();
 
-    // Créer la commande
+    // Créer la commande avec date correctement formatée
     const newOrder = new Order({
       ...orderData,
       orderNumber,
       user: session?.user?.id || null,
-      deliveryInfo: {
-        ...orderData.deliveryInfo,
-        date: new Date(orderData.deliveryInfo.date)
-      },
+      // La date est déjà convertie en Date object
+      deliveryInfo: orderData.deliveryInfo,
       timeline: [
         {
           status: orderData.status || 'payée',
@@ -113,32 +118,6 @@ export async function POST(req: NextRequest) {
       } catch (error) {
         console.warn('⚠️ Erreur vidage panier:', error);
       }
-    }
-
-    // ✅ ENVOYER LES EMAILS - NOUVELLEMENT AJOUTÉ
-    try {
-      // Email de confirmation au client
-      console.log('📧 Envoi email de confirmation (fallback)...');
-      const confirmationSent = await sendOrderConfirmation(newOrder);
-      
-      // Notification à l'admin
-      console.log('📧 Envoi notification admin (fallback)...');
-      const adminNotificationSent = await sendNewOrderNotification(newOrder);
-
-      // Mettre à jour les statuts d'email
-      await Order.findByIdAndUpdate(newOrder._id, {
-        emailsSent: {
-          confirmation: confirmationSent,
-          adminNotification: adminNotificationSent,
-          sentAt: new Date()
-        }
-      });
-
-      console.log(`📧 Emails envoyés - Confirmation: ${confirmationSent}, Admin: ${adminNotificationSent}`);
-
-    } catch (emailError) {
-      console.error('❌ Erreur envoi emails (fallback):', emailError);
-      // Ne pas faire échouer la création de commande pour autant
     }
 
     return NextResponse.json({

@@ -1,29 +1,12 @@
-// src/app/api/payments/create-payment-intent/route.ts - Version avec support variants
+// src/app/api/payments/create-payment-intent/route.ts - Correction date
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { stripe } from '@/lib/stripe';
-import { createOrderSchema } from '@/lib/validations';
 
-// Fonction d'aide pour gérer les erreurs Stripe
-function handleStripeError(error: any) {
-  const errorMessages: Record<string, string> = {
-    'card_declined': 'Votre carte a été refusée',
-    'insufficient_funds': 'Fonds insuffisants',
-    'expired_card': 'Votre carte a expiré',
-    'incorrect_cvc': 'Code de sécurité incorrect',
-    'processing_error': 'Erreur de traitement, veuillez réessayer',
-    'amount_too_large': 'Montant trop élevé',
-    'amount_too_small': 'Montant trop faible'
-  };
-
-  return {
-    message: errorMessages[error.code] || 'Erreur de paiement',
-    code: error.code || 'STRIPE_ERROR'
-  };
-}
-
-// POST /api/payments/create-payment-intent - Créer un Payment Intent avec variants
+// POST /api/payments/create-payment-intent - Créer un Payment Intent avec conversion date
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -31,25 +14,27 @@ export async function POST(req: NextRequest) {
 
     console.log('🔄 Création Payment Intent...');
 
-    // Validation des données avec Zod
-    const validationResult = createOrderSchema.safeParse(body);
-    if (!validationResult.success) {
-      console.error('❌ Validation failed:', validationResult.error.errors);
+    const orderData = body;
+
+    // 🔧 CORRECTION : Convertir la date string en Date
+    if (orderData.deliveryInfo?.date && typeof orderData.deliveryInfo.date === 'string') {
+      orderData.deliveryInfo.date = new Date(orderData.deliveryInfo.date);
+    }
+
+    // Validation des données de base
+    if (!orderData.items || !orderData.customerInfo || !orderData.deliveryInfo) {
       return NextResponse.json({
         success: false,
         error: {
-          message: 'Données invalides',
-          code: 'VALIDATION_ERROR',
-          details: validationResult.error.errors
+          message: 'Données de commande incomplètes',
+          code: 'INCOMPLETE_ORDER_DATA'
         }
       }, { status: 400 });
     }
 
-    const orderData = validationResult.data;
-
     // Calculs et validation
     const calculatedTotal = orderData.items.reduce(
-      (sum, item) => sum + (item.price * item.quantity), 0
+      (sum: number, item: any) => sum + (item.price * item.quantity), 0
     );
 
     if (Math.abs(calculatedTotal - orderData.totalAmount) > 0.01) {
@@ -96,7 +81,10 @@ export async function POST(req: NextRequest) {
       
       // Informations livraison
       delivery_type: orderData.deliveryInfo.type,
-      delivery_date: orderData.deliveryInfo.date.toISOString(),
+      // 🔧 CORRECTION : S'assurer que la date est un objet Date
+      delivery_date: orderData.deliveryInfo.date instanceof Date 
+        ? orderData.deliveryInfo.date.toISOString()
+        : new Date(orderData.deliveryInfo.date).toISOString(),
       delivery_address: orderData.deliveryInfo.address 
         ? `${orderData.deliveryInfo.address.street}, ${orderData.deliveryInfo.address.city} ${orderData.deliveryInfo.address.zipCode}`.substring(0, 490)
         : '',
@@ -114,7 +102,7 @@ export async function POST(req: NextRequest) {
     };
 
     // NOUVEAU : Ajouter les items avec variants (format amélioré)
-    const itemsWithVariants = orderData.items.map(item => {
+    const itemsWithVariants = orderData.items.map((item: any) => {
       let itemString = `${item.name}:${item.quantity}x${item.price}€`;
       
       // AJOUT : Inclure les informations de variant si présentes
@@ -128,17 +116,17 @@ export async function POST(req: NextRequest) {
     metadata.items = itemsWithVariants.substring(0, 490);
 
     // NOUVEAU : Métadonnées spécifiques aux variants (si présents)
-    const hasVariants = orderData.items.some(item => item.variantId);
+    const hasVariants = orderData.items.some((item: any) => item.variantId);
     if (hasVariants) {
       metadata.has_variants = 'true';
       
       // Compter les items avec variants
-      const variantItems = orderData.items.filter(item => item.variantId);
+      const variantItems = orderData.items.filter((item: any) => item.variantId);
       metadata.variant_items_count = variantItems.length.toString();
       
       // Liste des variants (format condensé)
       const variantsList = variantItems
-        .map(item => `${item.variantId}:${item.variantName}`)
+        .map((item: any) => `${item.variantId}:${item.variantName}`)
         .join('|');
       metadata.variants = variantsList.substring(0, 490);
     }
@@ -156,7 +144,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Log pour le debug
-    const variantItems = orderData.items.filter(item => item.variantId);
+    const variantItems = orderData.items.filter((item: any) => item.variantId);
     console.log('✅ Payment Intent créé:', {
       paymentIntentId: paymentIntent.id,
       amount: amount,
@@ -184,13 +172,11 @@ export async function POST(req: NextRequest) {
 
     // Gestion spécifique des erreurs Stripe
     if (error.type?.startsWith('Stripe')) {
-      const stripeError = handleStripeError(error);
       return NextResponse.json({
         success: false,
         error: {
-          message: stripeError.message,
-          code: stripeError.code,
-          type: 'stripe_error'
+          message: 'Erreur de paiement Stripe',
+          code: 'STRIPE_ERROR'
         }
       }, { status: 400 });
     }
@@ -201,75 +187,6 @@ export async function POST(req: NextRequest) {
       error: {
         message: 'Erreur lors de la création du paiement',
         code: 'PAYMENT_INTENT_CREATION_ERROR'
-      }
-    }, { status: 500 });
-  }
-}
-
-// GET /api/payments/create-payment-intent - Récupérer un Payment Intent existant
-export async function GET(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Authentification requise',
-          code: 'AUTH_REQUIRED'
-        }
-      }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(req.url);
-    const paymentIntentId = searchParams.get('payment_intent_id');
-
-    if (!paymentIntentId) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'ID Payment Intent requis',
-          code: 'MISSING_PAYMENT_INTENT_ID'
-        }
-      }, { status: 400 });
-    }
-
-    // Récupérer le Payment Intent depuis Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        paymentIntent: {
-          id: paymentIntent.id,
-          client_secret: paymentIntent.client_secret,
-          amount: paymentIntent.amount,
-          currency: paymentIntent.currency,
-          status: paymentIntent.status,
-          metadata: paymentIntent.metadata
-        }
-      }
-    });
-
-  } catch (error: any) {
-    console.error('❌ Get Payment Intent error:', error);
-
-    if (error.type?.startsWith('Stripe')) {
-      const stripeError = handleStripeError(error);
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: stripeError.message,
-          code: stripeError.code,
-          type: 'stripe_error'
-        }
-      }, { status: 400 });
-    }
-
-    return NextResponse.json({
-      success: false,
-      error: {
-        message: 'Erreur lors de la récupération du paiement',
-        code: 'PAYMENT_INTENT_FETCH_ERROR'
       }
     }, { status: 500 });
   }

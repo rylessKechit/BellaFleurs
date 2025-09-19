@@ -3,29 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { 
-  ShoppingCart, 
-  Heart, 
-  Share2, 
-  Star, 
-  Plus, 
-  Minus,
-  Truck,
-  Shield,
-  Award,
-  ChevronRight,
-  AlertCircle,
-  Loader2
-} from 'lucide-react';
+import Link from 'next/link';
+import { Star, Heart, ShoppingCart, ArrowLeft, Plus, Minus, Truck, Shield, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
+import { toast } from 'sonner';
 
 interface ProductVariant {
   name: string;
@@ -91,34 +78,37 @@ export default function ProductDetailPage() {
         if (data.success && data.data) {
           console.log('Données reçues de l\'API:', JSON.stringify(data.data, null, 2));
           
-          // CORRECTION : Forcer la détection des variants même si hasVariants est undefined
           const productData = { ...data.data };
           
-          // Si variants existe et a du contenu, forcer hasVariants à true
-          if (productData.variants && Array.isArray(productData.variants) && productData.variants.length > 0) {
-            productData.hasVariants = true;
-            console.log('FORCE hasVariants = true car variants détectés:', productData.variants);
+          // Respecter hasVariants du backend sans forcer
+          // Nettoyer les variants pour produits simples
+          if (!productData.hasVariants) {
+            productData.variants = [];
           }
           
           setProduct(productData);
           
-          // Initialiser avec la première variante si variants
-          if (productData.variants && productData.variants.length > 0) {
+          // Initialiser variants seulement si réellement présents
+          if (productData.hasVariants && productData.variants?.length > 0) {
             console.log('Initialisation variants:', productData.variants);
             const firstActiveIndex = productData.variants.findIndex((v: any) => v.isActive !== false);
             const indexToUse = firstActiveIndex >= 0 ? firstActiveIndex : 0;
-            console.log('Index variant sélectionné:', indexToUse);
             setSelectedVariantIndex(indexToUse);
+            console.log('Index variant sélectionné:', indexToUse);
+          } else {
+            setSelectedVariantIndex(0);
+            console.log('Produit simple, pas de variants');
           }
           
-          // Marquer les données comme prêtes APRÈS avoir tout initialisé
           setDataReady(true);
         } else {
-          throw new Error('Produit non trouvé');
+          console.error('Erreur API:', data);
+          toast.error('Produit introuvable');
+          router.push('/produits');
         }
       } catch (error) {
-        console.error('Erreur:', error);
-        toast.error('Produit introuvable');
+        console.error('Erreur chargement produit:', error);
+        toast.error('Erreur lors du chargement du produit');
         router.push('/produits');
       } finally {
         setLoading(false);
@@ -128,182 +118,186 @@ export default function ProductDetailPage() {
     fetchProduct();
   }, [params.id, router]);
 
-  // Helpers
-  const getSelectedVariant = () => {
-    if (!product || !product.variants || product.variants.length === 0) return null;
-    return product.variants[selectedVariantIndex] || null;
-  };
-
+  // Fonction prix unifiée
   const getCurrentPrice = () => {
     if (!product) return 0;
     
-    // Vérification explicite de hasVariants
-    const hasVariants = product.hasVariants === true;
-    
-    if (hasVariants && product.variants && product.variants.length > 0) {
-      const variant = getSelectedVariant();
-      console.log('Variant sélectionné:', variant);
-      return variant?.price || 0;
+    if (!product.hasVariants) {
+      return product.price || 0;
     }
-    return product.price || 0;
+    
+    if (product.variants?.length > 0 && product.variants[selectedVariantIndex]) {
+      return product.variants[selectedVariantIndex].price;
+    }
+    
+    return 0;
   };
 
-  const getCurrentImage = () => {
-    if (!product?.images?.length) return '/api/placeholder/600/600';
-    return product.images[selectedImageIndex] || product.images[0];
-  };
-
-  const isAvailable = () => {
-    // Toujours disponible pour les produits à la demande
-    if (!product) return false;
-    if (!product.isActive) return false;
-    
-    const hasVariants = product.hasVariants === true;
-    
-    // Si pas de variants, toujours dispo
-    if (!hasVariants) return true;
-    
-    // Si variants, vérifier la variante sélectionnée
-    const variant = getSelectedVariant();
-    return variant?.isActive !== false; // true par défaut si pas spécifié
-  };
-
-  const formatPrice = (price: number) => {
+  // Fonction prix formaté unifiée
+  const getFormattedPrice = () => {
+    const price = getCurrentPrice();
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
       currency: 'EUR'
     }).format(price);
   };
 
-  const handleAddToCart = async () => {
-    if (!product || !isAvailable()) {
-      toast.error('Ce produit n\'est pas disponible');
-      return;
+  // Obtenir le variant actuel ou null
+  const getCurrentVariant = () => {
+    if (!product?.hasVariants || !product.variants?.length) {
+      return null;
     }
+    return product.variants[selectedVariantIndex] || null;
+  };
 
-    setIsAddingToCart(true);
+  // Ajout au panier
+  const handleAddToCart = async () => {
+    if (!product || isAddingToCart) return;
+
     try {
-      const variantId = product.hasVariants ? selectedVariantIndex.toString() : undefined;
-      
+      setIsAddingToCart(true);
+
+      const requestBody: any = {
+        productId: product._id,
+        quantity: quantity
+      };
+
+      // Ajouter variantId seulement si produit a des variants
+      if (product.hasVariants && product.variants?.length > 0) {
+        requestBody.variantId = selectedVariantIndex.toString();
+      }
+
+      console.log('Ajout panier avec données:', requestBody);
+
       const response = await fetch('/api/cart', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         credentials: 'include',
-        body: JSON.stringify({
-          productId: product._id,
-          quantity,
-          variantId
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await response.json();
-      if (data.success) {
-        const variant = getSelectedVariant();
-        const name = variant ? `${product.name} - ${variant.name}` : product.name;
-        toast.success(`${name} ajouté au panier (×${quantity})`);
+
+      if (response.ok && data.success) {
+        const currentVariant = getCurrentVariant();
+        const productName = currentVariant 
+          ? `${product.name} - ${currentVariant.name}`
+          : product.name;
+          
+        toast.success(`${productName} ajouté au panier`);
         incrementCartCount(quantity);
       } else {
-        throw new Error(data.error?.message || 'Erreur');
+        throw new Error(data.error?.message || 'Erreur lors de l\'ajout au panier');
       }
+
     } catch (error: any) {
+      console.error('Erreur addToCart:', error);
       toast.error(error.message || 'Erreur lors de l\'ajout au panier');
     } finally {
       setIsAddingToCart(false);
     }
   };
 
-  if (loading || !dataReady) {
+  // Gestion quantité
+  const updateQuantity = (newQuantity: number) => {
+    if (newQuantity >= 1 && newQuantity <= 50) {
+      setQuantity(newQuantity);
+    }
+  };
+
+  // Loading state
+  if (loading) {
     return (
-      <>
-        <Header />
-        <main className="min-h-screen bg-gray-50 py-8">
-          <div className="max-w-7xl mx-auto px-4 flex items-center justify-center">
-            <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary-600" />
-              <p>Chargement du produit...</p>
-            </div>
-          </div>
-        </main>
-        <Footer />
-      </>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement du produit...</p>
+        </div>
+      </div>
     );
   }
 
-  if (!product) {
+  // Product not found
+  if (!product || !dataReady) {
     return (
-      <>
-        <Header />
-        <main className="min-h-screen bg-gray-50 py-8">
-          <div className="max-w-7xl mx-auto px-4 text-center">
-            <AlertCircle className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h1 className="text-2xl font-bold mb-2">Produit introuvable</h1>
-            <p className="text-gray-600 mb-8">Ce produit n'existe pas ou a été supprimé.</p>
-            <Button onClick={() => router.push('/produits')}>
-              Retour au catalogue
-            </Button>
-          </div>
-        </main>
-        <Footer />
-      </>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Produit introuvable</h1>
+          <Button onClick={() => router.push('/produits')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour aux produits
+          </Button>
+        </div>
+      </div>
     );
   }
 
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
+      
+      <div className="min-h-screen bg-gray-50 pt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Breadcrumb */}
           <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-8">
-            <button onClick={() => router.push('/')} className="hover:text-primary-600">
-              Accueil
-            </button>
-            <ChevronRight className="w-4 h-4" />
-            <button onClick={() => router.push('/produits')} className="hover:text-primary-600">
-              Produits
-            </button>
-            <ChevronRight className="w-4 h-4" />
+            <Link href="/" className="hover:text-pink-600">Accueil</Link>
+            <span>/</span>
+            <Link href="/produits" className="hover:text-pink-600">Produits</Link>
+            <span>/</span>
             <span className="text-gray-900">{product.name}</span>
           </nav>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
-            
-            {/* Images */}
+          {/* Bouton retour */}
+          <Button 
+            variant="outline" 
+            onClick={() => router.back()}
+            className="mb-6"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour
+          </Button>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+            {/* Galerie d'images */}
             <div className="space-y-4">
-              <div className="aspect-square relative bg-white rounded-lg overflow-hidden shadow-sm">
+              {/* Image principale */}
+              <div className="aspect-square bg-white rounded-lg overflow-hidden shadow-sm">
                 <Image
-                  src={getCurrentImage()}
+                  src={product.images[selectedImageIndex] || '/api/placeholder/600/600'}
                   alt={product.name}
-                  fill
-                  className="object-cover"
-                  priority
+                  width={600}
+                  height={600}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/api/placeholder/600/600';
+                  }}
                 />
-                {!isAvailable() && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <Badge className="bg-red-600 text-white">Non disponible</Badge>
-                  </div>
-                )}
               </div>
 
               {/* Miniatures */}
-              {product.images && product.images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto">
+              {product.images.length > 1 && (
+                <div className="grid grid-cols-4 gap-2">
                   {product.images.map((image, index) => (
                     <button
                       key={index}
                       onClick={() => setSelectedImageIndex(index)}
-                      className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 flex-shrink-0 ${
+                      className={`aspect-square bg-white rounded-lg overflow-hidden border-2 transition-colors ${
                         selectedImageIndex === index 
-                          ? 'border-primary-500' 
+                          ? 'border-pink-500' 
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <Image
-                        src={image}
+                        src={image || '/api/placeholder/150/150'}
                         alt={`${product.name} ${index + 1}`}
-                        fill
-                        className="object-cover"
+                        width={150}
+                        height={150}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/api/placeholder/150/150';
+                        }}
                       />
                     </button>
                   ))}
@@ -311,260 +305,330 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* Informations */}
+            {/* Informations produit */}
             <div className="space-y-6">
-              
               {/* Header */}
               <div>
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{product.category}</Badge>
-                      {product.hasVariants && (
-                        <Badge variant="outline" className="text-xs">Multi-tailles</Badge>
-                      )}
-                      {product.difficulty && (
-                        <Badge className={difficultyColors[product.difficulty]}>
-                          {product.difficulty}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      onClick={() => setIsInWishlist(!isInWishlist)}
-                    >
-                      <Heart className={`w-4 h-4 ${isInWishlist ? 'fill-red-500 text-red-500' : ''}`} />
-                    </Button>
-                    <Button variant="outline" size="icon">
-                      <Share2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {product.category}
+                  </Badge>
+                  {product.difficulty && (
+                    <Badge className={`text-xs ${difficultyColors[product.difficulty]}`}>
+                      {product.difficulty}
+                    </Badge>
+                  )}
+                </div>
+                
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                  {product.name}
+                </h1>
+                
+                {/* Prix */}
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-3xl font-bold text-pink-600">
+                    {getFormattedPrice()}
+                  </span>
+                  {product.hasVariants && product.variants?.length > 0 && (
+                    <span className="text-sm text-gray-500">
+                      par {getCurrentVariant()?.name.toLowerCase() || 'pièce'}
+                    </span>
+                  )}
                 </div>
 
                 {/* Rating */}
-                {product.averageRating && product.averageRating > 0 && (
+                {product.averageRating && product.reviewsCount ? (
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="flex">
-                      {[1, 2, 3, 4, 5].map((star) => (
+                    <div className="flex items-center">
+                      {[...Array(5)].map((_, i) => (
                         <Star
-                          key={star}
+                          key={i}
                           className={`w-4 h-4 ${
-                            star <= product.averageRating! 
-                              ? 'text-yellow-400 fill-yellow-400' 
+                            i < Math.floor(product.averageRating!)
+                              ? 'text-yellow-400 fill-current'
                               : 'text-gray-300'
                           }`}
                         />
                       ))}
                     </div>
-                    <span className="text-gray-600">({product.reviewsCount || 0})</span>
+                    <span className="text-sm text-gray-600">
+                      {product.averageRating.toFixed(1)} ({product.reviewsCount} avis)
+                    </span>
                   </div>
-                )}
-
-                {/* Prix avec debug */}
-                <div className="mb-6">
-                  <div className="text-4xl font-bold text-primary-600">
-                    {formatPrice(getCurrentPrice())}
-                  </div>
-                  {/* DEBUG - à retirer plus tard */}
-                  <div className="text-xs text-red-500 mt-1">
-                    DEBUG - hasVariants: {String(product.hasVariants)} | variants: {product.variants?.length || 0} | prix: {getCurrentPrice()} | type: {typeof product.hasVariants}
-                  </div>
-                  {product.hasVariants === true && (
-                    <p className="text-gray-500 mt-1">Prix selon la taille</p>
-                  )}
-                </div>
+                ) : null}
               </div>
 
-              {/* Sélecteur de variants - CONDITION CORRIGÉE */}
-              {(product.hasVariants === true || (product.variants && product.variants.length > 0)) && (
-                <div className="space-y-4">
-                  <Label className="text-base font-semibold">Choisir une taille</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {product.variants && product.variants.map((variant, index) => (
+              {/* Description mise en avant avec style amélioré */}
+              <Card className="bg-gradient-to-br from-pink-50 to-purple-50 border-pink-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
+                      <span className="text-pink-600 text-sm">📝</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-lg">Description</h3>
+                  </div>
+                  <div className="text-gray-700 leading-relaxed whitespace-pre-line text-base">
+                    {product.description || "Une magnifique création florale composée avec soin par nos artisans fleuristes."}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Composition mise en avant si disponible */}
+              {product.composition && (
+                <Card className="bg-gradient-to-br from-green-50 to-blue-50 border-green-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-600 text-sm">🌺</span>
+                      </div>
+                      <h3 className="font-semibold text-gray-900 text-lg">Composition</h3>
+                    </div>
+                    <div className="text-gray-700 leading-relaxed text-base">
+                      {product.composition}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Instructions d'entretien mises en avant si disponibles */}
+              {(product.entretien || product.careInstructions) && (
+                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 text-sm">💧</span>
+                      </div>
+                      <h3 className="font-semibold text-gray-900 text-lg">Instructions d&apos;entretien</h3>
+                    </div>
+                    <div className="text-gray-700 leading-relaxed whitespace-pre-line text-base">
+                      {product.entretien || product.careInstructions}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Sélecteur variants seulement si hasVariants = true */}
+              {product.hasVariants && product.variants?.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">Choisir une taille</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {product.variants.map((variant, index) => (
                       <button
                         key={index}
-                        onClick={() => {
-                          console.log('Sélection variant:', index, variant);
-                          setSelectedVariantIndex(index);
-                        }}
-                        disabled={variant.isActive === false}
-                        className={`p-4 rounded-lg border-2 text-left transition-colors ${
+                        onClick={() => setSelectedVariantIndex(index)}
+                        disabled={!variant.isActive}
+                        className={`p-3 border rounded-lg text-center transition-colors ${
                           selectedVariantIndex === index
-                            ? 'border-primary-500 bg-primary-50'
-                            : variant.isActive !== false
-                            ? 'border-gray-200 hover:border-gray-300'
-                            : 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
+                            ? 'border-pink-500 bg-pink-50 text-pink-900'
+                            : variant.isActive
+                            ? 'border-gray-200 hover:border-gray-300 text-gray-900'
+                            : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
                         }`}
                       >
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-medium">{variant.name}</span>
-                          <span className="font-bold text-primary-600">
-                            {formatPrice(variant.price)}
-                          </span>
+                        <div className="font-medium">{variant.name}</div>
+                        <div className="text-sm text-gray-600">
+                          {new Intl.NumberFormat('fr-FR', {
+                            style: 'currency',
+                            currency: 'EUR'
+                          }).format(variant.price)}
                         </div>
-                        {variant.description && (
-                          <p className="text-sm text-gray-600">{variant.description}</p>
-                        )}
-                        {variant.isActive === false && (
-                          <p className="text-xs text-red-500 mt-1">Indisponible</p>
-                        )}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Quantité */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Quantité</Label>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center border rounded-lg">
+              {/* Quantité et ajout panier */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3">Quantité</h3>
+                  <div className="flex items-center gap-3">
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateQuantity(quantity - 1)}
                       disabled={quantity <= 1}
                     >
                       <Minus className="w-4 h-4" />
                     </Button>
-                    <span className="w-12 text-center font-medium">{quantity}</span>
+                    <span className="font-medium text-lg min-w-[3rem] text-center">
+                      {quantity}
+                    </span>
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setQuantity(Math.min(10, quantity + 1))}
-                      disabled={quantity >= 10}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateQuantity(quantity + 1)}
+                      disabled={quantity >= 50}
                     >
                       <Plus className="w-4 h-4" />
                     </Button>
                   </div>
-                  <span className="text-sm text-gray-500">Maximum: 10</span>
+                </div>
+
+                {/* Boutons d'action */}
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleAddToCart}
+                    disabled={isAddingToCart || !product.isActive}
+                    className="flex-1"
+                    size="lg"
+                  >
+                    {isAddingToCart ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Ajout...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Ajouter au panier
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setIsInWishlist(!isInWishlist)}
+                  >
+                    <Heart className={`w-4 h-4 ${isInWishlist ? 'fill-current text-red-500' : ''}`} />
+                  </Button>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="space-y-4">
-                <Button 
-                  onClick={handleAddToCart}
-                  disabled={!isAvailable() || isAddingToCart}
-                  size="lg"
-                  className="w-full text-lg py-6"
-                >
-                  <ShoppingCart className="w-5 h-5 mr-2" />
-                  {isAddingToCart 
-                    ? 'Ajout en cours...' 
-                    : isAvailable() 
-                      ? 'Ajouter au panier'
-                      : 'Non disponible'
-                  }
-                </Button>
+              {/* Informations de livraison */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Truck className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="font-medium text-sm">Livraison gratuite</p>
+                        <p className="text-xs text-gray-600">À partir de 50€ d&apos;achat</p>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center gap-3">
+                      <Shield className="w-5 h-5 text-blue-600" />
+                      <div>
+                        <p className="font-medium text-sm">Satisfaction garantie</p>
+                        <p className="text-xs text-gray-600">Fraîcheur assurée 48h</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Garanties */}
-                <div className="grid grid-cols-3 gap-4 text-center py-4 border-t">
-                  <div className="flex flex-col items-center gap-2 text-sm text-gray-600">
-                    <Truck className="w-5 h-5" />
-                    <span>Livraison 24-48h</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-2 text-sm text-gray-600">
-                    <Shield className="w-5 h-5" />
-                    <span>Paiement sécurisé</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-2 text-sm text-gray-600">
-                    <Award className="w-5 h-5" />
-                    <span>Fraîcheur garantie</span>
+              {/* Tags */}
+              {product.tags && product.tags.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Tags</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {product.tags.map((tag, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Tabs détails */}
-          <Tabs defaultValue="description" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="description">Description</TabsTrigger>
-              <TabsTrigger value="care">Entretien</TabsTrigger>
-              <TabsTrigger value="composition">Composition</TabsTrigger>
-              <TabsTrigger value="info">Informations</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="description" className="mt-8">
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Description</h3>
-                  <p className="text-gray-700 leading-relaxed mb-6">{product.description}</p>
-                  
-                  {product.tags && product.tags.length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-3">Mots-clés</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {product.tags.map((tag, index) => (
-                          <Badge key={index} variant="outline">{tag}</Badge>
-                        ))}
-                      </div>
+          {/* Sections supplémentaires */}
+          <div className="mt-16 space-y-8">
+            {/* Section Pourquoi choisir ce produit */}
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="font-semibold text-gray-900 mb-4 text-xl">Pourquoi choisir ce bouquet ?</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-green-600 text-sm">🌱</span>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="care" className="mt-8">
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Instructions d'entretien</h3>
-                  <p className="text-gray-700 leading-relaxed">
-                    {product.entretien || product.careInstructions || 'Instructions d\'entretien non renseignées.'}
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                    <div>
+                      <h4 className="font-medium text-gray-900">Fleurs fraîches</h4>
+                      <p className="text-sm text-gray-600">Sélectionnées le matin même pour une fraîcheur optimale</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-blue-600 text-sm">🎨</span>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">Création unique</h4>
+                      <p className="text-sm text-gray-600">Chaque bouquet est composé à la main par nos fleuristes</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-purple-600 text-sm">💝</span>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">Emballage soigné</h4>
+                      <p className="text-sm text-gray-600">Présenté dans un emballage élégant et protecteur</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-pink-600 text-sm">⚡</span>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">Livraison rapide</h4>
+                      <p className="text-sm text-gray-600">Livré dans les meilleurs délais pour préserver la beauté</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            <TabsContent value="composition" className="mt-8">
+            {/* Conseils d'entretien détaillés */}
+            {(product.entretien || product.careInstructions) && (
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Composition</h3>
-                  <p className="text-gray-700 leading-relaxed">
-                    {product.composition || 'Composition non renseignée.'}
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="info" className="mt-8">
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Informations produit</h3>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-medium mb-2">Catégorie</h4>
-                      <p className="text-gray-600">{product.category}</p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium mb-2">Référence</h4>
-                      <p className="text-gray-600 font-mono text-sm">{product._id}</p>
-                    </div>
-                    {product.hasVariants && (
-                      <div>
-                        <h4 className="font-medium mb-2">Tailles disponibles</h4>
-                        <p className="text-gray-600">
-                          {product.variants?.filter(v => v.isActive).length || 0} tailles
-                        </p>
-                      </div>
-                    )}
-                    <div>
-                      <h4 className="font-medium mb-2">Délai</h4>
-                      <p className="text-gray-600">24-48h</p>
+                  <h3 className="font-semibold text-gray-900 mb-4 text-xl">Conseils d&apos;entretien</h3>
+                  <div className="prose prose-sm max-w-none text-gray-700">
+                    <p className="whitespace-pre-line leading-relaxed">
+                      {product.entretien || product.careInstructions}
+                    </p>
+                    
+                    {/* Conseils généraux par défaut */}
+                    <div className="mt-4 bg-blue-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-blue-900 mb-2">Conseils généraux :</h4>
+                      <ul className="text-sm text-blue-800 space-y-1">
+                        <li>• Coupez les tiges en biseau sous l&apos;eau froide</li>
+                        <li>• Changez l&apos;eau tous les 2-3 jours</li>
+                        <li>• Retirez les feuilles qui trempent dans l&apos;eau</li>
+                        <li>• Placez dans un endroit frais, à l&apos;abri du soleil direct</li>
+                      </ul>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+            )}
+
+            {/* Produits similaires ou recommandations */}
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="font-semibold text-gray-900 mb-4 text-xl">Vous pourriez aussi aimer</h3>
+                <p className="text-gray-600 text-center py-8">
+                  Découvrez nos autres créations florales dans la même catégorie
+                </p>
+                <div className="text-center">
+                  <Button variant="outline" asChild>
+                    <Link href={`/produits?category=${encodeURIComponent(product.category)}`}>
+                      Voir plus de {product.category.toLowerCase()}
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </main>
+      </div>
+
       <Footer />
     </>
   );

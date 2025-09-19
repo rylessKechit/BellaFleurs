@@ -149,7 +149,7 @@ export default function CheckoutPage() {
 
   // Calculs totaux
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const deliveryFee = 5.00;
+  const deliveryFee = subtotal >= 50 ? 0 : 10; // Livraison gratuite dès 50€
   const total = subtotal + deliveryFee;
 
   // Validation
@@ -230,7 +230,6 @@ export default function CheckoutPage() {
         price: item.price,
         quantity: item.quantity,
         image: item.image,
-        // NOUVEAU : Inclure les données variants
         variantId: item.variantId,
         variantName: item.variantName
       })),
@@ -242,6 +241,7 @@ export default function CheckoutPage() {
       deliveryInfo: {
         type: 'delivery',
         address: deliveryInfo.address,
+        // 🔧 CORRECTION : Conversion explicite string -> Date
         date: new Date(deliveryInfo.date),
         notes: deliveryInfo.notes
       },
