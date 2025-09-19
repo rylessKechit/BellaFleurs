@@ -361,7 +361,7 @@ export const ROUTES = {
     },
     products: '/api/products',
     orders: '/api/orders',
-    upload: '/api/upload',
+    upload: '/api/admin/upload',
     newsletter: '/api/newsletter',
     contact: '/api/contact',
     webhook: '/api/webhook'

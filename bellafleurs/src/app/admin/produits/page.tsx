@@ -12,7 +12,9 @@ import {
   Upload,
   X,
   Save,
-  MoreHorizontal
+  MoreHorizontal,
+  Move,
+  Package
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { 
   Dialog, 
   DialogContent, 
@@ -44,7 +47,7 @@ import {
 import AdminLayout from '@/components/admin/AdminLayout';
 import { toast } from 'sonner';
 
-// Catégories fixes - bonnes catégories
+// Catégories fixes
 const CATEGORIES = [
   'Bouquets',
   'Fleurs de saisons',
@@ -56,11 +59,25 @@ const CATEGORIES = [
 ];
 
 // Types
+interface ProductVariant {
+  name: string;
+  price: number;
+  description?: string;
+  image?: string;
+  isActive: boolean;
+  order: number;
+}
+
 interface Product {
   _id: string;
   name: string;
   description: string;
-  price: number;
+  price?: number;                  // Optionnel si hasVariants = true
+  hasVariants: boolean;            // Nouveau champ
+  variants: ProductVariant[];      // Nouveau champ
+  displayPrice?: number;           // Prix à afficher
+  displayPriceFormatted?: string;  // Prix formaté
+  priceRangeFormatted?: string;    // Fourchette de prix
   category: string;
   images: string[];
   isActive: boolean;
@@ -74,7 +91,9 @@ interface Product {
 interface ProductForm {
   name: string;
   description: string;
-  price: number;
+  price?: number;
+  hasVariants: boolean;
+  variants: ProductVariant[];
   category: string;
   tags: string[];
   isActive: boolean;
@@ -86,6 +105,8 @@ const initialForm: ProductForm = {
   name: '',
   description: '',
   price: 0,
+  hasVariants: false,
+  variants: [],
   category: 'Bouquets',
   tags: [],
   isActive: true,
@@ -93,7 +114,194 @@ const initialForm: ProductForm = {
   motsClesSEO: []
 };
 
-// Composant d'upload d'images - RESPONSIVE APPLIQUÉ
+const initialVariant: ProductVariant = {
+  name: '',
+  price: 0,
+  description: '',
+  image: '',
+  isActive: true,
+  order: 0
+};
+
+// Composant pour gérer les variantes
+function VariantManager({ 
+  variants, 
+  onChange 
+}: { 
+  variants: ProductVariant[], 
+  onChange: (variants: ProductVariant[]) => void 
+}) {
+  const addVariant = () => {
+    const newVariant = {
+      ...initialVariant,
+      order: variants.length,
+      name: `Taille ${variants.length + 1}`
+    };
+    onChange([...variants, newVariant]);
+  };
+
+  const updateVariant = (index: number, field: keyof ProductVariant, value: any) => {
+    const updatedVariants = [...variants];
+    updatedVariants[index] = { ...updatedVariants[index], [field]: value };
+    onChange(updatedVariants);
+  };
+
+  const removeVariant = (index: number) => {
+    const updatedVariants = variants.filter((_, i) => i !== index);
+    // Réajuster les ordres
+    const reorderedVariants = updatedVariants.map((variant, i) => ({
+      ...variant,
+      order: i
+    }));
+    onChange(reorderedVariants);
+  };
+
+  const moveVariant = (fromIndex: number, toIndex: number) => {
+    const updatedVariants = [...variants];
+    const [moved] = updatedVariants.splice(fromIndex, 1);
+    updatedVariants.splice(toIndex, 0, moved);
+    
+    // Réajuster les ordres
+    const reorderedVariants = updatedVariants.map((variant, i) => ({
+      ...variant,
+      order: i
+    }));
+    onChange(reorderedVariants);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-medium">Variantes de tailles</Label>
+        <Button type="button" onClick={addVariant} size="sm" variant="outline">
+          <Plus className="w-4 h-4 mr-2" />
+          Ajouter une taille
+        </Button>
+      </div>
+
+      {variants.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+          <p className="text-sm">Aucune variante définie</p>
+          <p className="text-xs text-gray-400 mt-1">Cliquez sur "Ajouter une taille" pour commencer</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {variants.map((variant, index) => (
+            <Card key={index} className="p-4">
+              <div className="flex items-start space-x-4">
+                {/* Contrôles de position */}
+                <div className="flex flex-col space-y-1">
+                  <Button 
+                    type="button"
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => moveVariant(index, Math.max(0, index - 1))}
+                    disabled={index === 0}
+                  >
+                    ↑
+                  </Button>
+                  <Button 
+                    type="button"
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => moveVariant(index, Math.min(variants.length - 1, index + 1))}
+                    disabled={index === variants.length - 1}
+                  >
+                    ↓
+                  </Button>
+                </div>
+
+                {/* Champs de la variante */}
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor={`variant-name-${index}`} className="text-xs">Nom de la taille *</Label>
+                    <Input
+                      id={`variant-name-${index}`}
+                      value={variant.name}
+                      onChange={(e) => updateVariant(index, 'name', e.target.value)}
+                      placeholder="ex: Petit, Moyen, Grand"
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor={`variant-price-${index}`} className="text-xs">Prix (€) *</Label>
+                    <Input
+                      id={`variant-price-${index}`}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={variant.price || ''}
+                      onChange={(e) => updateVariant(index, 'price', parseFloat(e.target.value) || 0)}
+                      placeholder="25.00"
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div className="flex items-end space-x-2">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={variant.isActive}
+                        onCheckedChange={(checked) => updateVariant(index, 'isActive', checked)}
+                      />
+                      <Label className="text-xs">Disponible</Label>
+                    </div>
+                    <Button 
+                      type="button"
+                      onClick={() => removeVariant(index)} 
+                      size="sm" 
+                      variant="destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description de la variante */}
+              <div className="mt-3 pl-12">
+                <Label htmlFor={`variant-description-${index}`} className="text-xs">Description (optionnelle)</Label>
+                <Textarea
+                  id={`variant-description-${index}`}
+                  value={variant.description || ''}
+                  onChange={(e) => updateVariant(index, 'description', e.target.value)}
+                  placeholder="ex: Idéal pour une table de 4 personnes"
+                  rows={2}
+                  className="mt-1"
+                />
+              </div>
+
+              {/* Image spécifique à la variante (optionnelle) */}
+              <div className="mt-3 pl-12">
+                <Label htmlFor={`variant-image-${index}`} className="text-xs">Image spécifique (optionnelle)</Label>
+                <Input
+                  id={`variant-image-${index}`}
+                  value={variant.image || ''}
+                  onChange={(e) => updateVariant(index, 'image', e.target.value)}
+                  placeholder="URL de l'image pour cette variante"
+                  className="mt-1"
+                />
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {variants.length > 0 && (
+        <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+          <p className="font-medium">💡 Conseils :</p>
+          <ul className="mt-1 space-y-1 text-xs">
+            <li>• La première variante sera affichée par défaut</li>
+            <li>• Utilisez les flèches pour réorganiser l'ordre d'affichage</li>
+            <li>• Les images spécifiques sont optionnelles (sinon, l'image principale sera utilisée)</li>
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Composant d'upload d'images (simplifié)
 function ImageUpload({ 
   images, 
   onImagesChange, 
@@ -107,7 +315,7 @@ function ImageUpload({
 
   const handleUpload = async (files: FileList) => {
     if (files.length === 0) return;
-    
+
     setUploading(true);
     try {
       const formData = new FormData();
@@ -117,18 +325,35 @@ function ImageUpload({
 
       const response = await fetch('/api/admin/upload', {
         method: 'POST',
-        body: formData
+        body: formData,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const newImages = [...images, ...data.data.urls].slice(0, maxImages);
-        onImagesChange(newImages);
-        toast.success('Images uploadées avec succès');
+      const result = await response.json();
+      console.log('Upload result:', result);
+
+      if (response.ok && result.success && result.data) {
+        // TON FORMAT : { success: true, data: { urls: ["https://..."] } }
+        let newImages: string[] = [];
+        
+        if (result.data.urls && Array.isArray(result.data.urls)) {
+          newImages = result.data.urls.filter((url: string) => 
+            typeof url === 'string' && url.trim().length > 0
+          );
+        }
+        
+        if (newImages.length > 0) {
+          onImagesChange([...images, ...newImages].slice(0, maxImages));
+          toast.success(`${newImages.length} image(s) uploadée(s) avec succès`);
+        } else {
+          console.error('Aucune URL trouvée dans:', result.data);
+          toast.error('Aucune URL d\'image trouvée dans la réponse');
+        }
       } else {
-        throw new Error('Erreur lors de l\'upload');
+        console.error('Upload failed:', result);
+        toast.error(result?.error?.message || result?.message || 'Erreur lors de l\'upload');
       }
     } catch (error) {
+      console.error('Upload error:', error);
       toast.error('Erreur lors de l\'upload des images');
     } finally {
       setUploading(false);
@@ -141,37 +366,36 @@ function ImageUpload({
   };
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
+    <div className="space-y-4">
+      <Label className="text-sm font-medium">Images du produit *</Label>
+      
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
         {images.map((image, index) => (
           <div key={index} className="relative group">
             <img
               src={image}
               alt={`Image ${index + 1}`}
-              className="w-full h-20 sm:h-24 md:h-32 object-cover rounded-lg"
+              className="w-full h-24 object-cover rounded-lg border"
             />
-            <div className="absolute top-0 left-0 w-full h-full bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center">
-              <Button
-                size="sm"
-                variant="destructive"
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 sm:p-2"
-                onClick={() => removeImage(index)}
-              >
-                <X className="w-3 h-3 sm:w-4 sm:h-4" />
-              </Button>
-            </div>
+            <button
+              type="button"
+              onClick={() => removeImage(index)}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <X className="w-4 h-4" />
+            </button>
             {index === 0 && (
-              <Badge className="absolute bottom-1 sm:bottom-2 left-1 sm:left-2 bg-green-600 text-xs">
+              <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
                 Principale
-              </Badge>
+              </div>
             )}
           </div>
         ))}
         
         {images.length < maxImages && (
-          <label className="w-full h-20 sm:h-24 md:h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-green-500 transition-colors">
-            <Upload className="w-4 h-4 sm:w-6 sm:h-6 text-gray-400 mb-1 sm:mb-2" />
-            <span className="text-xs sm:text-sm text-gray-600 text-center px-1">Ajouter</span>
+          <label className="w-full h-24 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-green-500 transition-colors">
+            <Upload className="w-6 h-6 text-gray-400 mb-2" />
+            <span className="text-xs text-gray-600 text-center px-1">Ajouter</span>
             <input
               type="file"
               multiple
@@ -185,7 +409,7 @@ function ImageUpload({
       </div>
       
       {uploading && (
-        <div className="text-center text-xs sm:text-sm text-gray-600">
+        <div className="text-center text-sm text-gray-600">
           Upload en cours...
         </div>
       )}
@@ -193,7 +417,7 @@ function ImageUpload({
   );
 }
 
-// Composant de formulaire produit - RESPONSIVE APPLIQUÉ
+// Composant de formulaire produit avec support des variants
 function ProductForm({ 
   product, 
   isEdit = false, 
@@ -210,13 +434,16 @@ function ProductForm({
       name: product.name,
       description: product.description,
       price: product.price,
+      hasVariants: product.hasVariants || false,
+      variants: product.variants || [],
       category: product.category,
-      tags: product.tags,
+      tags: product.tags || [],
       isActive: product.isActive,
       entretien: product.entretien || '',
       motsClesSEO: product.motsClesSEO || []
     } : initialForm
   );
+  
   const [images, setImages] = useState<string[]>(product?.images || []);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -227,30 +454,83 @@ function ProductForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!form.name || !form.description || form.price <= 0) {
-      toast.error('Veuillez remplir tous les champs obligatoires');
+    // Validations côté client
+    if (!form.name.trim()) {
+      toast.error('Le nom du produit est requis');
       return;
     }
 
+    if (!form.description.trim()) {
+      toast.error('La description est requise');
+      return;
+    }
+
+    if (!form.hasVariants && (!form.price || form.price <= 0)) {
+      toast.error('Le prix est requis pour les produits sans variants');
+      return;
+    }
+
+    if (form.hasVariants && (!form.variants || form.variants.length === 0)) {
+      toast.error('Au moins une variante est requise pour les produits avec variants');
+      return;
+    }
+
+    if (form.hasVariants) {
+      // Valider chaque variante
+      for (let i = 0; i < form.variants.length; i++) {
+        const variant = form.variants[i];
+        if (!variant.name.trim()) {
+          toast.error(`Le nom de la variante ${i + 1} est requis`);
+          return;
+        }
+        if (!variant.price || variant.price <= 0) {
+          toast.error(`Le prix de la variante "${variant.name}" est requis`);
+          return;
+        }
+      }
+    }
+
     if (images.length === 0) {
-      toast.error('Veuillez ajouter au moins une image');
+      toast.error('Au moins une image est requise');
+      return;
+    }
+
+    // NOUVEAU : Validation des images comme strings
+    const validImages = images.filter(img => typeof img === 'string' && img.trim().length > 0);
+    if (validImages.length === 0) {
+      toast.error('Les images ne sont pas valides. Veuillez les re-uploader.');
       return;
     }
 
     setIsSaving(true);
     try {
-      await onSave(form, images);
+      await onSave(form, validImages); // Utiliser les images validées
     } finally {
       setIsSaving(false);
     }
   };
 
+  // Gestion du toggle variants
+  const handleVariantsToggle = (enabled: boolean) => {
+    setForm(prev => ({
+      ...prev,
+      hasVariants: enabled,
+      // Si on active les variants et qu'il n'y en a pas, on en crée une par défaut
+      variants: enabled && prev.variants.length === 0 
+        ? [{ ...initialVariant, name: 'Taille unique', price: prev.price || 0 }]
+        : prev.variants,
+      // Si on désactive les variants, on prend le prix de la première variante
+      price: !enabled && prev.variants.length > 0 ? prev.variants[0].price : prev.price
+    }));
+  };
+
   // Gestion des tags
   const addTag = () => {
-    if (tagInput.trim() && !form.tags.includes(tagInput.trim())) {
+    const tag = tagInput.trim().toLowerCase();
+    if (tag && !form.tags.includes(tag)) {
       setForm(prev => ({
         ...prev,
-        tags: [...prev.tags, tagInput.trim()]
+        tags: [...prev.tags, tag]
       }));
       setTagInput('');
     }
@@ -269,8 +549,9 @@ function ProductForm({
       addTag();
     } else if (e.key === ',' || e.key === ';') {
       e.preventDefault();
-      // Traiter les tags séparés par virgule
-      const newTags = tagInput.split(/[,;]/).map(tag => tag.trim()).filter(tag => tag && !form.tags.includes(tag));
+      const newTags = tagInput.split(/[,;]/)
+        .map(tag => tag.trim().toLowerCase())
+        .filter(tag => tag && !form.tags.includes(tag));
       setForm(prev => ({
         ...prev,
         tags: [...prev.tags, ...newTags]
@@ -281,10 +562,11 @@ function ProductForm({
 
   // Gestion des mots-clés SEO
   const addMotCle = () => {
-    if (motsClesInput.trim() && !form.motsClesSEO.includes(motsClesInput.trim())) {
+    const motCle = motsClesInput.trim();
+    if (motCle && !form.motsClesSEO.includes(motCle)) {
       setForm(prev => ({
         ...prev,
-        motsClesSEO: [...prev.motsClesSEO, motsClesInput.trim()]
+        motsClesSEO: [...prev.motsClesSEO, motCle]
       }));
       setMotsClesInput('');
     }
@@ -301,76 +583,48 @@ function ProductForm({
     if (e.key === 'Enter') {
       e.preventDefault();
       addMotCle();
-    } else if (e.key === ',' || e.key === ';') {
-      e.preventDefault();
-      // Traiter les mots-clés séparés par virgule
-      const newMotsCles = motsClesInput.split(/[,;]/).map(motCle => motCle.trim()).filter(motCle => motCle && !form.motsClesSEO.includes(motCle));
-      setForm(prev => ({
-        ...prev,
-        motsClesSEO: [...prev.motsClesSEO, ...newMotsCles]
-      }));
-      setMotsClesInput('');
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-      {/* Informations de base - RESPONSIVE APPLIQUÉ */}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Informations de base */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base sm:text-lg">Informations de base</CardTitle>
+          <CardTitle className="text-lg">Informations générales</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 sm:space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-            <div>
-              <Label htmlFor="name" className="text-sm sm:text-base">Nom du produit *</Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => setForm({...form, name: e.target.value})}
-                placeholder="Ex: Bouquet de roses rouges"
-                className="text-sm sm:text-base"
-              />
-            </div>
-            <div>
-              <Label htmlFor="price" className="text-sm sm:text-base">Prix (€) *</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.price}
-                onChange={(e) => setForm({...form, price: parseFloat(e.target.value) || 0})}
-                placeholder="45.90"
-                className="text-sm sm:text-base"
-              />
-            </div>
-          </div>
-
+        <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="description" className="text-sm sm:text-base">Description *</Label>
-            <Textarea
-              id="description"
-              value={form.description}
-              onChange={(e) => setForm({...form, description: e.target.value})}
-              placeholder="Décrivez votre création florale..."
-              rows={4}
-              className="text-sm sm:text-base"
+            <Label htmlFor="name">Nom du produit *</Label>
+            <Input
+              id="name"
+              value={form.name}
+              onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="ex: Bouquet de roses rouges"
+              className="mt-1"
             />
           </div>
 
-          {/* Catégorie uniquement - RESPONSIVE APPLIQUÉ */}
           <div>
-            <Label className="text-sm sm:text-base">Catégorie *</Label>
-            <Select 
-              value={form.category} 
-              onValueChange={(value) => setForm({...form, category: value})}
-            >
-              <SelectTrigger className="text-sm sm:text-base">
-                <SelectValue />
+            <Label htmlFor="description">Description *</Label>
+            <Textarea
+              id="description"
+              value={form.description}
+              onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Décrivez votre création florale..."
+              rows={4}
+              className="mt-1"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="category">Catégorie *</Label>
+            <Select value={form.category} onValueChange={(value) => setForm(prev => ({ ...prev, category: value }))}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Choisir une catégorie" />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map(category => (
+                {CATEGORIES.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
                   </SelectItem>
@@ -381,143 +635,165 @@ function ProductForm({
         </CardContent>
       </Card>
 
-      {/* Tags et SEO - RESPONSIVE APPLIQUÉ */}
+      {/* Gestion des prix et variants */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base sm:text-lg">Tags et SEO</CardTitle>
+          <CardTitle className="text-lg">Prix et variantes</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 sm:space-y-4">
-          
+        <CardContent className="space-y-4">
+          {/* Toggle pour activer les variants */}
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <Label className="text-sm font-medium">Produit avec différentes tailles</Label>
+              <p className="text-xs text-gray-600 mt-1">
+                Activez cette option si votre produit propose plusieurs tailles avec des prix différents
+              </p>
+            </div>
+            <Switch
+              checked={form.hasVariants}
+              onCheckedChange={handleVariantsToggle}
+            />
+          </div>
+
+          {/* Prix simple OU gestion des variants */}
+          {!form.hasVariants ? (
+            <div>
+              <Label htmlFor="price">Prix (€) *</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.price || ''}
+                onChange={(e) => setForm(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                placeholder="25.00"
+                className="mt-1"
+              />
+            </div>
+          ) : (
+            <VariantManager
+              variants={form.variants}
+              onChange={(variants) => setForm(prev => ({ ...prev, variants }))}
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Images */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Images</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ImageUpload
+            images={images}
+            onImagesChange={setImages}
+            maxImages={5}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Tags et référencement */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Tags et référencement</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           {/* Tags */}
           <div>
-            <Label htmlFor="tags" className="text-sm sm:text-base">Tags</Label>
-            <div className="space-y-2">
-              <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-                <Input
-                  id="tags"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagKeyDown}
-                  placeholder="Tapez un tag et appuyez sur Entrée ou virgule"
-                  className="text-sm sm:text-base flex-1"
-                />
-                <Button type="button" onClick={addTag} variant="outline" size="sm" className="w-full sm:w-auto">
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                  <span className="sm:inline">Ajouter</span>
-                </Button>
-              </div>
-              <p className="text-xs text-gray-500">
-                Séparez les tags par une virgule (,) ou appuyez sur Entrée
-              </p>
-              <div className="flex flex-wrap gap-1 sm:gap-2">
-                {form.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="flex items-center gap-1 text-xs">
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="hover:text-red-500"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
+            <Label htmlFor="tags">Tags</Label>
+            <div className="mt-1">
+              <Input
+                id="tags"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder="Tapez un tag et appuyez sur Entrée (ou séparez par des virgules)"
+              />
+              {form.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {form.tags.map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="ml-1 hover:text-red-500"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Mots-clés SEO - RESPONSIVE APPLIQUÉ */}
+          {/* Mots-clés SEO */}
           <div>
-            <Label htmlFor="motsClesSEO" className="text-sm sm:text-base">Mots-clés SEO</Label>
-            <div className="space-y-2">
-              <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-                <Input
-                  id="motsClesSEO"
-                  value={motsClesInput}
-                  onChange={(e) => setMotsClesInput(e.target.value)}
-                  onKeyDown={handleMotCleKeyDown}
-                  placeholder="Tapez un mot-clé et appuyez sur Entrée ou virgule"
-                  className="text-sm sm:text-base flex-1"
-                />
-                <Button type="button" onClick={addMotCle} variant="outline" size="sm" className="w-full sm:w-auto">
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
-                  <span className="sm:inline">Ajouter</span>
-                </Button>
-              </div>
-              <p className="text-xs text-gray-500">
-                Séparez les mots-clés par une virgule (,) ou appuyez sur Entrée
-              </p>
-              <div className="flex flex-wrap gap-1 sm:gap-2">
-                {form.motsClesSEO.map((motCle, index) => (
-                  <Badge key={index} variant="outline" className="flex items-center gap-1 text-xs">
-                    {motCle}
-                    <button
-                      type="button"
-                      onClick={() => removeMotCle(motCle)}
-                      className="hover:text-red-500"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
+            <Label htmlFor="motsClesSEO">Mots-clés SEO</Label>
+            <div className="mt-1">
+              <Input
+                id="motsClesSEO"
+                value={motsClesInput}
+                onChange={(e) => setMotsClesInput(e.target.value)}
+                onKeyDown={handleMotCleKeyDown}
+                placeholder="Mot-clé pour le référencement"
+              />
+              {form.motsClesSEO.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {form.motsClesSEO.map((motCle, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {motCle}
+                      <button
+                        type="button"
+                        onClick={() => removeMotCle(motCle)}
+                        className="ml-1 hover:text-red-500"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Images - RESPONSIVE APPLIQUÉ */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base sm:text-lg">Images *</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ImageUpload images={images} onImagesChange={setImages} />
-          <p className="text-xs sm:text-sm text-gray-500 mt-2">
-            La première image sera utilisée comme image principale
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Détails optionnels - RESPONSIVE APPLIQUÉ */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base sm:text-lg">Détails optionnels</CardTitle>
-        </CardHeader>
-        <CardContent>
+          {/* Instructions d'entretien */}
           <div>
-            <Label htmlFor="entretien" className="text-sm sm:text-base">Instructions d'entretien</Label>
+            <Label htmlFor="entretien">Instructions d'entretien</Label>
             <Textarea
               id="entretien"
               value={form.entretien}
-              onChange={(e) => setForm({...form, entretien: e.target.value})}
-              placeholder="Comment entretenir ce produit..."
+              onChange={(e) => setForm(prev => ({ ...prev, entretien: e.target.value }))}
+              placeholder="Comment bien entretenir cette création..."
               rows={3}
-              className="text-sm sm:text-base"
+              className="mt-1"
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Actions - RESPONSIVE APPLIQUÉ */}
-      <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-        <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
+      {/* Actions */}
+      <div className="flex justify-end space-x-4 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel}>
           Annuler
         </Button>
-        <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
-          {isSaving ? 'Sauvegarde...' : (isEdit ? 'Modifier' : 'Créer')}
+        <Button type="submit" disabled={isSaving}>
+          {isSaving ? 'Sauvegarde...' : (isEdit ? 'Mettre à jour' : 'Créer le produit')}
         </Button>
-      </DialogFooter>
+      </div>
     </form>
   );
 }
 
-export default function AdminProductsPage() {
+// Composant principal de la page admin produits
+export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   useEffect(() => {
@@ -526,20 +802,25 @@ export default function AdminProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/admin/products', {
-        method: 'GET',
-        credentials: 'include'
+      setIsLoading(true);
+      const params = new URLSearchParams({
+        activeOnly: 'false', // Afficher tous les produits en admin
+        search: searchTerm,
+        category: selectedCategory === 'all' ? '' : selectedCategory,
+        limit: '100' // Afficher plus de produits en admin
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setProducts(data.data.products || []);
+      const response = await fetch(`/api/products?${params}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setProducts(result.data.products || []);
       } else {
-        throw new Error('Erreur lors du chargement des produits');
+        toast.error(result.error?.message || 'Erreur lors du chargement des produits');
       }
-    } catch (error: any) {
-      console.error('Erreur:', error);
-      toast.error('Impossible de charger les produits');
+    } catch (error) {
+      console.error('Fetch products error:', error);
+      toast.error('Erreur lors du chargement des produits');
     } finally {
       setIsLoading(false);
     }
@@ -553,106 +834,87 @@ export default function AdminProductsPage() {
       };
 
       const url = editingProduct 
-        ? `/api/admin/products/${editingProduct._id}`
-        : '/api/admin/products';
+        ? `/api/admin/products/${editingProduct._id}` 
+        : '/api/products';
       
       const method = editingProduct ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(productData)
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData),
       });
 
-      if (response.ok) {
-        toast.success(editingProduct ? 'Produit modifié avec succès' : 'Produit créé avec succès');
-        setIsDialogOpen(false);
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(editingProduct ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
+        setShowForm(false);
         setEditingProduct(null);
-        fetchProducts();
+        fetchProducts(); // Recharger la liste
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Erreur lors de la sauvegarde');
+        toast.error(result.error?.message || 'Erreur lors de la sauvegarde');
       }
-    } catch (error: any) {
-      console.error('Erreur:', error);
-      toast.error(error.message || 'Erreur lors de la sauvegarde du produit');
+    } catch (error) {
+      console.error('Save product error:', error);
+      toast.error('Erreur lors de la sauvegarde du produit');
     }
   };
 
-  const handleDeleteProduct = async (productId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
+  const handleDeleteProduct = async (product: Product) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer "${product.name}" ?`)) {
+      return;
+    }
 
     try {
-      const response = await fetch(`/api/admin/products/${productId}`, {
+      const response = await fetch(`/api/admin/products/${product._id}`, {
         method: 'DELETE',
-        credentials: 'include'
       });
 
-      if (response.ok) {
+      const result = await response.json();
+
+      if (result.success) {
         toast.success('Produit supprimé avec succès');
         fetchProducts();
       } else {
-        throw new Error('Erreur lors de la suppression');
+        toast.error(result.error?.message || 'Erreur lors de la suppression');
       }
-    } catch (error: any) {
-      console.error('Erreur:', error);
+    } catch (error) {
+      console.error('Delete product error:', error);
       toast.error('Erreur lors de la suppression du produit');
     }
   };
 
-  const handleToggleActive = async (productId: string, isActive: boolean) => {
-    try {
-      const response = await fetch(`/api/admin/products/${productId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ isActive: !isActive })
-      });
-
-      if (response.ok) {
-        toast.success(isActive ? 'Produit désactivé' : 'Produit activé');
-        fetchProducts();
-      } else {
-        throw new Error('Erreur lors de la modification');
-      }
-    } catch (error: any) {
-      console.error('Erreur:', error);
-      toast.error('Erreur lors de la modification du statut');
+  // Fonction pour afficher le prix d'un produit
+  const displayProductPrice = (product: Product) => {
+    if (product.hasVariants) {
+      return product.priceRangeFormatted || 'Prix non défini';
+    } else {
+      return product.displayPriceFormatted || `${product.price}€`;
     }
   };
 
-  // Filtrage des produits
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesCategory = filterCategory === 'all' || product.category === filterCategory;
-    
-    return matchesSearch && matchesCategory;
-  });
-
-  const openCreateDialog = () => {
-    setEditingProduct(null);
-    setIsDialogOpen(true);
-  };
-
-  const openEditDialog = (product: Product) => {
-    setEditingProduct(product);
-    setIsDialogOpen(true);
-  };
-
-  const closeDialog = () => {
-    setIsDialogOpen(false);
-    setEditingProduct(null);
-  };
-
-  if (isLoading) {
+  if (showForm) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-green-600"></div>
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold">
+              {editingProduct ? 'Modifier le produit' : 'Créer un nouveau produit'}
+            </h1>
+          </div>
+
+          <ProductForm
+            product={editingProduct}
+            isEdit={!!editingProduct}
+            onSave={handleSaveProduct}
+            onCancel={() => {
+              setShowForm(false);
+              setEditingProduct(null);
+            }}
+          />
         </div>
       </AdminLayout>
     );
@@ -660,179 +922,172 @@ export default function AdminProductsPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 sm:space-y-8">
-        
-        {/* Header - RESPONSIVE APPLIQUÉ */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestion des Produits</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
-              Créez et gérez vos créations florales
-            </p>
-          </div>
-          <Button onClick={openCreateDialog} className="self-start sm:self-auto">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Gestion des produits</h1>
+          <Button onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Nouveau Produit
+            Nouveau produit
           </Button>
         </div>
 
-        {/* Filtres et recherche - RESPONSIVE APPLIQUÉ */}
+        {/* Filtres */}
         <Card>
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Rechercher un produit..."
+                    placeholder="Rechercher des produits..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 text-sm sm:text-base"
+                    className="pl-10"
                   />
                 </div>
               </div>
-              <div className="w-full sm:w-48">
-                <Select value={filterCategory} onValueChange={setFilterCategory}>
-                  <SelectTrigger className="text-sm sm:text-base">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Toutes catégories</SelectItem>
-                    {CATEGORIES.map(category => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Toutes les catégories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes les catégories</SelectItem>
+                  {CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button onClick={fetchProducts} variant="outline">
+                <Filter className="w-4 h-4 mr-2" />
+                Filtrer
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Liste des produits - RESPONSIVE APPLIQUÉ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-          {filteredProducts.map((product) => (
-            <Card key={product._id} className="hover:shadow-md transition-shadow">
-              <div className="relative">
-                <img
-                  src={product.images[0] || '/api/placeholder/300/200'}
-                  alt={product.name}
-                  className="w-full h-32 sm:h-40 md:h-48 object-cover rounded-t-lg"
-                />
-                <Badge 
-                  className={`absolute top-2 right-2 text-xs ${
-                    product.isActive ? 'bg-green-600' : 'bg-gray-600'
-                  }`}
-                >
-                  {product.isActive ? 'Actif' : 'Inactif'}
-                </Badge>
-              </div>
-              
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate flex-1 mr-2">
-                    {product.name}
-                  </h3>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="p-1 sm:p-2">
-                        <MoreHorizontal className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openEditDialog(product)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Modifier
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleToggleActive(product._id, product.isActive)}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        {product.isActive ? 'Désactiver' : 'Activer'}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDeleteProduct(product._id)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Supprimer
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                
-                <p className="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-2">
-                  {product.description}
-                </p>
-                
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-base sm:text-lg font-bold text-green-600">
-                    {typeof product.price === 'number' ? product.price.toFixed(2) : '0.00'}€
-                  </span>
-                  <Badge variant="outline" className="text-xs">
-                    {product.category}
-                  </Badge>
-                </div>
-                
-                {product.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {product.tags.slice(0, 3).map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                    {product.tags.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{product.tags.length - 3}
-                      </Badge>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredProducts.length === 0 && (
+        {/* Liste des produits */}
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p>Chargement des produits...</p>
+          </div>
+        ) : products.length === 0 ? (
           <Card>
-            <CardContent className="text-center py-8 sm:py-12">
-              <ImageIcon className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
-                Aucun produit trouvé
-              </h3>
-              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
-                {searchTerm || filterCategory !== 'all' 
-                  ? 'Aucun produit ne correspond à vos critères de recherche.'
-                  : 'Commencez par créer votre premier produit.'
-                }
-              </p>
-              {(!searchTerm && filterCategory === 'all') && (
-                <Button onClick={openCreateDialog}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Créer un produit
-                </Button>
-              )}
+            <CardContent className="text-center py-12">
+              <Package className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p className="text-gray-500 mb-4">Aucun produit trouvé</p>
+              <Button onClick={() => setShowForm(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Créer votre premier produit
+              </Button>
             </CardContent>
           </Card>
-        )}
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {products.map((product) => (
+              <Card key={product._id} className="overflow-hidden">
+                <div className="relative h-48">
+                  <img
+                    src={product.images[0] || '/api/placeholder/300/200'}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2 right-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="ghost" className="bg-white/80">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => {
+                          setEditingProduct(product);
+                          setShowForm(true);
+                        }}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Modifier
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDeleteProduct(product)}>
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  
+                  {/* Badge pour les produits avec variants */}
+                  {product.hasVariants && (
+                    <div className="absolute top-2 left-2">
+                      <Badge variant="secondary" className="text-xs">
+                        Multi-tailles
+                      </Badge>
+                    </div>
+                  )}
+                </div>
 
-        {/* Dialog de création/modification - RESPONSIVE APPLIQUÉ */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">
-                {editingProduct ? 'Modifier le produit' : 'Nouveau produit'}
-              </DialogTitle>
-            </DialogHeader>
-            <ProductForm
-              product={editingProduct}
-              isEdit={!!editingProduct}
-              onSave={handleSaveProduct}
-              onCancel={closeDialog}
-            />
-          </DialogContent>
-        </Dialog>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-lg truncate flex-1">{product.name}</h3>
+                    <Badge variant={product.isActive ? "default" : "secondary"} className="ml-2">
+                      {product.isActive ? 'Actif' : 'Inactif'}
+                    </Badge>
+                  </div>
+
+                  <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                    {product.description}
+                  </p>
+
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg font-bold text-green-600">
+                      {displayProductPrice(product)}
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {product.category}
+                    </Badge>
+                  </div>
+
+                  {product.tags && product.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {product.tags.slice(0, 3).map((tag, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                      {product.tags.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{product.tags.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Affichage des variants pour les produits multi-tailles */}
+                  {product.hasVariants && product.variants && product.variants.length > 0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-xs text-gray-500 mb-2">
+                        {product.variants.length} taille{product.variants.length > 1 ? 's' : ''} :
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {product.variants.map((variant, index) => (
+                          <Badge 
+                            key={index} 
+                            variant={variant.isActive ? "default" : "secondary"} 
+                            className="text-xs"
+                          >
+                            {variant.name} - {variant.price}€
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

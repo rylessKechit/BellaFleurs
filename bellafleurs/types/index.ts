@@ -33,17 +33,42 @@ export interface IUser extends BaseDocument {
   isEmailVerified?: boolean;
 }
 
-// Types pour les produits
+// Interface pour une variante de produit
+export interface IProductVariant {
+  _id?: string;
+  name: string;                    // "Petit", "Moyen", "Grand", "Taille unique"
+  price: number;                   // Prix spécifique à cette variante
+  description?: string;            // Description optionnelle de la variante
+  image?: string;                  // Image optionnelle spécifique à cette variante
+  isActive: boolean;               // Si cette variante est disponible
+  order: number;                   // Ordre d'affichage (0 = premier)
+}
+
+// Types pour les produits - MIS À JOUR AVEC VARIANTS
 export interface IProduct extends BaseDocument {
   name: string;
   description: string;
-  price: number;
-  category: 'bouquets' | 'compositions' | 'plantes' | 'evenements';
-  subcategory: string;
+  price?: number;                  // Optionnel si hasVariants = true
+  hasVariants: boolean;          // Nouveau : true = produit avec tailles multiples
+  variants: IProductVariant[];     // Nouveau : array des variantes
+  category: 'Bouquets' | 'Fleurs de saisons' | 'Compositions piquées' | 'Roses' | 'Orchidées' | 'Deuil' | 'Abonnement';
+  subcategory?: string;            // Garder pour compatibilité
   images: string[];
   isActive: boolean;
   tags: string[];
-  seo: {
+  
+  // Champs optionnels mis à jour
+  entretien?: string;
+  motsClesSEO?: string[];
+  slug?: string;
+  averageRating?: number;
+  reviewsCount?: number;
+  careInstructions?: string;
+  difficulty?: 'facile' | 'modéré' | 'difficile';
+  composition?: string;
+  
+  // Ancien champ SEO (garder pour compatibilité)
+  seo?: {
     title: string;
     description: string;
     keywords: string[];
@@ -56,10 +81,14 @@ export interface IProduct extends BaseDocument {
   };
   
   // Méthodes d'instance
-  updateStock(quantity: number): Promise<IProduct>;
-  reduceStock(quantity: number): Promise<IProduct>;
+  updateStock?(quantity: number): Promise<IProduct>;
+  reduceStock?(quantity: number): Promise<IProduct>;
   addTag(tag: string): Promise<IProduct>;
   removeTag(tag: string): Promise<IProduct>;
+  addVariant?(variant: Omit<IProductVariant, '_id' | 'order'>): Promise<IProduct>;
+  removeVariant?(variantId: string): Promise<IProduct>;
+  updateVariant?(variantId: string, updates: Partial<IProductVariant>): Promise<IProduct>;
+  getDefaultVariant?(): IProductVariant | null;
   
   // Virtuals
   isInStock?: boolean;
@@ -68,15 +97,21 @@ export interface IProduct extends BaseDocument {
   mainImage?: string;
   categoryLabel?: string;
   priceFormatted?: string;
+  displayPrice?: number;           // Prix à afficher (price ou prix du premier variant)
+  displayPriceFormatted?: string;
+  priceRangeFormatted?: string;    // "À partir de 25€" ou "25€ - 45€"
 }
 
-// Types pour les commandes
+// Types pour les commandes - MIS À JOUR AVEC VARIANTS
 export interface IOrderItem {
   product: string; // ObjectId en string
   name: string;
   price: number;
   quantity: number;
   image: string;
+  // Nouveau : Support des variants dans le panier/commandes
+  variantId?: string;              // ID de la variante choisie
+  variantName?: string;            // Nom de la variante pour affichage
 }
 
 export interface IOrder extends BaseDocument {
@@ -142,7 +177,7 @@ export interface ICategory {
   }[];
 }
 
-// Types pour les filtres de recherche
+// Types pour les filtres de recherche - MIS À JOUR AVEC VARIANTS
 export interface ProductFilters {
   category?: string;
   subcategory?: string;
@@ -151,6 +186,7 @@ export interface ProductFilters {
   inStock?: boolean;
   tags?: string[];
   search?: string;
+  hasVariants?: boolean;           // Nouveau filtre pour variants
 }
 
 // Types pour la pagination
@@ -311,17 +347,34 @@ export interface ComponentWithClassName {
   className?: string;
 }
 
-// Types pour les formulaires de produits
+// Types pour les formulaires de produits - MIS À JOUR AVEC VARIANTS
+export interface ProductFormVariant {
+  name: string;
+  price: number;
+  description?: string;
+  image?: string;
+  isActive: boolean;
+  order: number;
+}
+
 export interface ProductFormData {
   name: string;
   description: string;
-  price: number;
+  price?: number;                  // Optionnel si hasVariants = true
+  hasVariants: boolean;            // Nouveau champ
+  variants: ProductFormVariant[];  // Nouveau champ
   category: IProduct['category'];
-  subcategory: string;
+  subcategory?: string;            // Garder pour compatibilité
   images: string[];
   isActive: boolean;
   tags: string[];
-  seo: {
+  entretien?: string;
+  motsClesSEO?: string[];
+  careInstructions?: string;
+  difficulty?: 'facile' | 'modéré' | 'difficile';
+  composition?: string;
+  // Garder pour compatibilité
+  seo?: {
     title: string;
     description: string;
     keywords: string[];
