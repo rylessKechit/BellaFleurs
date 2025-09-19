@@ -166,6 +166,8 @@ export async function POST(
 
     // Valider les données requises
     const { orderData } = body;
+
+    console.log('Received orderData for fallback order creation:', orderData);
     
     if (!orderData || !orderData.customerInfo || !orderData.deliveryInfo || !orderData.items) {
       return NextResponse.json({

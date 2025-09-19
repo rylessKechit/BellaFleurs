@@ -9,7 +9,7 @@ import {
   useStripe,
   useElements
 } from '@stripe/react-stripe-js';
-import { CreditCard, Shield, AlertCircle, CheckCircle } from 'lucide-react';
+import { CreditCard, Shield, AlertCircle, CheckCircle, Smartphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 // Configuration Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
 
-// Styles pour CardElement
+// Styles pour CardElement - Version simplifiée
 const cardElementOptions = {
   style: {
     base: {
@@ -35,13 +35,13 @@ const cardElementOptions = {
       iconColor: '#9e2146',
     },
   },
-  hidePostalCode: true, // On gère déjà l'adresse séparément
+  hidePostalCode: true,
 };
 
 // Interface pour les props du formulaire
 interface StripePaymentFormProps {
   orderData: any;
-  amount: number; // Montant en euros
+  amount: number;
   currency?: string;
   customerEmail?: string;
   onSuccess: (result: any) => void;
@@ -63,9 +63,94 @@ function PaymentForm({
   const elements = useElements();
   
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentIntent, setPaymentIntent] = useState<any>(null);
   const [cardError, setCardError] = useState<string>('');
   const [cardComplete, setCardComplete] = useState(false);
+  const [paymentRequest, setPaymentRequest] = useState<any>(null);
+  const [canMakePayment, setCanMakePayment] = useState(false);
+  const [showCardForm, setShowCardForm] = useState(false);
+
+  // Initialiser Payment Request (Apple Pay / Google Pay)
+  useEffect(() => {
+    if (stripe) {
+      const pr = stripe.paymentRequest({
+        country: 'FR',
+        currency: currency.toLowerCase(),
+        total: {
+          label: 'Bella Fleurs',
+          amount: Math.round(amount * 100),
+        },
+        requestPayerName: true,
+        requestPayerEmail: true,
+        requestPayerPhone: true,
+      });
+
+      // Vérifier si Apple Pay / Google Pay est disponible
+      pr.canMakePayment().then(result => {
+        if (result) {
+          setPaymentRequest(pr);
+          setCanMakePayment(true);
+        } else {
+          setShowCardForm(true); // Afficher directement le formulaire carte
+        }
+      });
+
+      // Gérer le paiement Apple Pay / Google Pay
+      pr.on('paymentmethod', async (ev) => {
+        setIsProcessing(true);
+        
+        try {
+          // Créer le payload corrigé pour l'API - STRUCTURE CORRIGÉE
+          const paymentPayload = {
+            // Directement les propriétés attendues par l'API (pas de wrapper orderData)
+            items: orderData.items || [],
+            customerInfo: orderData.customerInfo || {},
+            deliveryInfo: orderData.deliveryInfo || {},
+            paymentMethod: 'card',
+            totalAmount: amount
+          };
+
+          console.log('🔄 Payload envoyé:', paymentPayload);
+
+          // Créer Payment Intent
+          const response = await fetch('/api/payments/create-payment-intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(paymentPayload)
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'Erreur lors de la création du paiement');
+          }
+
+          const result = await response.json();
+          const { client_secret } = result.data.paymentIntent;
+
+          // Confirmer le paiement
+          const { error: confirmError, paymentIntent } = await stripe!.confirmCardPayment(
+            client_secret,
+            { payment_method: ev.paymentMethod.id },
+            { handleActions: false }
+          );
+
+          if (confirmError) {
+            ev.complete('fail');
+            onError(confirmError.message || 'Erreur lors du paiement');
+          } else {
+            ev.complete('success');
+            onSuccess(paymentIntent);
+          }
+        } catch (error: any) {
+          console.error('❌ Erreur Payment Request:', error);
+          ev.complete('fail');
+          onError(error.message || 'Erreur lors du paiement');
+        } finally {
+          setIsProcessing(false);
+        }
+      });
+    }
+  }, [stripe, amount, currency, customerEmail, orderData, onSuccess, onError]);
 
   // Gérer les changements de la carte
   const handleCardChange = (event: any) => {
@@ -73,8 +158,8 @@ function PaymentForm({
     setCardComplete(event.complete);
   };
 
-  // Traiter le paiement
-  const handleSubmit = async (event: React.FormEvent) => {
+  // Traiter le paiement par carte
+  const handleCardSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!stripe || !elements) {
@@ -96,69 +181,61 @@ function PaymentForm({
     setIsProcessing(true);
 
     try {
-      // 1. Créer le Payment Intent
-      console.log('🔄 Création du Payment Intent...');
-      
+      // Créer le payload corrigé pour l'API - STRUCTURE CORRIGÉE  
+      const paymentPayload = {
+        // Directement les propriétés attendues par l'API (pas de wrapper orderData)
+        items: orderData.items || [],
+        customerInfo: orderData.customerInfo || {},
+        deliveryInfo: orderData.deliveryInfo || {},
+        paymentMethod: 'card',
+        totalAmount: amount
+      };
+
+      console.log('🔄 Payload envoyé pour carte:', paymentPayload);
+
+      // Créer Payment Intent
       const response = await fetch('/api/payments/create-payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          amount: Math.round(amount * 100),
-          currency,
-          customerEmail,
-          orderData
-        })
+        body: JSON.stringify(paymentPayload)
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Erreur API:', errorData);
         throw new Error(errorData.error?.message || 'Erreur lors de la création du paiement');
       }
 
       const result = await response.json();
-      const newPaymentIntent = result.data.paymentIntent;
-      console.log('✅ Payment Intent créé:', newPaymentIntent.id);
+      const { client_secret } = result.data.paymentIntent;
 
-      // 2. Confirmer le paiement avec Stripe
-      console.log('🔄 Confirmation du paiement...');
-      
-      const { error: confirmError, paymentIntent: confirmedPaymentIntent } = await stripe.confirmCardPayment(
-        newPaymentIntent.client_secret,
+      console.log('✅ Payment Intent créé avec succès');
+
+      // Confirmer le paiement avec la carte
+      const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+        client_secret,
         {
           payment_method: {
             card: cardElement,
             billing_details: {
-              name: orderData.customerInfo.name,
-              email: orderData.customerInfo.email,
-              phone: orderData.customerInfo.phone,
-              address: orderData.deliveryInfo.address ? {
-                line1: orderData.deliveryInfo.address.street,
-                city: orderData.deliveryInfo.address.city,
-                postal_code: orderData.deliveryInfo.address.zipCode,
-                country: 'FR'
-              } : undefined
+              name: orderData.customerInfo?.name || '',
+              email: orderData.customerInfo?.email || '',
+              phone: orderData.customerInfo?.phone || '',
             }
           }
         }
       );
 
       if (confirmError) {
-        throw new Error(confirmError.message || 'Erreur lors de la confirmation du paiement');
-      }
-
-      if (confirmedPaymentIntent?.status === 'succeeded') {
-        console.log('✅ Paiement confirmé:', confirmedPaymentIntent.id);
-        onSuccess({
-          paymentIntent: confirmedPaymentIntent,
-          orderData
-        });
+        console.error('❌ Erreur confirmation:', confirmError);
+        onError(confirmError.message || 'Erreur lors du paiement');
       } else {
-        throw new Error('Le paiement n\'a pas pu être confirmé');
+        console.log('✅ Paiement confirmé:', paymentIntent.id);
+        onSuccess(paymentIntent);
       }
-
     } catch (error: any) {
-      console.error('❌ Erreur de paiement:', error);
+      console.error('❌ Erreur paiement carte:', error);
       onError(error.message || 'Erreur lors du paiement');
     } finally {
       setIsProcessing(false);
@@ -173,78 +250,107 @@ function PaymentForm({
           Paiement sécurisé
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          
-          {/* Montant */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex justify-between items-center">
-              <span className="font-medium text-gray-700">Montant à payer :</span>
-              <span className="text-2xl font-bold text-green-600">
-                {amount.toFixed(2)} €
-              </span>
+      <CardContent className="space-y-6">
+        
+        {/* Apple Pay / Google Pay */}
+        {canMakePayment && paymentRequest && !showCardForm && (
+          <div className="space-y-4">
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-4">Paiement express</p>
+              <div id="payment-request-button" className="mb-4">
+                {/* Le bouton Payment Request sera injecté ici par Stripe */}
+              </div>
+              <div className="flex items-center my-4">
+                <div className="flex-1 border-t border-gray-200"></div>
+                <span className="px-4 text-sm text-gray-500">ou</span>
+                <div className="flex-1 border-t border-gray-200"></div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowCardForm(true)}
+                className="w-full"
+              >
+                Payer par carte bancaire
+              </Button>
             </div>
           </div>
+        )}
 
-          {/* Élément carte Stripe */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Informations de carte bancaire
-            </label>
-            <div className={`border rounded-lg p-3 ${cardError ? 'border-red-300' : 'border-gray-300'} ${cardComplete ? 'border-green-300' : ''}`}>
-              <CardElement
-                options={cardElementOptions}
-                onChange={handleCardChange}
-              />
+        {/* Formulaire carte bancaire */}
+        {(showCardForm || !canMakePayment) && (
+          <form onSubmit={handleCardSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Informations de carte *
+              </label>
+              <div className={`p-3 border rounded-lg ${cardError ? 'border-red-300' : cardComplete ? 'border-green-300' : 'border-gray-300'}`}>
+                <CardElement
+                  options={cardElementOptions}
+                  onChange={handleCardChange}
+                />
+              </div>
+              {cardError && (
+                <div className="flex items-center mt-2 text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {cardError}
+                </div>
+              )}
+              {cardComplete && !cardError && (
+                <div className="flex items-center mt-2 text-green-600 text-sm">
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Informations de carte valides
+                </div>
+              )}
             </div>
-            {cardError && (
-              <div className="flex items-center mt-2 text-red-600 text-sm">
-                <AlertCircle className="w-4 h-4 mr-1" />
-                {cardError}
-              </div>
-            )}
-            {cardComplete && !cardError && (
-              <div className="flex items-center mt-2 text-green-600 text-sm">
-                <CheckCircle className="w-4 h-4 mr-1" />
-                Informations de carte valides
-              </div>
-            )}
-          </div>
 
-          {/* Sécurité */}
-          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-            <div className="flex items-center">
-              <Shield className="w-5 h-5 text-green-600 mr-2" />
-              <div className="text-sm text-green-800">
-                <div className="font-medium">Paiement 100% sécurisé</div>
-                <div>Vos données sont cryptées et protégées par Stripe</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bouton de paiement */}
-          <Button
-            type="submit"
-            disabled={!stripe || !cardComplete || isProcessing || disabled}
-            className="w-full py-3 text-lg"
-            size="lg"
-          >
-            {isProcessing ? (
+            {/* Sécurité */}
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
               <div className="flex items-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Traitement en cours...
+                <Shield className="w-5 h-5 text-green-600 mr-2" />
+                <div className="text-sm text-green-800">
+                  <div className="font-medium">Paiement 100% sécurisé</div>
+                  <div>Vos données sont cryptées et protégées par Stripe</div>
+                </div>
               </div>
-            ) : (
-              `Payer ${amount.toFixed(2)} €`
-            )}
-          </Button>
+            </div>
 
-          {/* Informations légales */}
-          <div className="text-xs text-gray-500 text-center">
-            En cliquant sur "Payer", vous acceptez d'être débité de {amount.toFixed(2)} € 
-            et vous confirmez avoir lu nos conditions de vente.
-          </div>
-        </form>
+            {/* Bouton de paiement */}
+            <Button
+              type="submit"
+              disabled={!stripe || !cardComplete || isProcessing || disabled}
+              className="w-full py-3 text-lg"
+              size="lg"
+            >
+              {isProcessing ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Traitement en cours...
+                </div>
+              ) : (
+                `Payer ${amount.toFixed(2)} €`
+              )}
+            </Button>
+          </form>
+        )}
+
+        {/* Afficher le bouton "Retour aux options" si on a affiché le formulaire carte */}
+        {canMakePayment && showCardForm && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setShowCardForm(false)}
+            className="w-full"
+          >
+            ← Retour aux options de paiement
+          </Button>
+        )}
+
+        {/* Informations légales */}
+        <div className="text-xs text-gray-500 text-center">
+          En cliquant sur "Payer", vous acceptez d'être débité de {amount.toFixed(2)} € 
+          et vous confirmez avoir lu nos conditions de vente.
+        </div>
       </CardContent>
     </Card>
   );

@@ -21,6 +21,8 @@ export async function POST(req: NextRequest) {
       orderData.deliveryInfo.date = new Date(orderData.deliveryInfo.date);
     }
 
+    console.log('Order Data reçue:', orderData);
+
     // Validation des données de base
     if (!orderData.items || !orderData.customerInfo || !orderData.deliveryInfo) {
       return NextResponse.json({
