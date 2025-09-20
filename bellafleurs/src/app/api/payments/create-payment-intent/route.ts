@@ -36,22 +36,7 @@ export async function POST(req: NextRequest) {
           code: 'INCOMPLETE_ORDER_DATA'
         }
       }, { status: 400 });
-    }
-
-    // Calculs et validation
-    const calculatedTotal = orderData.items.reduce(
-      (sum: number, item: any) => sum + (item.price * item.quantity), 0
-    );
-
-    if (Math.abs(calculatedTotal - orderData.totalAmount) > 0.01) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Incohérence dans le total de la commande',
-          code: 'AMOUNT_MISMATCH'
-        }
-      }, { status: 400 });
-    }
+    }orderData.totalAmount
 
     // Conversion pour Stripe (centimes)
     const amount = Math.round(orderData.totalAmount * 100);
