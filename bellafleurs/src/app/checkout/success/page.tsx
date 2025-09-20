@@ -99,14 +99,6 @@ export default function CheckoutSuccessPage() {
             <p className="text-lg text-gray-600 mb-6">
               Votre commande a été confirmée et va être traitée dans les plus brefs délais.
             </p>
-
-            {paymentIntentId && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-blue-800">
-                  <strong>Référence de paiement :</strong> {paymentIntentId}
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Informations de commande */}

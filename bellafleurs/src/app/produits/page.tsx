@@ -470,31 +470,10 @@ export default function ProductsPage() {
               </span>
               {product.hasVariants && (
                 <span className="text-xs text-gray-500">
-                  {product.variants?.filter(v => v.isActive).length || 0} taille{(product.variants?.filter(v => v.isActive).length || 0) > 1 ? 's' : ''}
+                  {product.variants?.filter(v => v.isActive).length || 0} taille{(product.variants?.filter(v => v.isActive).length || 0) > 1 ? '' : ''}
                 </span>
               )}
             </div>
-
-            {/* Rating */}
-            {product.averageRating && product.averageRating > 0 && (
-              <div className="flex items-center gap-1">
-                <div className="flex">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`w-4 h-4 ${
-                        star <= product.averageRating! 
-                          ? 'text-yellow-400 fill-yellow-400' 
-                          : 'text-gray-300'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm text-gray-600">
-                  ({product.reviewsCount || 0})
-                </span>
-              </div>
-            )}
 
             {/* Tags */}
             {product.tags && product.tags.length > 0 && (

@@ -1,12 +1,16 @@
-// src/app/api/payments/create-payment-intent/route.ts - Correction date
+// src/app/api/payments/create-payment-intent/route.ts - Solution Long Terme
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { stripe } from '@/lib/stripe';
+import connectDB from '@/lib/mongodb';
+import Order from '@/models/Order';
+import Cart from '@/models/Cart';
+import { sendOrderConfirmation, sendNewOrderNotification } from '@/lib/email';
 
-// POST /api/payments/create-payment-intent - Créer un Payment Intent avec conversion date
+// POST /api/payments/create-payment-intent - Créer Payment Intent + Commande en attente
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     const orderData = body;
 
-    // 🔧 CORRECTION : Convertir la date string en Date
+    // Correction : Convertir la date string en Date
     if (orderData.deliveryInfo?.date && typeof orderData.deliveryInfo.date === 'string') {
       orderData.deliveryInfo.date = new Date(orderData.deliveryInfo.date);
     }
@@ -52,7 +56,7 @@ export async function POST(req: NextRequest) {
     // Conversion pour Stripe (centimes)
     const amount = Math.round(orderData.totalAmount * 100);
     const currency = 'eur';
-    const customerEmail = session?.user?.email;
+    const customerEmail = session?.user?.email || orderData.customerInfo.email;
 
     if (amount < 50) {
       return NextResponse.json({
@@ -74,8 +78,44 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // MÉTADONNÉES STRIPE AVEC SUPPORT VARIANTS
+    await connectDB();
+
+    // ÉTAPE 1 : Créer la commande avec statut "pending_payment"
+    const orderNumber = await Order.generateOrderNumber();
+    
+    const newOrder = new Order({
+      orderNumber,
+      user: session?.user?.id || null,
+      items: orderData.items,
+      customerInfo: orderData.customerInfo,
+      deliveryInfo: {
+        type: orderData.deliveryInfo.type,
+        address: orderData.deliveryInfo.address,
+        date: orderData.deliveryInfo.date,
+        notes: orderData.deliveryInfo.notes
+      },
+      paymentMethod: orderData.paymentMethod,
+      totalAmount: orderData.totalAmount,
+      status: 'payée', // Utiliser directement 'payée' au lieu de 'pending_payment'
+      paymentStatus: 'pending',
+      timeline: [
+        {
+          status: 'payée',
+          date: new Date(),
+          note: 'Commande créée, en attente de confirmation du paiement'
+        }
+      ]
+    });
+
+    const savedOrder = await newOrder.save();
+    console.log('✅ Commande créée avec statut payée:', savedOrder.orderNumber);
+
+    // ÉTAPE 2 : Créer le Payment Intent avec l'ID de commande dans les métadonnées
     const metadata: Record<string, string> = {
+      // NOUVEAU : ID de commande pour mise à jour directe
+      order_id: savedOrder.id.toString(),
+      order_number: savedOrder.orderNumber,
+      
       // Informations client
       customer_name: orderData.customerInfo.name,
       customer_email: orderData.customerInfo.email,
@@ -83,7 +123,6 @@ export async function POST(req: NextRequest) {
       
       // Informations livraison
       delivery_type: orderData.deliveryInfo.type,
-      // 🔧 CORRECTION : S'assurer que la date est un objet Date
       delivery_date: orderData.deliveryInfo.date instanceof Date 
         ? orderData.deliveryInfo.date.toISOString()
         : new Date(orderData.deliveryInfo.date).toISOString(),
@@ -103,34 +142,22 @@ export async function POST(req: NextRequest) {
       delivery_notes: orderData.deliveryInfo.notes?.substring(0, 490) || ''
     };
 
-    // NOUVEAU : Ajouter les items avec variants (format amélioré)
+    // Ajouter les items avec variants
+    const hasVariants = orderData.items.some((item: any) => item.variantId);
     const itemsWithVariants = orderData.items.map((item: any) => {
       let itemString = `${item.name}:${item.quantity}x${item.price}€`;
-      
-      // AJOUT : Inclure les informations de variant si présentes
       if (item.variantId && item.variantName) {
         itemString += `[${item.variantName}]`;
       }
-      
       return itemString;
     }).join('|');
     
     metadata.items = itemsWithVariants.substring(0, 490);
 
-    // NOUVEAU : Métadonnées spécifiques aux variants (si présents)
-    const hasVariants = orderData.items.some((item: any) => item.variantId);
     if (hasVariants) {
       metadata.has_variants = 'true';
-      
-      // Compter les items avec variants
       const variantItems = orderData.items.filter((item: any) => item.variantId);
       metadata.variant_items_count = variantItems.length.toString();
-      
-      // Liste des variants (format condensé)
-      const variantsList = variantItems
-        .map((item: any) => `${item.variantId}:${item.variantName}`)
-        .join('|');
-      metadata.variants = variantsList.substring(0, 490);
     }
 
     // Créer le Payment Intent avec Stripe
@@ -140,20 +167,29 @@ export async function POST(req: NextRequest) {
       automatic_payment_methods: {
         enabled: true,
       },
-      receipt_email: customerEmail || orderData.customerInfo.email,
+      receipt_email: customerEmail,
       metadata: metadata,
-      description: `Commande Bella Fleurs - ${orderData.customerInfo.name}${hasVariants ? ' (avec variants)' : ''}`,
+      description: `Commande Bella Fleurs - ${orderData.customerInfo.name} - ${savedOrder.orderNumber}`,
     });
 
-    // Log pour le debug
-    const variantItems = orderData.items.filter((item: any) => item.variantId);
-    console.log('✅ Payment Intent créé:', {
+    // ÉTAPE 3 : Mettre à jour la commande avec le Payment Intent ID
+    await Order.findByIdAndUpdate(savedOrder._id, {
+      stripePaymentIntentId: paymentIntent.id,
+      $push: {
+        timeline: {
+          status: 'payée',
+          date: new Date(),
+          note: `Payment Intent créé: ${paymentIntent.id}`
+        }
+      }
+    });
+
+    console.log('✅ Payment Intent créé et lié à la commande:', {
       paymentIntentId: paymentIntent.id,
+      orderId: savedOrder._id,
+      orderNumber: savedOrder.orderNumber,
       amount: amount,
-      currency: currency,
-      customer: orderData.customerInfo.name,
-      hasVariants: hasVariants,
-      itemsWithVariants: variantItems.length || 0
+      hasVariants: hasVariants
     });
 
     return NextResponse.json({
@@ -165,6 +201,10 @@ export async function POST(req: NextRequest) {
           amount: paymentIntent.amount,
           currency: paymentIntent.currency,
           status: paymentIntent.status
+        },
+        order: {
+          id: savedOrder._id,
+          orderNumber: savedOrder.orderNumber
         }
       }
     });

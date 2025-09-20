@@ -213,8 +213,26 @@ export default function CheckoutPage() {
   }, [cartItems, customerInfo, deliveryInfo, total]);
 
   // Gérer le succès du paiement
-  const handlePaymentSuccess = (paymentIntent: any) => {
+  const handlePaymentSuccess = async (paymentIntent: any) => {
     toast.success('Paiement confirmé !');
+    
+    // Vider le panier côté client
+    try {
+      console.log('🛒 Vidage du panier côté client...');
+      const clearResponse = await fetch('/api/cart/clear', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      if (clearResponse.ok) {
+        console.log('✅ Panier vidé côté client');
+      } else {
+        console.warn('⚠️ Erreur vidage panier côté client');
+      }
+    } catch (error) {
+      console.warn('⚠️ Erreur vidage panier:', error);
+    }
+    
     router.push(`/checkout/success?payment_intent=${paymentIntent.id}`);
   };
 

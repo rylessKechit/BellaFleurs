@@ -139,6 +139,11 @@ function PaymentForm({
             onError(confirmError.message || 'Erreur lors du paiement');
           } else {
             ev.complete('success');
+            
+            // DEBUGGING : Logs pour Apple Pay / Google Pay
+            console.log('✅ Paiement Apple/Google Pay confirmé:', paymentIntent.id);
+            console.log('🔍 Payment Intent Apple/Google Pay complet:', paymentIntent);
+            
             onSuccess(paymentIntent);
           }
         } catch (error: any) {
@@ -232,6 +237,11 @@ function PaymentForm({
         onError(confirmError.message || 'Erreur lors du paiement');
       } else {
         console.log('✅ Paiement confirmé:', paymentIntent.id);
+        
+        // DEBUGGING : Vérifier le Payment Intent ID récupéré
+        console.log('🔍 Payment Intent complet:', paymentIntent);
+        console.log('🔍 Payment Intent ID à envoyer:', paymentIntent.id);
+        
         onSuccess(paymentIntent);
       }
     } catch (error: any) {
