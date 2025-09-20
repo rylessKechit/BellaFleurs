@@ -108,7 +108,7 @@ const ProductSchema = new Schema({
     type: String,
     required: [true, 'Category is required'],
     enum: {
-      values: ['Bouquets', 'Fleurs de saisons', 'Compositions piquées', 'Roses', 'Orchidées', 'Deuil', 'Abonnement'],
+      values: ['Bouquets', 'Fleurs de saisons', 'Compositions piquées', 'Roses', 'Orchidées', 'Deuil', 'Incontournable', 'Abonnement'],
       message: 'Invalid category'
     }
   },

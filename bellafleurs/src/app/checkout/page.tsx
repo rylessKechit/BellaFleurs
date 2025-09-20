@@ -12,8 +12,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ShoppingCart, Truck, CreditCard, User, MapPin, Calendar } from 'lucide-react';
+import { ShoppingCart, Truck, CreditCard, User, MapPin, Calendar, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
+import { usePostalCodeValidation } from '@/hooks/usePostalCodeValidation';
 
 // Types
 interface CartItem {
@@ -81,6 +82,9 @@ export default function CheckoutPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const { validationState, validatePostalCode } = usePostalCodeValidation();
+  const [isDeliveryZoneValid, setIsDeliveryZoneValid] = useState(false);
+
   // Informations client
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     firstName: '',
@@ -100,6 +104,25 @@ export default function CheckoutPage() {
     date: '',
     notes: ''
   });
+
+  // Ajouter un useEffect pour synchroniser la ville
+  useEffect(() => {
+    if (validationState.isDeliverable && validationState.city) {
+      setDeliveryInfo(prev => ({
+        ...prev,
+        address: { ...prev.address, city: validationState.city }
+      }));
+      setIsDeliveryZoneValid(true);
+    } else {
+      setIsDeliveryZoneValid(false);
+      if (!validationState.isLoading) {
+        setDeliveryInfo(prev => ({
+          ...prev,
+          address: { ...prev.address, city: '' }
+        }));
+      }
+    }
+  }, [validationState]);
 
   // Charger le panier
   useEffect(() => {
@@ -258,12 +281,17 @@ export default function CheckoutPage() {
     }
 
     if (currentStep === 2) {
-      // Valider les infos de livraison
+      // Valider les infos de livraison avec validation zone
       const newErrors: Record<string, string> = {};
       if (!deliveryInfo.address.street.trim()) newErrors.street = 'Adresse requise';
-      if (!deliveryInfo.address.city.trim()) newErrors.city = 'Ville requise';
       if (!deliveryInfo.address.zipCode.trim()) newErrors.zipCode = 'Code postal requis';
+      if (!deliveryInfo.address.city.trim()) newErrors.city = 'Ville requise';
       if (!deliveryInfo.date) newErrors.date = 'Date de livraison requise';
+      
+      // Nouvelle validation zone
+      if (!isDeliveryZoneValid) {
+        newErrors.deliveryZone = 'Zone de livraison non couverte';
+      }
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
@@ -446,34 +474,74 @@ export default function CheckoutPage() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
+                      <Label htmlFor="zipCode">Code postal *</Label>
+                      <div className="relative">
+                        <Input
+                          id="zipCode"
+                          value={deliveryInfo.address.zipCode}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '').slice(0, 5);
+                            setDeliveryInfo({
+                              ...deliveryInfo,
+                              address: { ...deliveryInfo.address, zipCode: value }
+                            });
+                            validatePostalCode(value);
+                          }}
+                          className={`pr-10 ${
+                            validationState.error ? 'border-red-300 bg-red-50' : 
+                            validationState.isDeliverable ? 'border-green-500 bg-green-50' : 
+                            'border-gray-300'
+                          }`}
+                          placeholder="75001"
+                          maxLength={5}
+                        />
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          {validationState.isLoading && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+                          {validationState.isDeliverable && <CheckCircle className="w-4 h-4 text-green-500" />}
+                          {validationState.error && <AlertCircle className="w-4 h-4 text-red-500" />}
+                        </div>
+                      </div>
+                      {validationState.error && (
+                        <p className="text-red-600 text-sm mt-1 flex items-center">
+                          <AlertCircle className="w-4 h-4 mr-1" />
+                          {validationState.error}
+                        </p>
+                      )}
+                      {validationState.isDeliverable && (
+                        <p className="text-green-600 text-sm mt-1 flex items-center">
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Zone de livraison validée
+                        </p>
+                      )}
+                    </div>
+                    <div>
                       <Label htmlFor="city">Ville *</Label>
                       <Input
                         id="city"
-                        value={deliveryInfo.address.city}
-                        onChange={(e) => setDeliveryInfo({
-                          ...deliveryInfo,
-                          address: { ...deliveryInfo.address, city: e.target.value }
-                        })}
-                        className={errors.city ? 'border-red-300' : ''}
-                        placeholder="Paris"
+                        value={validationState.city || deliveryInfo.address.city}
+                        onChange={() => {}} // Disabled - auto-rempli
+                        disabled={true}
+                        className="bg-gray-50 text-gray-700"
+                        placeholder="Ville"
                       />
-                      {errors.city && <p className="text-red-600 text-sm mt-1">{errors.city}</p>}
-                    </div>
-                    <div>
-                      <Label htmlFor="zipCode">Code postal *</Label>
-                      <Input
-                        id="zipCode"
-                        value={deliveryInfo.address.zipCode}
-                        onChange={(e) => setDeliveryInfo({
-                          ...deliveryInfo,
-                          address: { ...deliveryInfo.address, zipCode: e.target.value }
-                        })}
-                        className={errors.zipCode ? 'border-red-300' : ''}
-                        placeholder="75001"
-                      />
-                      {errors.zipCode && <p className="text-red-600 text-sm mt-1">{errors.zipCode}</p>}
+                      <p className="text-xs text-gray-500 mt-1">
+                        La ville sera automatiquement remplie
+                      </p>
                     </div>
                   </div>
+
+                  {/* Erreur de zone de livraison */}
+                  {errors.deliveryZone && (
+                    <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                      <p className="text-red-700 text-sm flex items-center">
+                        <AlertCircle className="w-4 h-4 mr-2" />
+                        {errors.deliveryZone}
+                      </p>
+                      <p className="text-red-600 text-xs mt-2">
+                        Nous livrons actuellement dans un rayon de 10 km autour de Brétigny-sur-Orge.
+                      </p>
+                    </div>
+                  )}
                   
                   <div>
                     <Label htmlFor="date">Date de livraison *</Label>
@@ -503,8 +571,12 @@ export default function CheckoutPage() {
                     <Button variant="outline" onClick={prevStep}>
                       Retour
                     </Button>
-                    <Button onClick={nextStep}>
-                      Continuer
+                    <Button 
+                      onClick={nextStep}
+                      disabled={!isDeliveryZoneValid}
+                      className={!isDeliveryZoneValid ? 'opacity-50 cursor-not-allowed' : ''}
+                    >
+                      Continuer vers le paiement
                     </Button>
                   </div>
                 </CardContent>

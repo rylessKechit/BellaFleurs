@@ -13,6 +13,7 @@ export default function GallerySection() {
     { name: 'Roses', image: '/images/roses.jpg' },
     { name: 'Orchidées', image: '/images/orchidees.jpg' },
     { name: 'Deuil', image: '/images/deuil.jpg' },
+    { name: 'Incontournable', image: '/images/incontournable.jpg' },
     { name: 'Abonnements', image: '/images/abonnements.jpg' }
   ];
 

@@ -51,7 +51,7 @@ export interface IProduct extends BaseDocument {
   price?: number;                  // Optionnel si hasVariants = true
   hasVariants: boolean;          // Nouveau : true = produit avec tailles multiples
   variants: IProductVariant[];     // Nouveau : array des variantes
-  category: 'Bouquets' | 'Fleurs de saisons' | 'Compositions piquées' | 'Roses' | 'Orchidées' | 'Deuil' | 'Abonnement';
+  category: 'Bouquets' | 'Fleurs de saisons' | 'Compositions piquées' | 'Roses' | 'Orchidées' | 'Deuil' | 'Incontournable' | 'Abonnement';
   subcategory?: string;            // Garder pour compatibilité
   images: string[];
   isActive: boolean;

@@ -46,6 +46,7 @@ export const productSchema = z.object({
     'Roses',
     'Orchidées',
     'Deuil',
+    'Incontournable',
     'Abonnement'
   ]),
   images: z.array(z.string().url()).min(1, 'Au moins une image requise'),
@@ -82,6 +83,7 @@ export const updateProductSchema = z.object({
     'Roses',
     'Orchidées',
     'Deuil',
+    'Incontournable',
     'Abonnement'
   ]).optional(),
   images: z.array(z.string().url()).min(1, 'Au moins une image requise').optional(),

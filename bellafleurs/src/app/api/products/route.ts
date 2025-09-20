@@ -14,6 +14,7 @@ const VALID_CATEGORIES = [
   'Roses',
   'Orchidées',
   'Deuil',
+  'Incontournable',
   'Abonnement'
 ];
 

@@ -80,6 +80,7 @@ export default function Footer() {
                 'Roses',
                 'Orchidées',
                 'Deuil',
+                'Incontournable',
                 'Abonnements'
               ].map((service) => (
                 <li key={service} className="text-gray-600 flex items-start">

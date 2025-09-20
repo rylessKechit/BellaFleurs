@@ -74,6 +74,7 @@ const CATEGORIES = [
   'Roses',
   'Orchidées',
   'Deuil',
+  'Incontournable',
   'Abonnement'
 ];
 
