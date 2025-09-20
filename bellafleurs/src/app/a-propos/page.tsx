@@ -279,7 +279,7 @@ export default function AProposPage() {
                 <div className="flex flex-col sm:flex-row items-center text-center sm:text-left">
                   <Phone className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 mb-2 sm:mb-0 sm:mr-3 flex-shrink-0" />
                   <div>
-                    <p className="font-semibold text-green-800 text-sm sm:text-base">06 XX XX XX XX</p>
+                    <p className="font-semibold text-green-800 text-sm sm:text-base">07 80 66 27 32</p>
                     <p className="text-green-700 text-xs sm:text-sm">Lun-Sam 9h-18h</p>
                   </div>
                 </div>

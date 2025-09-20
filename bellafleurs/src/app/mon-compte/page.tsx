@@ -445,7 +445,7 @@ export default function MonComptePage() {
                             ...prev,
                             phone: e.target.value
                           } : null)}
-                          placeholder="01 23 45 67 89"
+                          placeholder="07 80 66 27 32"
                           className="text-sm"
                         />
                       </div>

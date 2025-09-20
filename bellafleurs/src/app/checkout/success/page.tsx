@@ -248,8 +248,8 @@ export default function CheckoutSuccessPage() {
           <div className="max-w-2xl mx-auto mt-12 text-center text-sm text-gray-500">
             <p>
               Une question ? Contactez-nous au{' '}
-              <a href="tel:+33123456789" className="text-green-600 hover:underline">
-                01 23 45 67 89
+              <a href="tel:+33780662732" className="text-green-600 hover:underline">
+                07 80 66 27 32
               </a>
               {' '}ou par email à{' '}
               <a href="mailto:contact@bellafleurs.fr" className="text-green-600 hover:underline">

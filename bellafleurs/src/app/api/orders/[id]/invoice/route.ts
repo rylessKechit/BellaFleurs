@@ -507,7 +507,7 @@ function generateClientInvoiceHTML(order: any): string {
                     📍 123 Rue des Fleurs, 75001 Paris
                 </div>
                 <div class="contact-item">
-                    ☎️ 01 23 45 67 89
+                    ☎️ 07 80 66 27 32
                 </div>
                 <div class="contact-item">
                     ✉️ contact@bellafleurs.fr

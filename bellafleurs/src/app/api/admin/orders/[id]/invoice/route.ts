@@ -398,7 +398,7 @@ function generateInvoiceHTML(order: any): string {
             <!-- Notes de bas de page -->
             <div class="footer-notes">
                 <p><strong>Bella Fleurs</strong> - Votre fleuriste de confiance</p>
-                <p>📍 123 Rue des Fleurs, 75001 Paris | ☎️ 01 23 45 67 89 | ✉️ contact@bellafleurs.fr</p>
+                <p>📍 123 Rue des Fleurs, 75001 Paris | ☎️ 07 80 66 27 32 | ✉️ contact@bellafleurs.fr</p>
                 <p>💳 Paiement effectué le ${orderDate} - Merci pour votre confiance !</p>
                 <br>
                 <p style="font-style: italic;">Cette facture a été générée automatiquement le ${invoiceDate}. 

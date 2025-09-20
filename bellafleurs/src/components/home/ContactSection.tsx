@@ -39,8 +39,8 @@ export default function ContactSection() {
                 <div className="space-y-3 text-sm">
                   <div className="flex items-center space-x-3">
                     <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-green-700 flex-shrink-0" />
-                    <a href="tel:+33123456789" className="text-green-700 hover:text-green-800 transition-colors text-sm sm:text-base">
-                      01 23 45 67 89
+                    <a href="tel:+33780662732" className="text-green-700 hover:text-green-800 transition-colors text-sm sm:text-base">
+                      07 80 66 27 32
                     </a>
                   </div>
                   
@@ -112,7 +112,7 @@ export default function ContactSection() {
                     <input
                       id="phone"
                       type="tel"
-                      placeholder="01 23 45 67 89"
+                      placeholder="07 80 66 27 32"
                       className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors text-green-800 placeholder-green-600 text-sm sm:text-base"
                     />
                   </div>

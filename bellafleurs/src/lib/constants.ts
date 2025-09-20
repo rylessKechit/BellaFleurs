@@ -21,7 +21,7 @@ export const SITE_CONFIG = {
 
 // Contact
 export const CONTACT_INFO = {
-  phone: '+33123456789',
+  phone: '+33780662732',
   email: 'contact@bellafleurs.fr',
   address: {
     street: '123 Avenue des Fleurs',

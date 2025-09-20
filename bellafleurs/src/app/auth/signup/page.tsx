@@ -214,7 +214,7 @@ export default function SignUpPage() {
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
                       errors.phone ? 'border-red-300 bg-red-50' : 'border-gray-300'
                     }`}
-                    placeholder="01 23 45 67 89"
+                    placeholder="07 80 66 27 32"
                   />
                 </div>
                 {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}

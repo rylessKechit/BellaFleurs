@@ -212,7 +212,7 @@ export default function CustomerInfoStep({
             value={customerInfo.phone}
             onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
             className={errors.phone ? 'border-red-300 bg-red-50' : ''}
-            placeholder="01 23 45 67 89"
+            placeholder="07 80 66 27 32"
             disabled={isLoading}
           />
           {errors.phone && (
@@ -222,7 +222,7 @@ export default function CustomerInfoStep({
             </p>
           )}
           <p className="text-sm text-gray-500 mt-1">
-            Format attendu : 01 23 45 67 89 ou +33 1 23 45 67 89
+            Format attendu : 07 80 66 27 32 ou +33 1 23 45 67 89
           </p>
         </div>
 
