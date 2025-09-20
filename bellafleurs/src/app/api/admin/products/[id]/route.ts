@@ -92,112 +92,127 @@ export async function PUT(
       description,
       price,
       hasVariants,
-      variants = [],
+      variants,
       category,
       images,
-      tags = [],
-      entretien = '',
-      careInstructions = '',
-      composition = '',
-      motsClesSEO = [],
-      isActive = true
+      isActive,
+      tags,
+      entretien,
+      careInstructions,
+      composition,
+      motsClesSEO
     } = body;
 
-    // Validation des champs requis
-    if (!name || !description || !category) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Champs requis manquants (name, description, category)',
-          code: 'MISSING_REQUIRED_FIELDS'
+    // 🔧 CORRECTION PRINCIPALE : Gestion intelligente des variants et du prix
+    const updateData: any = {};
+    const unsetFields: any = {};
+
+    // Champs toujours mis à jour
+    if (name !== undefined) updateData.name = name.trim();
+    if (description !== undefined) updateData.description = description.trim();
+    if (category !== undefined) updateData.category = category.trim();
+    if (images !== undefined) updateData.images = images;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (tags !== undefined) updateData.tags = Array.isArray(tags) ? tags.map((tag: string) => tag.toLowerCase().trim()) : [];
+    if (entretien !== undefined) updateData.entretien = entretien?.trim() || '';
+    if (careInstructions !== undefined) updateData.careInstructions = careInstructions?.trim() || '';
+    if (composition !== undefined) updateData.composition = composition?.trim() || '';
+    if (motsClesSEO !== undefined) updateData.motsClesSEO = Array.isArray(motsClesSEO) ? motsClesSEO.map((mot: string) => mot.trim()) : [];
+
+    // 🔧 GESTION INTELLIGENTE DES VARIANTS ET PRIX
+    if (hasVariants !== undefined) {
+      updateData.hasVariants = hasVariants;
+
+      if (hasVariants) {
+        // Produit AVEC variants
+        if (variants && Array.isArray(variants)) {
+          // Traitement des variants
+          const processedVariants = variants.map((variant: any, index: number) => ({
+            name: variant.name.trim(),
+            price: variant.price,
+            description: variant.description?.trim() || '',
+            image: variant.image || '',
+            isActive: variant.isActive !== false,
+            order: variant.order || index
+          }));
+
+          // Validation : au moins 1 variant
+          if (processedVariants.length === 0) {
+            return NextResponse.json({
+              success: false,
+              error: {
+                message: 'Au moins un variant requis pour un produit avec variants',
+                code: 'VALIDATION_ERROR'
+              }
+            }, { status: 400 });
+          }
+
+          updateData.variants = processedVariants.sort((a: any, b: any) => a.order - b.order);
         }
-      }, { status: 400 });
-    }
 
-    // Validation spécifique
-    if (!hasVariants && (!price || price <= 0)) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Le prix est requis pour les produits sans variants',
-          code: 'MISSING_PRICE'
+        // 🔧 SUPPRIMER le champ price pour les produits avec variants
+        unsetFields.price = 1;
+
+      } else {
+        // Produit SANS variants
+        if (price === undefined || price <= 0) {
+          return NextResponse.json({
+            success: false,
+            error: {
+              message: 'Prix requis pour un produit sans variants',
+              code: 'VALIDATION_ERROR'
+            }
+          }, { status: 400 });
         }
-      }, { status: 400 });
-    }
 
-    if (hasVariants && (!variants || variants.length === 0)) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Au moins une variante est requise pour les produits avec variants',
-          code: 'MISSING_VARIANTS'
-        }
-      }, { status: 400 });
-    }
-
-    // Générer le slug
-    const slug = name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-');
-
-    // Traitement des tags et mots-clés
-    const processedTags = Array.isArray(tags) 
-      ? tags.map((tag: string) => tag.toLowerCase().trim()) 
-      : [];
-    
-    const processedMotsClesSEO = Array.isArray(motsClesSEO) 
-      ? motsClesSEO.map((mot: string) => mot.trim()) 
-      : [];
-
-    // Traitement des variants si applicable
-    let processedVariants: IProductVariant[] = [];
-    if (hasVariants && variants) {
-      processedVariants = variants.map((variant: any, index: number) => ({
-        name: variant.name.trim(),
-        price: variant.price,
-        description: variant.description?.trim() || '',
-        image: variant.image || '',
-        isActive: variant.isActive !== false,
-        order: variant.order || index
-      }));
-      
-      // Trier par ordre
-      processedVariants.sort((a: IProductVariant, b: IProductVariant) => a.order - b.order);
-    }
-
-    // 🔧 CORRECTION : Type correct pour updateData
-    const updateData: any = {
-      name: name.trim(),
-      description: description.trim(),
-      hasVariants,
-      variants: processedVariants,
-      images,
-      category: category.trim(),
-      isActive,
-      tags: processedTags,
-      slug,
-      entretien: entretien?.trim() || '',
-      careInstructions: careInstructions?.trim() || '',
-      composition: composition?.trim() || '',
-      motsClesSEO: processedMotsClesSEO
-    };
-
-    // Ajouter le prix seulement si pas de variants
-    if (!hasVariants) {
-      updateData.price = price;
+        updateData.price = price;
+        // 🔧 SUPPRIMER les variants pour les produits sans variants
+        updateData.variants = [];
+      }
     } else {
-      // 🔧 CORRECTION : Supprimer le prix pour les produits avec variants
-      updateData.$unset = { price: 1 };
+      // Si hasVariants n'est pas spécifié, mettre à jour seulement ce qui est fourni
+      if (price !== undefined) updateData.price = price;
+      if (variants !== undefined) {
+        const processedVariants = variants.map((variant: any, index: number) => ({
+          name: variant.name.trim(),
+          price: variant.price,
+          description: variant.description?.trim() || '',
+          image: variant.image || '',
+          isActive: variant.isActive !== false,
+          order: variant.order || index
+        }));
+        updateData.variants = processedVariants.sort((a: any, b: any) => a.order - b.order);
+      }
     }
 
+    // 🔧 CONSTRUCTION DE LA REQUÊTE DE MISE À JOUR
+    const mongoUpdate: any = {};
+    
+    if (Object.keys(updateData).length > 0) {
+      mongoUpdate.$set = updateData;
+    }
+    
+    if (Object.keys(unsetFields).length > 0) {
+      mongoUpdate.$unset = unsetFields;
+    }
+
+    console.log('🔄 Mise à jour produit:', {
+      id,
+      hasVariants: updateData.hasVariants,
+      variantsCount: updateData.variants?.length,
+      hasPrice: 'price' in updateData,
+      unsetFields
+    });
+
+    // 🔧 MISE À JOUR AVEC VALIDATION
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
-      updateData,
-      { new: true, runValidators: true }
+      mongoUpdate,
+      { 
+        new: true, 
+        runValidators: true,
+        context: 'query' // Important pour les validations conditionnelles
+      }
     ).lean();
 
     if (!updatedProduct) {
@@ -210,8 +225,10 @@ export async function PUT(
       }, { status: 404 });
     }
 
-    // 🔧 CORRECTION : Utiliser le formateur unifié
+    // Formater la réponse
     const formattedProduct = formatProductResponse(updatedProduct);
+
+    console.log('✅ Produit mis à jour avec succès:', updatedProduct._id);
 
     return NextResponse.json({
       success: true,
@@ -222,9 +239,13 @@ export async function PUT(
   } catch (error: unknown) {
     console.error('❌ Admin product PUT error:', error);
     
+    // Gestion des erreurs de validation Mongoose
     if (error && typeof error === 'object' && 'name' in error && error.name === 'ValidationError') {
       const validationError = error as any;
       const validationErrors = Object.values(validationError.errors).map((err: any) => err.message);
+      
+      console.error('❌ Erreurs de validation:', validationErrors);
+      
       return NextResponse.json({
         success: false,
         error: {
@@ -234,6 +255,7 @@ export async function PUT(
       }, { status: 400 });
     }
 
+    // Erreur de duplication
     if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
       return NextResponse.json({
         success: false,

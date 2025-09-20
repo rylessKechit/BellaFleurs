@@ -330,7 +330,7 @@ export default function CheckoutPage() {
             ))}
           </div>
           
-          <div className="mt-2 flex text-sm text-gray-600">
+          <div className="mt-2 flex items-center text-sm text-gray-600">
             <span className={currentStep >= 1 ? 'text-green-600 font-medium' : ''}>
               Informations
             </span>

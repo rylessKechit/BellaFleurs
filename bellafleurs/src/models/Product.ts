@@ -11,9 +11,9 @@ const ProductVariantSchema = new Schema({
   },
   price: {
     type: Number,
-    required: [true, 'Variant price is required'],
-    min: [0.01, 'Variant price must be greater than 0'],
-    max: [10000, 'Variant price cannot exceed 10,000€'],
+    required: [true, 'Variant price is required'], // ✅ Simple validation pour les variants
+    min: [0.01, 'Price must be greater than 0'],
+    max: [10000, 'Price cannot exceed 10,000€'],
     set: (v: number) => Math.round(v * 100) / 100
   },
   description: {
@@ -57,9 +57,24 @@ const ProductSchema = new Schema({
     min: [0.01, 'Price must be greater than 0'],
     max: [10000, 'Price cannot exceed 10,000€'],
     set: (v: number) => Math.round(v * 100) / 100,
-    // Prix requis seulement si hasVariants = false
+    // 🔧 VALIDATION CONDITIONNELLE AMÉLIORÉE
     required: function(this: IProduct) {
-      return !this.hasVariants;
+      // Prix requis seulement si hasVariants = false ET ce n'est pas une mise à jour qui supprime le prix
+      return this.hasVariants === false;
+    },
+    validate: {
+      validator: function(this: IProduct, value: number) {
+        // Si hasVariants = true, le prix ne devrait pas exister
+        if (this.hasVariants === true && value !== undefined) {
+          return false;
+        }
+        // Si hasVariants = false, le prix doit exister et être valide
+        if (this.hasVariants === false && (!value || value <= 0)) {
+          return false;
+        }
+        return true;
+      },
+      message: 'Prix incompatible avec la configuration des variants'
     }
   },
   hasVariants: {
@@ -71,14 +86,22 @@ const ProductSchema = new Schema({
     default: [],
     validate: {
       validator: function(this: IProduct, variants: IProductVariant[]) {
+        // 🔧 VALIDATION AMÉLIORÉE POUR LES MISES À JOUR
+        
         // Si hasVariants = true, au moins 1 variant requis
-        if (this.hasVariants) {
+        if (this.hasVariants === true) {
           return variants && variants.length > 0;
         }
-        // Si hasVariants = false, pas de variants
-        return !variants || variants.length === 0;
+        
+        // Si hasVariants = false, aucun variant autorisé
+        if (this.hasVariants === false) {
+          return !variants || variants.length === 0;
+        }
+        
+        // Si hasVariants n'est pas défini (cas de mise à jour partielle), on accepte
+        return true;
       },
-      message: 'Products with variants must have at least one variant, products without variants cannot have variants'
+      message: 'Configuration variants incompatible: variants requis si hasVariants=true, interdits si hasVariants=false'
     }
   },
   category: {
@@ -160,9 +183,12 @@ ProductSchema.index({ slug: 1 });
 
 // Middleware de validation pré-sauvegarde
 ProductSchema.pre('save', function(next) {
+  // Cast explicite pour éviter les erreurs TypeScript
+  const doc = this as any;
+  
   // Générer le slug automatiquement
-  if (!this.slug && this.name) {
-    this.slug = this.name
+  if (!doc.slug && doc.name) {
+    doc.slug = doc.name
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -172,10 +198,58 @@ ProductSchema.pre('save', function(next) {
   }
 
   // Trier les variants par ordre
-  if (this.hasVariants && this.variants) {
-    this.variants.sort((a, b) => a.order - b.order);
+  if (doc.hasVariants && doc.variants && Array.isArray(doc.variants)) {
+    doc.variants.sort((a: any, b: any) => a.order - b.order);
   }
 
+  // 🔧 VALIDATION SUPPLÉMENTAIRE AVANT SAUVEGARDE
+  if (doc.hasVariants) {
+    // Produit avec variants : supprimer le prix s'il existe
+    if (doc.price !== undefined) {
+      doc.price = undefined;
+    }
+    // Vérifier qu'il y a au moins un variant
+    if (!doc.variants || !Array.isArray(doc.variants) || doc.variants.length === 0) {
+      return next(new Error('Au moins un variant requis pour un produit avec variants'));
+    }
+  } else {
+    // Produit sans variants : supprimer les variants et s'assurer qu'il y a un prix
+    doc.variants = [];
+    if (!doc.price || doc.price <= 0) {
+      return next(new Error('Prix requis pour un produit sans variants'));
+    }
+  }
+
+  next();
+});
+
+// Middleware pré-update pour les mises à jour
+ProductSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function(next) {
+  const update = this.getUpdate() as any;
+  
+  // 🔧 GESTION DES MISES À JOUR AVEC VARIANTS
+  if (update.$set) {
+    const hasVariants = update.$set.hasVariants;
+    
+    if (hasVariants === true) {
+      // Produit avec variants : s'assurer que le prix est supprimé
+      if (!update.$unset) update.$unset = {};
+      update.$unset.price = 1;
+      
+      // Vérifier qu'il y a des variants
+      if (!update.$set.variants || !Array.isArray(update.$set.variants) || update.$set.variants.length === 0) {
+        return next(new Error('Au moins un variant requis pour un produit avec variants'));
+      }
+    } else if (hasVariants === false) {
+      // Produit sans variants : supprimer les variants et vérifier le prix
+      update.$set.variants = [];
+      
+      if (!update.$set.price || update.$set.price <= 0) {
+        return next(new Error('Prix requis pour un produit sans variants'));
+      }
+    }
+  }
+  
   next();
 });
 
