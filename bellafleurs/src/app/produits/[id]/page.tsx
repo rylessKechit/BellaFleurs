@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Heart, ShoppingCart, ArrowLeft, Plus, Minus, Truck, Shield, RefreshCw } from 'lucide-react';
+import { Star, Heart, ShoppingCart, ArrowLeft, Plus, Minus, Truck, Shield, RefreshCw, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -260,7 +260,7 @@ export default function ProductDetailPage() {
           </Button>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-            {/* Galerie d'images */}
+            {/* Galerie d'images - GAUCHE */}
             <div className="space-y-4">
               {/* Image principale */}
               <div className="aspect-square bg-white rounded-lg overflow-hidden shadow-sm">
@@ -269,7 +269,7 @@ export default function ProductDetailPage() {
                   alt={product.name}
                   width={600}
                   height={600}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/api/placeholder/600/600';
                   }}
@@ -305,9 +305,9 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* Informations produit */}
+            {/* Informations produit - DROITE */}
             <div className="space-y-6">
-              {/* Header */}
+              {/* En-tête */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="secondary" className="text-xs">
@@ -358,51 +358,19 @@ export default function ProductDetailPage() {
                 ) : null}
               </div>
 
-              {/* Description mise en avant avec style amélioré */}
-              <Card className="bg-gradient-to-br from-pink-50 to-purple-50 border-pink-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
-                      <span className="text-pink-600 text-sm">📝</span>
+              {/* NOUVEAU : Description du variant (seulement si produit avec variants) */}
+              {product.hasVariants && product.variants?.length > 0 && getCurrentVariant()?.description && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Info className="w-4 h-4 text-blue-600" />
+                      <h3 className="font-medium text-blue-900">
+                        À propos de "{getCurrentVariant()?.name}"
+                      </h3>
                     </div>
-                    <h3 className="font-semibold text-gray-900 text-lg">Description</h3>
-                  </div>
-                  <div className="text-gray-700 leading-relaxed whitespace-pre-line text-base">
-                    {product.description || "Une magnifique création florale composée avec soin par nos artisans fleuristes."}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Composition mise en avant si disponible */}
-              {product.composition && (
-                <Card className="bg-gradient-to-br from-green-50 to-blue-50 border-green-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <span className="text-green-600 text-sm">🌺</span>
-                      </div>
-                      <h3 className="font-semibold text-gray-900 text-lg">Composition</h3>
-                    </div>
-                    <div className="text-gray-700 leading-relaxed text-base">
-                      {product.composition}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Instructions d'entretien mises en avant si disponibles */}
-              {(product.entretien || product.careInstructions) && (
-                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 text-sm">💧</span>
-                      </div>
-                      <h3 className="font-semibold text-gray-900 text-lg">Instructions d&apos;entretien</h3>
-                    </div>
-                    <div className="text-gray-700 leading-relaxed whitespace-pre-line text-base">
-                      {product.entretien || product.careInstructions}
-                    </div>
+                    <p className="text-blue-800 text-sm leading-relaxed">
+                      {getCurrentVariant()?.description}
+                    </p>
                   </CardContent>
                 </Card>
               )}
@@ -535,6 +503,56 @@ export default function ProductDetailPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* NOUVEAU : Description principale déplacée sous les images */}
+          <div className="mt-12 space-y-8">
+            
+            {/* Description principale */}
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Description</h2>
+                <div className="prose prose-gray max-w-none">
+                  <p className="text-gray-700 leading-relaxed text-base">
+                    {product.description || "Une magnifique création florale composée avec soin par nos artisans fleuristes."}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Composition */}
+            {product.composition && (
+              <Card className="bg-gradient-to-br from-green-50 to-blue-50 border-green-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <span className="text-green-600 text-sm">🌺</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-lg">Composition</h3>
+                  </div>
+                  <div className="text-gray-700 leading-relaxed text-base">
+                    {product.composition}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Instructions d'entretien */}
+            {(product.entretien || product.careInstructions) && (
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 text-sm">💧</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-lg">Instructions d&apos;entretien</h3>
+                  </div>
+                  <div className="text-gray-700 leading-relaxed whitespace-pre-line text-base">
+                    {product.entretien || product.careInstructions}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Sections supplémentaires */}
