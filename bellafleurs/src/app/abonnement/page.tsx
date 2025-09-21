@@ -67,7 +67,7 @@ export default function AbonnementPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-4xl mx-auto">
               <Badge className="mb-4 sm:mb-6 bg-primary-100 text-primary-700 hover:bg-primary-100">
-                🌸 Nouveauté 2024
+                🌸 Nouveauté 2025
               </Badge>
               
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 sm:mb-6">
