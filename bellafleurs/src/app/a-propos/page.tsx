@@ -12,7 +12,7 @@ export default function AProposPage() {
       role: "Fleuriste passionnée & Fondatrice",
       experience: "23 ans d'expérience",
       speciality: "Art floral français et japonais",
-      description: "Diplômée en art floral, Aurélie a consacré sa vie à créer des moments magiques à travers les fleurs. Sa passion l'a menée du Japon aux ateliers parisiens les plus prestigieux."
+      description: "Diplômée en art floral, Aurélie a consacré sa vie à créer des moments magiques à travers les fleurs."
     },
   ];
 
