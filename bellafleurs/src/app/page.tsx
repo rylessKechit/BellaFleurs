@@ -14,7 +14,7 @@ export default function Home() {
       {/* Background global pour toute la landing page - SANS OVERLAY */}
       <div className="fixed inset-0 z-0">
         <Image
-          src="/images/hero-background.png"
+          src="/images/hero-background.webp"
           alt="Bella Fleurs - Background"
           fill
           className="object-cover"
