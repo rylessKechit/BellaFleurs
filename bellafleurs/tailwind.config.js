@@ -1,61 +1,24 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: ['class'],
+  darkMode: ["class"],
   content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/**/*.{js,ts,jsx,tsx,mdx}',
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './pages/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './app/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
   ],
+  prefix: "",
   theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
     extend: {
       colors: {
         primary: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
-          950: '#052e16',
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))'
-        },
-        secondary: {
-          50: '#f7fee7',
-          100: '#ecfccb',
-          200: '#d9f99d',
-          300: '#bef264',
-          400: '#a3e635',
-          500: '#84cc16',
-          600: '#65a30d',
-          700: '#4d7c0f',
-          800: '#3f6212',
-          900: '#365314',
-          950: '#1a2e05',
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))'
-        },
-        accent: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
-          950: '#052e16',
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))'
-        },
-        pink: {
           50: '#f0fdf4',
           100: '#dcfce7',
           200: '#bbf7d0',
@@ -133,7 +96,7 @@ module.exports = {
         'slide-in-left': 'slideInLeft 0.3s ease-out',
         'bounce-gentle': 'bounceGentle 2s ease-in-out infinite',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
-        float: 'float 3s ease-in-out infinite',
+        'float': 'float 3s ease-in-out infinite',
         'petal-fall': 'petalFall 3s linear infinite'
       },
       keyframes: {
@@ -158,8 +121,8 @@ module.exports = {
           '50%': { transform: 'translateY(-10px)' }
         },
         pulseSoft: {
-          '0%, 100%': { transform: 'scale(1)' },
-          '50%': { transform: 'scale(1.05)' }
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.8' }
         },
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
@@ -167,36 +130,42 @@ module.exports = {
         },
         petalFall: {
           '0%': {
-            transform: 'translateY(-100vh) rotate(0deg)',
-            opacity: '0.7'
+            transform: 'translateY(-10vh) rotate(0deg)',
+            opacity: '0.8'
+          },
+          '10%': {
+            opacity: '1'
+          },
+          '90%': {
+            opacity: '0.6'
           },
           '100%': {
-            transform: 'translateY(100vh) rotate(360deg)',
+            transform: 'translateY(110vh) rotate(360deg)',
             opacity: '0'
           }
         }
       },
-      boxShadow: {
-        soft: '0 4px 20px -2px rgba(0, 0, 0, 0.1)',
-        medium: '0 8px 30px -4px rgba(0, 0, 0, 0.15)',
-        strong: '0 20px 60px -8px rgba(0, 0, 0, 0.25)',
-        glow: '0 0 20px rgba(199, 54, 80, 0.3)',
-        'pink-glow': '0 0 20px rgba(236, 72, 153, 0.3)'
+      // ✅ AJOUT DE PROPRIÉTÉS POUR LES ANIMATIONS DYNAMIQUES
+      animationDelay: {
+        '100': '0.1s',
+        '200': '0.2s',
+        '300': '0.3s',
+        '500': '0.5s',
+        '700': '0.7s',
+        '1000': '1s',
+        '2000': '2s',
+        '3000': '3s',
+        '4000': '4s',
+        '5000': '5s',
       },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-        'hero-pattern': "url('/images/hero-pattern.svg')",
-        'floral-bg': "url('/images/floral-bg.png')"
-      },
-      backdropBlur: {
-        xs: '2px'
+      animationDuration: {
+        '2000': '2s',
+        '3000': '3s',
+        '4000': '4s',
+        '5000': '5s',
+        '6000': '6s',
       }
-    }
+    },
   },
-  plugins: [
-    require('@tailwindcss/forms'),
-    require('@tailwindcss/typography'),
-    require('tailwindcss-animate')
-  ]
-};
+  plugins: [require("tailwindcss-animate")],
+}

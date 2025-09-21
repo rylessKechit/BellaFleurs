@@ -1,10 +1,18 @@
-// src/components/layout/Footer.tsx
+// src/components/layout/Footer.tsx - VERSION AVEC FIX HYDRATATION
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Phone, Mail, MapPin, Clock, Heart, Facebook, Instagram, Twitter } from 'lucide-react';
 
 export default function Footer() {
+  // ✅ FIX HYDRATATION : État pour contrôler le rendu côté client
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   return (
     <footer className="bg-gradient-to-b from-gray-50 to-gray-100 border-t border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -46,97 +54,61 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Navigation rapide */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900">Navigation</h4>
-            <ul className="space-y-2 text-sm">
-              {[
-                { name: 'Accueil', href: '/' },
-                { name: 'Nos produits', href: '/produits' },
-                { name: 'À propos', href: '/#apropos' },
-                { name: 'Galerie', href: '/#galerie' },
-                { name: 'Contact', href: '/#contact' }
-              ].map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-gray-600 hover:text-primary-600 transition-colors duration-200"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Services */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-gray-900">Mes créations</h4>
-            <ul className="space-y-2 text-sm">
-              {[
-                'Bouquets',
-                'Fleurs de saisons',
-                'Compositions piquées',
-                'Roses',
-                'Orchidées',
-                'Deuil',
-                'Incontournable',
-                'Abonnements'
-              ].map((service) => (
-                <li key={service} className="text-gray-600 flex items-start">
-                  <span className="text-primary-500 mr-2 mt-0.5">•</span>
-                  {service}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Contact & Horaires */}
+          {/* Contact */}
           <div className="space-y-4">
             <h4 className="font-semibold text-gray-900">Contact</h4>
             <div className="space-y-3 text-sm">
-              <div className="flex items-start space-x-3">
-                <MapPin className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
-                <div className="text-gray-600">
-                  <p>91120 Brétigny-sur-Orge</p>
-                </div>
+              <div className="flex items-start space-x-2">
+                <MapPin className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" />
+                <p className="text-gray-600">
+                  123 Avenue des Fleurs<br />
+                  91220 Brétigny-sur-Orge
+                </p>
               </div>
-              
-              <div className="flex items-center space-x-3">
-                <Phone className="w-4 h-4 text-primary-500 flex-shrink-0" />
-                <a
-                  href="tel:+33780662732"
-                  className="text-gray-600 hover:text-primary-600 transition-colors duration-200"
+              <div className="flex items-center space-x-2">
+                <Phone className="w-4 h-4 text-primary-600 flex-shrink-0" />
+                <a 
+                  href="tel:+33780662732" 
+                  className="text-gray-600 hover:text-primary-600 transition-colors"
                 >
                   07 80 66 27 32
                 </a>
               </div>
-              
-              <div className="flex items-center space-x-3">
-                <Mail className="w-4 h-4 text-primary-500 flex-shrink-0" />
-                <a
-                  href="mailto:contact@bellafleurs.fr"
-                  className="text-gray-600 hover:text-primary-600 transition-colors duration-200"
+              <div className="flex items-center space-x-2">
+                <Mail className="w-4 h-4 text-primary-600 flex-shrink-0" />
+                <a 
+                  href="mailto:contact@bellafleurs.fr" 
+                  className="text-gray-600 hover:text-primary-600 transition-colors"
                 >
                   contact@bellafleurs.fr
                 </a>
               </div>
-              
-              <div className="flex items-start space-x-3">
-                <Clock className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
-                <div className="text-gray-600">
-                  <p>Lundi - Samedi : 9h - 13h / 14h - 19h</p>
+            </div>
+          </div>
+
+          {/* Horaires */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-900">Horaires</h4>
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4 text-primary-600 flex-shrink-0" />
+                <div>
+                  <p className="font-medium">Lundi - Samedi</p>
+                  <p>9h00 - 19h00</p>
                 </div>
+              </div>
+              <div className="ml-6">
+                <p className="font-medium">Dimanche</p>
+                <p>9h00 - 13h00</p>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Section newsletter */}
-        <div className="py-8 border-t border-gray-200">
-          <div className="max-w-md mx-auto text-center space-y-4">
-            <h4 className="font-semibold text-gray-900">
-              Restez au parfum de nos nouveautés ! 🌺
+          {/* Newsletter */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-gray-900 flex items-center">
+              Newsletter 
+              <span className="ml-2">🌺</span>
             </h4>
             <p className="text-sm text-gray-600">
               Recevez nos offres spéciales et conseils floraux
@@ -160,6 +132,44 @@ export default function Footer() {
                 S'abonner
               </button>
             </form>
+          </div>
+        </div>
+
+        {/* Navigation rapide */}
+        <div className="border-t border-gray-200 py-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div>
+              <h5 className="font-medium text-gray-900 mb-3">Nos Créations</h5>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/produits/bouquets" className="text-gray-600 hover:text-primary-600 transition-colors">Bouquets</Link></li>
+                <li><Link href="/produits/compositions" className="text-gray-600 hover:text-primary-600 transition-colors">Compositions</Link></li>
+                <li><Link href="/produits/plantes" className="text-gray-600 hover:text-primary-600 transition-colors">Plantes</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="font-medium text-gray-900 mb-3">Événements</h5>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/evenements/mariage" className="text-gray-600 hover:text-primary-600 transition-colors">Mariage</Link></li>
+                <li><Link href="/evenements/deuil" className="text-gray-600 hover:text-primary-600 transition-colors">Deuil</Link></li>
+                <li><Link href="/evenements/anniversaire" className="text-gray-600 hover:text-primary-600 transition-colors">Anniversaire</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="font-medium text-gray-900 mb-3">Services</h5>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/services/livraison" className="text-gray-600 hover:text-primary-600 transition-colors">Livraison</Link></li>
+                <li><Link href="/services/conseil" className="text-gray-600 hover:text-primary-600 transition-colors">Conseil</Link></li>
+                <li><Link href="/services/sur-mesure" className="text-gray-600 hover:text-primary-600 transition-colors">Sur mesure</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="font-medium text-gray-900 mb-3">Support</h5>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/aide" className="text-gray-600 hover:text-primary-600 transition-colors">Aide</Link></li>
+                <li><Link href="/faq" className="text-gray-600 hover:text-primary-600 transition-colors">FAQ</Link></li>
+                <li><Link href="/contact" className="text-gray-600 hover:text-primary-600 transition-colors">Contact</Link></li>
+              </ul>
+            </div>
           </div>
         </div>
 
@@ -194,24 +204,33 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Pétales flottants décoratifs */}
-      <div className="absolute bottom-0 left-0 right-0 overflow-hidden h-20 pointer-events-none">
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute animate-float opacity-10"
-            style={{
-              left: `${15 + i * 15}%`,
-              bottom: `${Math.random() * 10}px`,
-              animationDelay: `${i * 0.5}s`,
-              animationDuration: `${4 + Math.random() * 2}s`,
-              fontSize: '20px'
-            }}
-          >
-            🌸
-          </div>
-        ))}
-      </div>
+      {/* ✅ PÉTALES FLOTTANTS AVEC FIX HYDRATATION */}
+      {isMounted && (
+        <div className="absolute bottom-0 left-0 right-0 overflow-hidden h-20 pointer-events-none">
+          {/* ✅ UTILISATION DE VALEURS FIXES AU LIEU DE Math.random() */}
+          {[
+            { left: 15, bottom: 2, delay: 0, duration: 4 },
+            { left: 30, bottom: 5, delay: 0.5, duration: 4.5 },
+            { left: 45, bottom: 1, delay: 1, duration: 4.2 },
+            { left: 60, bottom: 7, delay: 1.5, duration: 4.8 },
+            { left: 75, bottom: 3, delay: 2, duration: 4.3 },
+            { left: 90, bottom: 6, delay: 2.5, duration: 4.7 },
+          ].map((petal, i) => (
+            <div
+              key={i}
+              className="absolute opacity-10 text-xl animate-float"
+              style={{
+                left: `${petal.left}%`,
+                bottom: `${petal.bottom}px`,
+                animationDelay: `${petal.delay}s`,
+                animationDuration: `${petal.duration}s`,
+              }}
+            >
+              🌸
+            </div>
+          ))}
+        </div>
+      )}
     </footer>
   );
 }
