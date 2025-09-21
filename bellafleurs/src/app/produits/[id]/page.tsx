@@ -270,6 +270,7 @@ export default function ProductDetailPage() {
                   width={600}
                   height={600}
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  quality={100}
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/api/placeholder/600/600';
                   }}
@@ -295,6 +296,7 @@ export default function ProductDetailPage() {
                         width={150}
                         height={150}
                         className="w-full h-full object-cover"
+                        quality={100}
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = '/api/placeholder/150/150';
                         }}

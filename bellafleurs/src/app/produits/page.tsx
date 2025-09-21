@@ -296,6 +296,7 @@ export default function ProductsPage() {
                     fill
                     className="object-cover transition-transform duration-300 hover:scale-105"
                     sizes="(max-width: 640px) 100vw, (max-width: 768px) 128px, 192px"
+                    quality={100}
                   />
                   {/* Badges overlay */}
                   <div className="absolute top-2 left-2 flex flex-col gap-1">
@@ -426,6 +427,7 @@ export default function ProductsPage() {
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-105"
                 sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+                quality={100}
               />
               
               {/* Badges */}

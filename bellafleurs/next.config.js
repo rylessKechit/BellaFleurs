@@ -2,6 +2,7 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: false,
   images: {
     remotePatterns: [
       {
@@ -15,6 +16,11 @@ const nextConfig = {
         pathname: '/**'
       }
     ],
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 31536000,
+    deviceSizes: [640, 768, 1024, 1280, 1600],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // SUPPRIMER LA LIGNE quality: 100 - ça n'existe pas ici
   },
   
   webpack: (config, { isServer }) => {

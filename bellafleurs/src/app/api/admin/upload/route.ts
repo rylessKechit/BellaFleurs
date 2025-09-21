@@ -20,8 +20,21 @@ async function uploadToCloudinary(file: File, folder: string = 'bella-fleurs/pro
   const result = await cloudinary.uploader.upload(dataUri, {
     folder,
     resource_type: 'image',
+    // AMÉLIORER CES PARAMÈTRES
     transformation: [
-      { width: 800, height: 600, crop: 'fill', quality: 'auto:good' }
+      { 
+        width: 1200,     // Plus grande résolution 
+        height: 900,     // Plus grande résolution
+        crop: 'fill', 
+        quality: 'auto:best',  // Meilleure qualité (était auto:good)
+        format: 'auto'         // Format optimal automatique
+      }
+    ],
+    // Ajouter ces options
+    eager: [
+      { width: 400, height: 300, crop: 'fill', quality: 'auto:best' },  // Thumbnail
+      { width: 800, height: 600, crop: 'fill', quality: 'auto:best' },  // Medium
+      { width: 1200, height: 900, crop: 'fill', quality: 'auto:best' }  // Large
     ]
   });
 
