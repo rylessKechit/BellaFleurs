@@ -382,7 +382,7 @@ export default function CartPage() {
                       <div className="mt-4 sm:mt-6 space-y-2 sm:space-y-3">
                         <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                           <Truck className="w-4 h-4 text-green-600" />
-                          <span>Livraison 24-48h en région parisienne</span>
+                          <span>Livraison 24h à Brétigny-sur-Orge et alentours</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                           <Gift className="w-4 h-4 text-green-600" />

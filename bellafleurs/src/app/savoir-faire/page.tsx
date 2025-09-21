@@ -34,19 +34,14 @@ export default function SavoirFairePage() {
       title: "Livraison soignée",
       description: "Livraison délicate et rapide pour préserver la fraîcheur de votre création. Nos livreurs sont formés à la manipulation des compositions florales.",
       details: [
-        "Livraison 24-48h en région parisienne",
+        "Livraison 24h à Brétigny-sur-Orge et alentours",
         "Emballage protecteur spécialisé",
-        "Livreurs formés aux fleurs",
         "Suivi en temps réel"
       ]
     }
   ];
 
   const techniques = [
-    {
-      name: "Art floral japonais",
-      description: "Maîtrise de l'ikebana pour des compositions épurées et harmonieuses"
-    },
     {
       name: "Bouquets français traditionnels",
       description: "Techniques classiques de la floriculture française"

@@ -6,29 +6,6 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
 export default function AProposPage() {
-  const timeline = [
-    {
-      year: "2001",
-      title: "Début de la passion",
-      description: "Aurélie découvre l'art floral lors de sa formation professionnelle"
-    },
-    {
-      year: "2010",
-      title: "Perfectionnement",
-      description: "Formation avancée en compositions florales et ikebana au Japon"
-    },
-    {
-      year: "2019",
-      title: "Naissance de Bella Fleurs",
-      description: "Ouverture de la boutique dans le 15ème arrondissement de Paris"
-    },
-    {
-      year: "2024",
-      title: "Reconnaissance",
-      description: "Fleuriste de l'année dans le 15ème, plus de 1000 clients satisfaits"
-    }
-  ];
-
   const team = [
     {
       name: "Aurélie",
@@ -37,20 +14,6 @@ export default function AProposPage() {
       speciality: "Art floral français et japonais",
       description: "Diplômée en art floral, Aurélie a consacré sa vie à créer des moments magiques à travers les fleurs. Sa passion l'a menée du Japon aux ateliers parisiens les plus prestigieux."
     },
-    {
-      name: "Marie",
-      role: "Assistante créative",
-      experience: "5 ans d'expérience",
-      speciality: "Compositions modernes",
-      description: "Jeune talent formée par Aurélie, Marie apporte une vision contemporaine aux créations traditionnelles de la boutique."
-    }
-  ];
-
-  const stats = [
-    { number: "23", label: "Ans d'expérience" },
-    { number: "1000+", label: "Clients satisfaits" },
-    { number: "500+", label: "Créations uniques" },
-    { number: "5★", label: "Note moyenne" }
   ];
 
   return (
@@ -99,67 +62,10 @@ export default function AProposPage() {
                     Puis j'ai ouvert ma propre boutique de fleurs à Cagnes-sur-Mer, sur les bords de la Méditerranée. Je l'ai gérée pendant six ans avec mon mari. Ce fut une très belle histoire de fleurs et de rencontres humaines. Notre amour a grandi et une nouvelle fleur a éclos : notre fille Bella.
                   </p>
                   <p className="text-base sm:text-lg md:text-xl text-green-800 leading-relaxed mt-3 sm:mt-4">
-                    Aujourd'hui, nous avons posé nos valises à Bretigny-sur-Orge. Me voilà prête pour vivre une nouvelle aventure avec mon site internet www.bellafleurs.com . Cela fait 20 ans que les fleurs, les compositions et les bouquets font partie de ma vie. Avec www.bellafleurs.com, mon savoir-faire et ma passion, je vous propose des créations florales originales et de saison pour accompagner vos plus beaux instants de vie et créer des souvenirs inoubliables.
+                    Aujourd'hui, nous avons posé nos valises à Bretigny-sur-Orge. Me voilà prête pour vivre une nouvelle aventure avec mon site internet www.bellafleurs.fr . Cela fait 20 ans que les fleurs, les compositions et les bouquets font partie de ma vie. Avec www.bellafleurs.fr, mon savoir-faire et ma passion, je vous propose des créations florales originales et de saison pour accompagner vos plus beaux instants de vie et créer des souvenirs inoubliables.
                   </p>
                 </div>
-
-                {/* Stats - RESPONSIVE APPLIQUÉ */}
-                <div className="grid grid-cols-2 gap-6 sm:gap-8 max-w-md mx-auto lg:max-w-none">
-                  {stats.map((stat, index) => (
-                    <div key={index} className="text-center">
-                      <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-green-600 mb-2">
-                        {stat.number}
-                      </div>
-                      <div className="text-sm sm:text-base text-green-700 font-medium">
-                        {stat.label}
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Notre histoire - Timeline - RESPONSIVE APPLIQUÉ */}
-        <section className="py-12 sm:py-16 md:py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12 sm:mb-16">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-800 mb-4 sm:mb-6">
-                Notre parcours
-              </h2>
-              <p className="text-base sm:text-lg text-green-600 max-w-2xl mx-auto">
-                Une histoire de passion qui s'écrit depuis plus de 20 ans
-              </p>
-            </div>
-
-            <div className="space-y-6 sm:space-y-8">
-              {timeline.map((event, index) => (
-                <div
-                  key={index}
-                  className={`flex flex-col md:flex-row items-center ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} gap-6 sm:gap-8`}
-                >
-                  <div className="flex-1">
-                    <div className={`bg-green-50 rounded-xl p-4 sm:p-6 shadow-lg ${index % 2 === 0 ? 'md:text-right' : 'md:text-left'}`}>
-                      <div className="text-lg sm:text-xl font-bold text-green-600 mb-2">
-                        {event.year}
-                      </div>
-                      <h3 className="text-xl sm:text-2xl font-bold text-green-800 mb-2 sm:mb-3">
-                        {event.title}
-                      </h3>
-                      <p className="text-sm sm:text-base text-green-700">
-                        {event.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="w-8 h-8 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    <div className="w-3 h-3 sm:w-4 sm:h-4 bg-white rounded-full"></div>
-                  </div>
-
-                  <div className="flex-1 hidden md:block"></div>
-                </div>
-              ))}
             </div>
           </div>
         </section>
@@ -287,7 +193,7 @@ export default function AProposPage() {
                 <div className="flex flex-col sm:flex-row items-center text-center sm:text-left sm:col-span-2 md:col-span-1">
                   <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 mb-2 sm:mb-0 sm:mr-3 flex-shrink-0" />
                   <div>
-                    <p className="font-semibold text-green-800 text-sm sm:text-base">contact@bellafleurs.com</p>
+                    <p className="font-semibold text-green-800 text-sm sm:text-base">contact@bellafleurs.fr</p>
                     <p className="text-green-700 text-xs sm:text-sm">Réponse sous 24h</p>
                   </div>
                 </div>
