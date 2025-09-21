@@ -2,20 +2,58 @@
 
 import React from 'react';
 import { Camera } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function GallerySection() {
+  const router = useRouter();
 
-  // 7 catégories de services
+  // 7 catégories de services avec mapping vers les catégories API
   const items = [
-    { name: 'Bouquets', image: '/images/bouquets.jpg' },
-    { name: 'Fleurs de saisons', image: '/images/fleurs-saisons.jpg' },
-    { name: 'Compositions piquées', image: '/images/compositions.jpg' },
-    { name: 'Roses', image: '/images/roses.jpg' },
-    { name: 'Orchidées', image: '/images/orchidees.jpg' },
-    { name: 'Deuil', image: '/images/deuil.jpg' },
-    { name: 'Incontournable', image: '/images/incontournable.jpg' },
-    { name: 'Abonnements', image: '/images/abonnements.jpg' }
+    { 
+      name: 'Bouquets', 
+      image: '/images/bouquets.webp',
+      category: 'Bouquets' // Nom exact de la catégorie dans l'API
+    },
+    { 
+      name: 'Fleurs de saisons', 
+      image: '/images/fleurs-saisons.webp',
+      category: 'Fleurs de saisons'
+    },
+    { 
+      name: 'Compositions piquées', 
+      image: '/images/compositions.webp',
+      category: 'Compositions piquées'
+    },
+    { 
+      name: 'Roses', 
+      image: '/images/roses.webp',
+      category: 'Roses'
+    },
+    { 
+      name: 'Orchidées', 
+      image: '/images/orchidees.webp',
+      category: 'Orchidées'
+    },
+    { 
+      name: 'Deuil', 
+      image: '/images/deuil.webp',
+      category: 'Deuil'
+    },
+    { 
+      name: 'Incontournable', 
+      image: '/images/incontournables.webp',
+      category: 'Incontournable'
+    }
   ];
+
+  // Fonction pour naviguer vers la page produits avec filtre
+  const handleCategoryClick = (categoryName: string) => {
+    // Encoder le nom de catégorie pour l'URL
+    const encodedCategory = encodeURIComponent(categoryName);
+    
+    // Naviguer vers /produits avec le paramètre de catégorie
+    router.push(`/produits?category=${encodedCategory}`);
+  };
 
   return (
     <section id="galerie" className="py-12 sm:py-16 md:py-20 relative flex justify-center">
@@ -31,6 +69,10 @@ export default function GallerySection() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-800 mb-4 sm:mb-6">
             Mes créations
           </h2>
+          
+          <p className="text-sm sm:text-base text-green-600">
+            Cliquez sur une catégorie pour découvrir nos créations
+          </p>
         </div>
 
         {/* Grille responsive - 7 services */}
@@ -41,23 +83,27 @@ export default function GallerySection() {
             {items.map((item, index) => (
               <div
                 key={index}
-                className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                onClick={() => handleCategoryClick(item.category)}
               >
                 {/* Image de fond avec overlay */}
                 <div 
                   className="h-48 sm:h-56 bg-cover bg-center relative"
                   style={{ 
-                    backgroundImage: `linear-gradient(rgba(0,0,0,0.0), rgba(0,0,0,0.1)), url(${item.image})`
+                    backgroundImage: `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.3)), url(${item.image})`
                   }}
                 >
                   {/* Bulle avec le nom du service */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg group-hover:bg-green-50/90 transition-all duration-300">
+                    <div className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg group-hover:bg-green-50/95 group-hover:scale-110 transition-all duration-300">
                       <span className="text-sm font-semibold text-green-800">
                         {item.name}
                       </span>
                     </div>
                   </div>
+                  
+                  {/* Overlay d'hover */}
+                  <div className="absolute inset-0 bg-green-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
               </div>
             ))}
@@ -71,22 +117,31 @@ export default function GallerySection() {
               {items.slice(0, 4).map((item, index) => (
                 <div
                   key={index}
-                  className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                  onClick={() => handleCategoryClick(item.category)}
                 >
                   {/* Image de fond avec overlay */}
                   <div 
                     className="h-56 lg:h-72 bg-cover bg-center relative"
                     style={{ 
-                      backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${item.image})`
+                      backgroundImage: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.4)), url(${item.image})`
                     }}
                   >
                     {/* Bulle avec le nom du service */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="bg-white/90 backdrop-blur-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-lg group-hover:bg-green-50/90 transition-all duration-300">
+                      <div className="bg-white/95 backdrop-blur-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-lg group-hover:bg-green-50/95 group-hover:scale-110 transition-all duration-300">
                         <span className="text-sm sm:text-base font-semibold text-green-800">
                           {item.name}
                         </span>
                       </div>
+                    </div>
+                    
+                    {/* Overlay d'hover */}
+                    <div className="absolute inset-0 bg-green-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    
+                    {/* Indicateur cliquable */}
+                    <div className="absolute top-3 right-3 bg-white/80 backdrop-blur-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <Camera className="w-4 h-4 text-green-600" />
                     </div>
                   </div>
                 </div>
@@ -98,22 +153,31 @@ export default function GallerySection() {
               {items.slice(4, 7).map((item, index) => (
                 <div
                   key={index + 4}
-                  className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                  onClick={() => handleCategoryClick(item.category)}
                 >
                   {/* Image de fond avec overlay */}
                   <div 
                     className="h-56 lg:h-72 bg-cover bg-center relative"
                     style={{ 
-                      backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${item.image})`
+                      backgroundImage: `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.4)), url(${item.image})`
                     }}
                   >
                     {/* Bulle avec le nom du service */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="bg-white/90 backdrop-blur-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-lg group-hover:bg-green-50/90 transition-all duration-300">
+                      <div className="bg-white/95 backdrop-blur-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-lg group-hover:bg-green-50/95 group-hover:scale-110 transition-all duration-300">
                         <span className="text-sm sm:text-base font-semibold text-green-800">
                           {item.name}
                         </span>
                       </div>
+                    </div>
+                    
+                    {/* Overlay d'hover */}
+                    <div className="absolute inset-0 bg-green-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    
+                    {/* Indicateur cliquable */}
+                    <div className="absolute top-3 right-3 bg-white/80 backdrop-blur-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <Camera className="w-4 h-4 text-green-600" />
                     </div>
                   </div>
                 </div>
@@ -121,6 +185,17 @@ export default function GallerySection() {
             </div>
           </div>
 
+        </div>
+        
+        {/* CTA vers la page produits */}
+        <div className="text-center mt-12 sm:mt-16">
+          <button
+            onClick={() => router.push('/produits')}
+            className="inline-flex items-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors duration-300 shadow-lg hover:shadow-xl"
+          >
+            <Camera className="w-5 h-5 mr-2" />
+            Voir toutes nos créations
+          </button>
         </div>
       </div>
     </section>

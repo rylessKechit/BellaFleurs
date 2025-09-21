@@ -75,7 +75,6 @@ const CATEGORIES = [
   'Orchidées',
   'Deuil',
   'Incontournable',
-  'Abonnement'
 ];
 
 export default function ProductsPage() {
@@ -94,58 +93,84 @@ export default function ProductsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [addingToCart, setAddingToCart] = useState<string[]>([]);
 
-  // Charger les produits
-  useEffect(() => {
-    fetchProducts();
-  }, [currentPage, selectedCategory, sortBy]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialiser les filtres depuis l'URL
+  // Modifier les useEffect
   useEffect(() => {
+    // D'abord initialiser depuis l'URL
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     
+    console.log('🔍 Initialisation depuis URL:', { category, search });
+    
     if (category && CATEGORIES.includes(category)) {
+      console.log('✅ Catégorie URL valide:', category);
       setSelectedCategory(category);
     }
     if (search) {
       setSearchTerm(search);
     }
+    
+    // Marquer comme initialisé
+    setIsInitialized(true);
   }, [searchParams]);
 
-  const fetchProducts = async () => {
-    try {
-      setIsLoading(true);
-      
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '12',
-        sort: sortBy
-      });
-
-      if (selectedCategory !== 'all') {
-        params.append('category', selectedCategory);
-      }
-
-      if (searchTerm.trim()) {
-        params.append('search', searchTerm.trim());
-      }
-
-      const response = await fetch(`/api/products?${params.toString()}`);
-      
-      if (response.ok) {
-        const data: ApiResponse = await response.json();
-        setProducts(data.data.products);
-        setTotalPages(data.data.pagination?.totalPages || 1);
-      } else {
-        throw new Error('Erreur lors du chargement des produits');
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      toast.error('Erreur lors du chargement des produits');
-    } finally {
-      setIsLoading(false);
+  // Charger les produits SEULEMENT après initialisation
+  useEffect(() => {
+    if (isInitialized) {
+      console.log('🚀 fetchProducts après initialisation');
+      fetchProducts();
     }
-  };
+  }, [currentPage, selectedCategory, sortBy, isInitialized]);
+
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        
+        console.log('🔍 fetchProducts appelé avec:', {
+          currentPage,
+          selectedCategory,
+          sortBy,
+          searchTerm
+        });
+        
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          limit: '12',
+          sort: sortBy
+        });
+
+        if (selectedCategory !== 'all') {
+          params.append('category', selectedCategory);
+          console.log('✅ Catégorie ajoutée aux params:', selectedCategory);
+        } else {
+          console.log('⚠️ selectedCategory est "all", pas de filtre appliqué');
+        }
+
+        if (searchTerm.trim()) {
+          params.append('search', searchTerm.trim());
+        }
+
+        const apiUrl = `/api/products?${params.toString()}`;
+        console.log('🚀 URL API finale:', apiUrl);
+
+        const response = await fetch(apiUrl);
+        
+        if (response.ok) {
+          const data: ApiResponse = await response.json();
+          console.log('📦 Données reçues:', data);
+          setProducts(data.data.products);
+          setTotalPages(data.data.pagination?.totalPages || 1);
+        } else {
+          throw new Error('Erreur lors du chargement des produits');
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+        toast.error('Erreur lors du chargement des produits');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
   // Gestionnaires d'événements
   const handleSearch = (e: React.FormEvent) => {

@@ -15,7 +15,6 @@ const VALID_CATEGORIES = [
   'Orchidées',
   'Deuil',
   'Incontournable',
-  'Abonnement'
 ];
 
 // Interface pour le produit de base de données avec variants

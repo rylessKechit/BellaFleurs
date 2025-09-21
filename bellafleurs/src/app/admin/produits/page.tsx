@@ -56,7 +56,6 @@ const CATEGORIES = [
   'Orchidées',
   'Deuil',
   'Incontournable',
-  'Abonnement'
 ];
 
 // Types
