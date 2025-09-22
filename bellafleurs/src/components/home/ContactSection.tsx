@@ -128,7 +128,7 @@ export default function ContactSection() {
                     >
                       <option value="" className="bg-white">Sélectionnez une occasion</option>
                       <option value="anniversaire" className="bg-white">Anniversaire</option>
-                      <option value="mariage" className="bg-white">Mariage</option>
+                      <option value="mariage" className="bg-white">Naissance</option>
                       <option value="deuil" className="bg-white">Deuil</option>
                       <option value="entreprise" className="bg-white">Événement d'entreprise</option>
                       <option value="autre" className="bg-white">Autre</option>

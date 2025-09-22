@@ -11,7 +11,7 @@ export default function AProposPage() {
       name: "Aurélie",
       role: "Fleuriste passionnée & Fondatrice",
       experience: "23 ans d'expérience",
-      speciality: "Art floral français et japonais",
+      speciality: "Art floral français",
       description: "Diplômée en art floral, Aurélie a consacré sa vie à créer des moments magiques à travers les fleurs."
     },
   ];
@@ -186,7 +186,7 @@ export default function AProposPage() {
                   <Phone className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 mb-2 sm:mb-0 sm:mr-3 flex-shrink-0" />
                   <div>
                     <p className="font-semibold text-green-800 text-sm sm:text-base">07 80 66 27 32</p>
-                    <p className="text-green-700 text-xs sm:text-sm">Lun-Sam 9h-18h</p>
+                    <p className="text-green-700 text-xs sm:text-sm">Lun-Sam 9h00 - 13h00 / 14h00 - 19h00</p>
                   </div>
                 </div>
                 

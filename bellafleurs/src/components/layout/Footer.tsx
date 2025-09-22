@@ -61,7 +61,6 @@ export default function Footer() {
               <div className="flex items-start space-x-2">
                 <MapPin className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" />
                 <p className="text-gray-600">
-                  123 Avenue des Fleurs<br />
                   91220 Brétigny-sur-Orge
                 </p>
               </div>
@@ -94,12 +93,12 @@ export default function Footer() {
                 <Clock className="w-4 h-4 text-primary-600 flex-shrink-0" />
                 <div>
                   <p className="font-medium">Lundi - Samedi</p>
-                  <p>9h00 - 19h00</p>
+                  <p>9h00 - 13h00 / 14h00 - 19h00</p>
                 </div>
               </div>
               <div className="ml-6">
                 <p className="font-medium">Dimanche</p>
-                <p>9h00 - 13h00</p>
+                <p>Fermée</p>
               </div>
             </div>
           </div>
@@ -149,7 +148,7 @@ export default function Footer() {
             <div>
               <h5 className="font-medium text-gray-900 mb-3">Événements</h5>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/evenements/mariage" className="text-gray-600 hover:text-primary-600 transition-colors">Mariage</Link></li>
+                <li><Link href="/evenements/mariage" className="text-gray-600 hover:text-primary-600 transition-colors">Naissance</Link></li>
                 <li><Link href="/evenements/deuil" className="text-gray-600 hover:text-primary-600 transition-colors">Deuil</Link></li>
                 <li><Link href="/evenements/anniversaire" className="text-gray-600 hover:text-primary-600 transition-colors">Anniversaire</Link></li>
               </ul>

@@ -24,23 +24,23 @@ export const CONTACT_INFO = {
   phone: '+33780662732',
   email: 'contact@bellafleurs.fr',
   address: {
-    street: '123 Avenue des Fleurs',
-    city: 'Paris',
-    zipCode: '75015',
+    street: '',
+    city: 'Brétigny-sur-Orge',
+    zipCode: '91220',
     country: 'France',
-    full: '123 Avenue des Fleurs, 75015 Paris, France'
+    full: 'Brétigny-sur-Orge, 91220, France'
   },
   hours: {
-    weekdays: 'Lundi-Samedi: 9h-19h',
-    weekend: 'Dimanche: 9h-13h',
+    weekdays: 'Lundi-Samedi: 9h00 - 13h00 / 14h00 - 19h00',
+    weekend: 'Dimanche: Fermée',
     detailed: [
-      { day: 'Lundi', hours: '9h00 - 19h00' },
-      { day: 'Mardi', hours: '9h00 - 19h00' },
-      { day: 'Mercredi', hours: '9h00 - 19h00' },
-      { day: 'Jeudi', hours: '9h00 - 19h00' },
-      { day: 'Vendredi', hours: '9h00 - 19h00' },
-      { day: 'Samedi', hours: '9h00 - 19h00' },
-      { day: 'Dimanche', hours: '9h00 - 13h00' }
+      { day: 'Lundi', hours: '9h00 - 13h00 / 14h00 - 19h00' },
+      { day: 'Mardi', hours: '9h00 - 13h00 / 14h00 - 19h00' },
+      { day: 'Mercredi', hours: '9h00 - 13h00 / 14h00 - 19h00' },
+      { day: 'Jeudi', hours: '9h00 - 13h00 / 14h00 - 19h00' },
+      { day: 'Vendredi', hours: '9h00 - 13h00 / 14h00 - 19h00' },
+      { day: 'Samedi', hours: '9h00 - 13h00 / 14h00 - 19h00' },
+      { day: 'Dimanche', hours: 'Fermée' }
     ]
   },
   social: {
@@ -97,7 +97,7 @@ export const PRODUCT_CATEGORIES = {
     description: 'Créations spéciales pour vos événements',
     image: '/images/categories/evenements.jpg',
     subcategories: [
-      { id: 'mariage', name: 'Mariage' },
+      { id: 'mariage', name: 'Naissance' },
       { id: 'anniversaire', name: 'Anniversaire' },
       { id: 'naissance', name: 'Naissance' },
       { id: 'deuil', name: 'Deuil' },
