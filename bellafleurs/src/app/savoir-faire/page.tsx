@@ -32,7 +32,7 @@ export default function SavoirFairePage() {
     {
       icon: Truck,
       title: "Livraison soignée",
-      description: "Livraison délicate et rapide pour préserver la fraîcheur de votre création. Nos livreurs sont formés à la manipulation des compositions florales.",
+      description: "Livraison délicate et rapide pour préserver la fraîcheur de votre création.",
       details: [
         "Livraison 24h à Brétigny-sur-Orge et alentours",
         "Emballage protecteur spécialisé",

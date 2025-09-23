@@ -25,7 +25,7 @@ export default function AboutSection() {
                   Fleuriste passionnée depuis plus de 20 ans, j'ai commencé mon apprentissage à 17 ans sur le bassin d'Arcachon.
                 </p>
                 <p className="text-base sm:text-lg md:text-xl text-green-800 leading-relaxed mt-3 sm:mt-4">
-                  Par la suite, je suis allée d'expérience en expérience. J'ai eu la chance d'apprendre différentes techniques dans plusieurs boutiques (MIN, fleuriste traditionnel, fleuriste de luxe, fleuriste franchisé.
+                  Par la suite, je suis allée d'expérience en expérience. J'ai eu la chance d'apprendre différentes techniques dans plusieurs boutiques (MIN, fleuriste traditionnel, fleuriste de luxe, fleuriste franchisé.)
                 </p>
                 <p className="text-base sm:text-lg md:text-xl text-green-800 leading-relaxed mt-3 sm:mt-4">
                   Puis j'ai ouvert ma propre boutique de fleurs à Cagnes-sur-Mer, sur les bords de la Méditerranée. Je l'ai gérée pendant six ans avec mon mari. Ce fut une très belle histoire de fleurs et de rencontres humaines. Notre amour a grandi et une nouvelle fleur a éclos : notre fille Bella.
