@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ShoppingCart, Truck, CreditCard, User, MapPin, Calendar, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { ShoppingCart, Truck, CreditCard, User, MapPin, Calendar, AlertCircle, CheckCircle, Loader2, Gift } from 'lucide-react';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 import { usePostalCodeValidation } from '@/hooks/usePostalCodeValidation';
 
@@ -66,10 +66,27 @@ interface OrderData {
     type: 'delivery';
     address: DeliveryAddress;
     date: Date;
+    timeSlot: string;
     notes?: string;
+    isGift: boolean;
+    giftInfo?: {
+      recipientName: string;
+      senderName: string;
+    };
   };
   paymentMethod: string;
   totalAmount: number;
+}
+
+interface GiftInfo {
+  isGift: boolean;
+  recipientFirstName: string;
+  recipientLastName: string;
+}
+
+interface TimeSlot {
+  value: string;
+  label: string;
 }
 
 export default function CheckoutPage() {
@@ -83,7 +100,6 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { validationState, validatePostalCode } = usePostalCodeValidation();
-  const [isDeliveryZoneValid, setIsDeliveryZoneValid] = useState(false);
 
   // Informations client
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
@@ -105,24 +121,48 @@ export default function CheckoutPage() {
     notes: ''
   });
 
-  // Ajouter un useEffect pour synchroniser la ville
+  // Option cadeau
+  const [giftInfo, setGiftInfo] = useState<GiftInfo>({
+    isGift: false,
+    recipientFirstName: '',
+    recipientLastName: ''
+  });
+
+  // Créneaux de livraison
+  const timeSlots: TimeSlot[] = [
+    { value: '9h-13h', label: '9h - 13h (matin)' },
+    { value: '14h-19h', label: '14h - 19h (après-midi)' }
+  ];
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+
+  // Gestion ville - simplifié
+  const [showCitySelect, setShowCitySelect] = useState(false);
+
+  // Synchroniser la ville basé sur la validation du code postal
   useEffect(() => {
-    if (validationState.isDeliverable && validationState.city) {
+    if (validationState.cities.length === 1) {
+      // Une seule ville - remplir automatiquement
       setDeliveryInfo(prev => ({
         ...prev,
-        address: { ...prev.address, city: validationState.city }
+        address: { ...prev.address, city: validationState.cities[0] }
       }));
-      setIsDeliveryZoneValid(true);
+      setShowCitySelect(false);
+    } else if (validationState.cities.length > 1) {
+      // Plusieurs villes - montrer le select
+      setShowCitySelect(true);
+      setDeliveryInfo(prev => ({
+        ...prev,
+        address: { ...prev.address, city: '' }
+      }));
     } else {
-      setIsDeliveryZoneValid(false);
-      if (!validationState.isLoading) {
-        setDeliveryInfo(prev => ({
-          ...prev,
-          address: { ...prev.address, city: '' }
-        }));
-      }
+      // Aucune ville - reset
+      setShowCitySelect(false);
+      setDeliveryInfo(prev => ({
+        ...prev,
+        address: { ...prev.address, city: '' }
+      }));
     }
-  }, [validationState]);
+  }, [validationState.cities]);
 
   // Charger le panier
   useEffect(() => {
@@ -163,55 +203,16 @@ export default function CheckoutPage() {
 
   // Calculs
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const deliveryFee = subtotal >= 50 ? 0 : 10;
+  const deliveryFee = subtotal >= 50 ? 0 : 5;
   const total = subtotal + deliveryFee;
 
-  // Validation du formulaire
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    // Validation client
-    if (!customerInfo.firstName.trim()) newErrors.firstName = 'Prénom requis';
-    if (!customerInfo.lastName.trim()) newErrors.lastName = 'Nom requis';
-    if (!customerInfo.email.trim()) newErrors.email = 'Email requis';
-    if (!customerInfo.phone.trim()) newErrors.phone = 'Téléphone requis';
-
-    // Validation email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (customerInfo.email && !emailRegex.test(customerInfo.email)) {
-      newErrors.email = 'Format email invalide';
-    }
-
-    // Validation livraison
-    if (!deliveryInfo.address.street.trim()) newErrors.street = 'Adresse requise';
-    if (!deliveryInfo.address.city.trim()) newErrors.city = 'Ville requise';
-    if (!deliveryInfo.address.zipCode.trim()) newErrors.zipCode = 'Code postal requis';
-    if (!deliveryInfo.date) newErrors.date = 'Date de livraison requise';
-
-    // Validation date future
-    if (deliveryInfo.date) {
-      const selectedDate = new Date(deliveryInfo.date);
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      if (selectedDate < tomorrow) {
-        newErrors.date = 'Date minimum: demain';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   // Données pour le paiement
-  const orderDataForPayment = useMemo((): OrderData | null => {
-    if (!deliveryInfo.address.street || !deliveryInfo.date) {
-      return null;
-    }
-
+  const orderDataForPayment = useMemo(() => {
+    if (cartItems.length === 0) return null;
+    
     return {
       items: cartItems.map(item => ({
-        product: item._id,
+        product: item._id,        // CORRIGÉ : 'product' au lieu de 'productId'
         name: item.name,
         price: item.price,
         quantity: item.quantity,
@@ -220,20 +221,28 @@ export default function CheckoutPage() {
         variantName: item.variantName
       })),
       customerInfo: {
-        name: `${customerInfo.firstName} ${customerInfo.lastName}`,
+        name: giftInfo.isGift 
+          ? `${giftInfo.recipientFirstName} ${giftInfo.recipientLastName}` 
+          : `${customerInfo.firstName} ${customerInfo.lastName}`,
         email: customerInfo.email,
         phone: customerInfo.phone
       },
       deliveryInfo: {
-        type: 'delivery',
+        type: 'delivery' as const,
         address: deliveryInfo.address,
         date: new Date(deliveryInfo.date),
-        notes: deliveryInfo.notes
+        timeSlot: selectedTimeSlot,
+        notes: deliveryInfo.notes,
+        isGift: giftInfo.isGift,
+        giftInfo: giftInfo.isGift ? {
+          recipientName: `${giftInfo.recipientFirstName} ${giftInfo.recipientLastName}`,
+          senderName: `${customerInfo.firstName} ${customerInfo.lastName}`
+        } : undefined
       },
       paymentMethod: 'card',
       totalAmount: total
     };
-  }, [cartItems, customerInfo, deliveryInfo, total]);
+  }, [cartItems, customerInfo, deliveryInfo, giftInfo, selectedTimeSlot, total]);
 
   // Gérer le succès du paiement
   const handlePaymentSuccess = async (paymentIntent: any) => {
@@ -281,16 +290,23 @@ export default function CheckoutPage() {
     }
 
     if (currentStep === 2) {
-      // Valider les infos de livraison avec validation zone
+      // Valider les infos de livraison
       const newErrors: Record<string, string> = {};
       if (!deliveryInfo.address.street.trim()) newErrors.street = 'Adresse requise';
       if (!deliveryInfo.address.zipCode.trim()) newErrors.zipCode = 'Code postal requis';
       if (!deliveryInfo.address.city.trim()) newErrors.city = 'Ville requise';
       if (!deliveryInfo.date) newErrors.date = 'Date de livraison requise';
+      if (!selectedTimeSlot) newErrors.timeSlot = 'Créneau de livraison requis';
       
-      // Nouvelle validation zone
-      if (!isDeliveryZoneValid) {
-        newErrors.deliveryZone = 'Zone de livraison non couverte';
+      // Validation zone de livraison simplifiée
+      if (!validationState.isDeliverable) {
+        newErrors.zipCode = 'Zone non couverte par nos services de livraison';
+      }
+      
+      // Validation cadeau
+      if (giftInfo.isGift) {
+        if (!giftInfo.recipientFirstName.trim()) newErrors.recipientFirstName = 'Prénom du destinataire requis';
+        if (!giftInfo.recipientLastName.trim()) newErrors.recipientLastName = 'Nom du destinataire requis';
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -449,138 +465,264 @@ export default function CheckoutPage() {
 
             {/* Étape 2 : Livraison */}
             {currentStep === 2 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Truck className="w-5 h-5 mr-2" />
-                    Informations de livraison
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="street">Adresse *</Label>
-                    <Input
-                      id="street"
-                      value={deliveryInfo.address.street}
-                      onChange={(e) => setDeliveryInfo({
-                        ...deliveryInfo,
-                        address: { ...deliveryInfo.address, street: e.target.value }
-                      })}
-                      className={errors.street ? 'border-red-300' : ''}
-                      placeholder="123 rue de la Paix"
-                    />
-                    {errors.street && <p className="text-red-600 text-sm mt-1">{errors.street}</p>}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="zipCode">Code postal *</Label>
-                      <div className="relative">
-                        <Input
-                          id="zipCode"
-                          value={deliveryInfo.address.zipCode}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, '').slice(0, 5);
-                            setDeliveryInfo({
-                              ...deliveryInfo,
-                              address: { ...deliveryInfo.address, zipCode: value }
-                            });
-                            validatePostalCode(value);
-                          }}
-                          className={`pr-10 ${
-                            validationState.error ? 'border-red-300 bg-red-50' : 
-                            validationState.isDeliverable ? 'border-green-500 bg-green-50' : 
-                            'border-gray-300'
-                          }`}
-                          placeholder="75001"
-                          maxLength={5}
+              <div className="space-y-6">
+                
+                {/* Option Cadeau */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Gift className="w-5 h-5 mr-2" />
+                      C'est un cadeau ?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="isGift"
+                          checked={giftInfo.isGift}
+                          onChange={(e) => setGiftInfo(prev => ({ 
+                            ...prev, 
+                            isGift: e.target.checked,
+                            recipientFirstName: e.target.checked ? prev.recipientFirstName : '',
+                            recipientLastName: e.target.checked ? prev.recipientLastName : ''
+                          }))}
+                          className="rounded border-gray-300"
                         />
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                          {validationState.isLoading && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
-                          {validationState.isDeliverable && <CheckCircle className="w-4 h-4 text-green-500" />}
-                          {validationState.error && <AlertCircle className="w-4 h-4 text-red-500" />}
-                        </div>
+                        <Label htmlFor="isGift" className="text-sm">
+                          Cette commande est un cadeau pour quelqu'un d'autre
+                        </Label>
                       </div>
-                      {validationState.error && (
-                        <p className="text-red-600 text-sm mt-1 flex items-center">
-                          <AlertCircle className="w-4 h-4 mr-1" />
-                          {validationState.error}
-                        </p>
-                      )}
-                      {validationState.isDeliverable && (
-                        <p className="text-green-600 text-sm mt-1 flex items-center">
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Zone de livraison validée
-                        </p>
+                      
+                      {giftInfo.isGift && (
+                        <div className="bg-pink-50 p-4 rounded-lg border border-pink-200 space-y-4">
+                          <p className="text-sm text-pink-800 font-medium">
+                            Informations du destinataire
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="recipientFirstName">Prénom du destinataire *</Label>
+                              <Input
+                                id="recipientFirstName"
+                                value={giftInfo.recipientFirstName}
+                                onChange={(e) => setGiftInfo(prev => ({
+                                  ...prev,
+                                  recipientFirstName: e.target.value
+                                }))}
+                                className={errors.recipientFirstName ? 'border-red-300 bg-red-50' : ''}
+                                placeholder="Prénom"
+                              />
+                              {errors.recipientFirstName && (
+                                <p className="text-red-600 text-sm mt-1">{errors.recipientFirstName}</p>
+                              )}
+                            </div>
+                            <div>
+                              <Label htmlFor="recipientLastName">Nom du destinataire *</Label>
+                              <Input
+                                id="recipientLastName"
+                                value={giftInfo.recipientLastName}
+                                onChange={(e) => setGiftInfo(prev => ({
+                                  ...prev,
+                                  recipientLastName: e.target.value
+                                }))}
+                                className={errors.recipientLastName ? 'border-red-300 bg-red-50' : ''}
+                                placeholder="Nom"
+                              />
+                              {errors.recipientLastName && (
+                                <p className="text-red-600 text-sm mt-1">{errors.recipientLastName}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Informations de livraison */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Truck className="w-5 h-5 mr-2" />
+                      Informations de livraison
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    
                     <div>
-                      <Label htmlFor="city">Ville *</Label>
+                      <Label htmlFor="street">Adresse *</Label>
                       <Input
-                        id="city"
-                        value={validationState.city || deliveryInfo.address.city}
-                        onChange={() => {}} // Disabled - auto-rempli
-                        disabled={true}
-                        className="bg-gray-50 text-gray-700"
-                        placeholder="Ville"
+                        id="street"
+                        value={deliveryInfo.address.street}
+                        onChange={(e) => setDeliveryInfo({
+                          ...deliveryInfo,
+                          address: { ...deliveryInfo.address, street: e.target.value }
+                        })}
+                        className={errors.street ? 'border-red-300' : ''}
+                        placeholder="123 rue de la Paix"
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        La ville sera automatiquement remplie
-                      </p>
+                      {errors.street && <p className="text-red-600 text-sm mt-1">{errors.street}</p>}
                     </div>
-                  </div>
-
-                  {/* Erreur de zone de livraison */}
-                  {errors.deliveryZone && (
-                    <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                      <p className="text-red-700 text-sm flex items-center">
-                        <AlertCircle className="w-4 h-4 mr-2" />
-                        {errors.deliveryZone}
-                      </p>
-                      <p className="text-red-600 text-xs mt-2">
-                        Nous livrons actuellement dans un rayon de 10 km autour de Brétigny-sur-Orge.
-                      </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="zipCode">Code postal *</Label>
+                        <div className="relative">
+                          <Input
+                            id="zipCode"
+                            value={deliveryInfo.address.zipCode}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '').slice(0, 5);
+                              setDeliveryInfo({
+                                ...deliveryInfo,
+                                address: { ...deliveryInfo.address, zipCode: value }
+                              });
+                              validatePostalCode(value);
+                            }}
+                            className={`pr-10 ${
+                              validationState.error ? 'border-red-300 bg-red-50' : 
+                              validationState.isDeliverable ? 'border-green-500 bg-green-50' : 
+                              'border-gray-300'
+                            }`}
+                            placeholder="91220"
+                            maxLength={5}
+                          />
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            {validationState.isLoading && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+                            {validationState.isDeliverable && <CheckCircle className="w-4 h-4 text-green-500" />}
+                            {validationState.error && <AlertCircle className="w-4 h-4 text-red-500" />}
+                          </div>
+                        </div>
+                        {validationState.error && (
+                          <p className="text-red-600 text-sm mt-1 flex items-center">
+                            <AlertCircle className="w-4 h-4 mr-1" />
+                            {validationState.error}
+                          </p>
+                        )}
+                        {validationState.isDeliverable && (
+                          <p className="text-green-600 text-sm mt-1 flex items-center">
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Zone de livraison validée
+                          </p>
+                        )}
+                        {errors.zipCode && (
+                          <p className="text-red-600 text-sm mt-1">{errors.zipCode}</p>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="city">Ville *</Label>
+                        {showCitySelect ? (
+                          <select
+                            id="city"
+                            value={deliveryInfo.address.city}
+                            onChange={(e) => setDeliveryInfo(prev => ({
+                              ...prev,
+                              address: { ...prev.address, city: e.target.value }
+                            }))}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                              errors.city ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
+                          >
+                            <option value="">Sélectionnez votre ville</option>
+                            {validationState.cities.map((city) => (
+                              <option key={city} value={city}>
+                                {city}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Input
+                            id="city"
+                            value={validationState.city || deliveryInfo.address.city}
+                            disabled={true}
+                            className="bg-gray-50 text-gray-700"
+                            placeholder="Ville"
+                          />
+                        )}
+                        {!showCitySelect && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            La ville sera automatiquement remplie
+                          </p>
+                        )}
+                        {showCitySelect && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            Plusieurs villes trouvées - veuillez sélectionner la vôtre
+                          </p>
+                        )}
+                        {errors.city && (
+                          <p className="text-red-600 text-sm mt-1">{errors.city}</p>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  
-                  <div>
-                    <Label htmlFor="date">Date de livraison *</Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={deliveryInfo.date}
-                      onChange={(e) => setDeliveryInfo({...deliveryInfo, date: e.target.value})}
-                      className={errors.date ? 'border-red-300' : ''}
-                      min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
-                    />
-                    {errors.date && <p className="text-red-600 text-sm mt-1">{errors.date}</p>}
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="notes">Instructions de livraison</Label>
-                    <Textarea
-                      id="notes"
-                      value={deliveryInfo.notes}
-                      onChange={(e) => setDeliveryInfo({...deliveryInfo, notes: e.target.value})}
-                      placeholder="Étage, code d'accès, instructions spéciales..."
-                      rows={3}
-                    />
-                  </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="date">Date de livraison *</Label>
+                        <Input
+                          id="date"
+                          type="date"
+                          value={deliveryInfo.date}
+                          onChange={(e) => setDeliveryInfo({...deliveryInfo, date: e.target.value})}
+                          className={errors.date ? 'border-red-300' : ''}
+                          min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+                        />
+                        {errors.date && <p className="text-red-600 text-sm mt-1">{errors.date}</p>}
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="timeSlot">Créneau de livraison *</Label>
+                        <select
+                          id="timeSlot"
+                          value={selectedTimeSlot}
+                          onChange={(e) => setSelectedTimeSlot(e.target.value)}
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                            errors.timeSlot ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
+                        >
+                          <option value="">Choisissez votre créneau</option>
+                          {timeSlots.map((slot) => (
+                            <option key={slot.value} value={slot.value}>
+                              {slot.label}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.timeSlot && (
+                          <p className="text-red-600 text-sm mt-1">{errors.timeSlot}</p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">
+                          Sélectionnez votre créneau préféré pour la livraison
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="notes">Instructions de livraison</Label>
+                      <Textarea
+                        id="notes"
+                        value={deliveryInfo.notes}
+                        onChange={(e) => setDeliveryInfo({...deliveryInfo, notes: e.target.value})}
+                        placeholder="Étage, code d'accès, instructions spéciales..."
+                        rows={3}
+                      />
+                    </div>
 
-                  <div className="flex justify-between pt-4">
-                    <Button variant="outline" onClick={prevStep}>
-                      Retour
-                    </Button>
-                    <Button 
-                      onClick={nextStep}
-                      disabled={!isDeliveryZoneValid}
-                      className={!isDeliveryZoneValid ? 'opacity-50 cursor-not-allowed' : ''}
-                    >
-                      Continuer vers le paiement
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                    <div className="flex justify-between pt-4">
+                      <Button variant="outline" onClick={prevStep}>
+                        Retour
+                      </Button>
+                      <Button 
+                        onClick={nextStep}
+                        disabled={!validationState.isDeliverable}
+                        className={!validationState.isDeliverable ? 'opacity-50 cursor-not-allowed' : ''}
+                      >
+                        Continuer vers le paiement
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
 
             {/* Étape 3 : Paiement */}
@@ -676,11 +818,22 @@ export default function CheckoutPage() {
                     <div className="text-sm space-y-2">
                       {customerInfo.firstName && (
                         <div>
-                          <p className="font-medium text-gray-900">Client</p>
+                          <p className="font-medium text-gray-900">
+                            {giftInfo.isGift ? 'Expéditeur' : 'Client'}
+                          </p>
                           <p className="text-gray-600">
                             {customerInfo.firstName} {customerInfo.lastName}
                           </p>
                           <p className="text-gray-600">{customerInfo.email}</p>
+                          
+                          {giftInfo.isGift && giftInfo.recipientFirstName && (
+                            <div className="mt-3">
+                              <p className="font-medium text-gray-900">Destinataire</p>
+                              <p className="text-gray-600">
+                                {giftInfo.recipientFirstName} {giftInfo.recipientLastName}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                       
@@ -694,6 +847,7 @@ export default function CheckoutPage() {
                           {deliveryInfo.date && (
                             <p className="text-gray-600">
                               Le {new Date(deliveryInfo.date).toLocaleDateString('fr-FR')}
+                              {selectedTimeSlot && ` (${selectedTimeSlot})`}
                             </p>
                           )}
                         </div>

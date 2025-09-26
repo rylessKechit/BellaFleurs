@@ -61,11 +61,6 @@ export default function EventsSection() {
                   <p className="text-sm sm:text-base text-green-700 leading-relaxed mb-4 sm:mb-6">
                     {event.description}
                   </p>
-                  
-                  {/* Call to action subtil */}
-                  <div className="text-xs sm:text-sm text-green-600 group-hover:text-green-800 transition-colors">
-                    En savoir plus →
-                  </div>
                 </div>
               </div>
             );

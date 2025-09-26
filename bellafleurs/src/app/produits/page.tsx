@@ -68,13 +68,13 @@ interface ApiResponse {
 }
 
 const CATEGORIES = [
-  'Bouquets',
   'Fleurs de saisons',
-  'Compositions piquées',
+  'Incontournable',
+  'Bouquets',
   'Roses',
+  'Compositions piquées',
   'Orchidées',
   'Deuil',
-  'Incontournable',
 ];
 
 export default function ProductsPage() {

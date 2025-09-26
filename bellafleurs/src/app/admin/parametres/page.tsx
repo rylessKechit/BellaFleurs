@@ -76,7 +76,6 @@ interface ShopSettings {
   shipping: {
     freeDeliveryThreshold: number;
     deliveryFee: number;
-    deliveryZones: string[];
   };
   
   // Notifications
@@ -124,8 +123,7 @@ const initialSettings: ShopSettings = {
   },
   shipping: {
     freeDeliveryThreshold: 50,
-    deliveryFee: 10,
-    deliveryZones: ['Brétigny-sur-Orge', 'Essonne', 'Île-de-France']
+    deliveryFee: 5,
   },
   notifications: {
     emailEnabled: true,
@@ -246,29 +244,6 @@ export default function AdminParametresPage() {
       seo: {
         ...prev.seo,
         keywords: prev.seo.keywords.filter(k => k !== keyword)
-      }
-    }));
-  };
-
-  const addDeliveryZone = () => {
-    if (newZone.trim() && !settings.shipping.deliveryZones.includes(newZone.trim())) {
-      setSettings(prev => ({
-        ...prev,
-        shipping: {
-          ...prev.shipping,
-          deliveryZones: [...prev.shipping.deliveryZones, newZone.trim()]
-        }
-      }));
-      setNewZone('');
-    }
-  };
-
-  const removeDeliveryZone = (zone: string) => {
-    setSettings(prev => ({
-      ...prev,
-      shipping: {
-        ...prev.shipping,
-        deliveryZones: prev.shipping.deliveryZones.filter(z => z !== zone)
       }
     }));
   };
@@ -853,46 +828,6 @@ export default function AdminParametresPage() {
                 </div>
 
                 <Separator />
-
-                {/* Zones de livraison */}
-                <div>
-                  <Label className="text-sm sm:text-base">Zones de livraison</Label>
-                  <div className="space-y-2 mt-2">
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Input
-                        value={newZone}
-                        onChange={(e) => setNewZone(e.target.value)}
-                        placeholder="Ex: Paris, Île-de-France..."
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            addDeliveryZone();
-                          }
-                        }}
-                        className="flex-1 text-sm sm:text-base"
-                      />
-                      <Button onClick={addDeliveryZone} variant="outline" className="w-full sm:w-auto">
-                        Ajouter
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {settings.shipping.deliveryZones.map((zone, index) => (
-                        <Badge key={index} variant="outline" className="flex items-center gap-1">
-                          {zone}
-                          <button
-                            onClick={() => removeDeliveryZone(zone)}
-                            className="hover:text-red-500 ml-1"
-                          >
-                            ×
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                    {settings.shipping.deliveryZones.length === 0 && (
-                      <p className="text-sm text-gray-500">Aucune zone de livraison définie</p>
-                    )}
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>

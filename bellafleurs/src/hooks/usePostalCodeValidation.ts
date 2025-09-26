@@ -1,14 +1,15 @@
-// src/hooks/usePostalCodeValidation.ts - Hook pour la validation des codes postaux
+// src/hooks/usePostalCodeValidation.ts - Hook simplifié pour la validation des codes postaux
+
 import { useState, useCallback, useMemo } from 'react';
-import { findCityByPostalCode, isDeliverable, type PostalCodeData } from '@/lib/data/postalCodes';
+import { findCitiesByPostalCode, isDeliverable } from '@/lib/data/postalCodes';
 
 export interface PostalCodeValidationState {
   isValid: boolean;
   isDeliverable: boolean;
-  city: string;
+  city: string; // Première ville (pour compatibilité)
+  cities: string[]; // Toutes les villes
   isLoading: boolean;
   error: string | null;
-  zoneInfo: PostalCodeData | null;
 }
 
 export interface UsePostalCodeValidationReturn {
@@ -21,15 +22,15 @@ const initialState: PostalCodeValidationState = {
   isValid: false,
   isDeliverable: false,
   city: '',
+  cities: [],
   isLoading: false,
   error: null,
-  zoneInfo: null
 };
 
 export const usePostalCodeValidation = (): UsePostalCodeValidationReturn => {
   const [validationState, setValidationState] = useState<PostalCodeValidationState>(initialState);
 
-  // Fonction de validation du format du code postal français
+  // Validation du format code postal français
   const isValidPostalCodeFormat = useCallback((zipCode: string): boolean => {
     const cleanZipCode = zipCode.trim().replace(/\s+/g, '');
     return /^[0-9]{5}$/.test(cleanZipCode);
@@ -39,7 +40,7 @@ export const usePostalCodeValidation = (): UsePostalCodeValidationReturn => {
   const validatePostalCode = useCallback((zipCode: string) => {
     const cleanZipCode = zipCode.trim().replace(/\s+/g, '');
     
-    // Réinitialiser l'état si le code postal est vide
+    // Réinitialiser si vide
     if (!cleanZipCode) {
       setValidationState(initialState);
       return;
@@ -51,49 +52,49 @@ export const usePostalCodeValidation = (): UsePostalCodeValidationReturn => {
         isValid: false,
         isDeliverable: false,
         city: '',
+        cities: [],
         isLoading: false,
         error: 'Format de code postal invalide (5 chiffres requis)',
-        zoneInfo: null
       });
       return;
     }
 
-    // Simulation d'un délai de validation (comme un appel API)
+    // Simulation délai validation
     setValidationState(prev => ({ ...prev, isLoading: true, error: null }));
 
-    // Simuler un délai court pour une meilleure UX
     setTimeout(() => {
-      const zoneInfo = findCityByPostalCode(cleanZipCode);
+      const cities = findCitiesByPostalCode(cleanZipCode);
       const deliverable = isDeliverable(cleanZipCode);
-
-      if (zoneInfo) {
+      
+      if (cities.length === 0) {
         setValidationState({
           isValid: true,
-          isDeliverable: deliverable,
-          city: zoneInfo.city,
-          isLoading: false,
-          error: null,
-          zoneInfo
-        });
-      } else {
-        setValidationState({
-          isValid: true, // Format valide mais zone non couverte
           isDeliverable: false,
           city: '',
+          cities: [],
           isLoading: false,
-          error: 'Zone non couverte par notre service de livraison',
-          zoneInfo: null
+          error: 'Code postal non desservi par nos services de livraison',
         });
+        return;
       }
-    }, 300); // Délai court pour une validation fluide
+
+      setValidationState({
+        isValid: true,
+        isDeliverable: deliverable,
+        city: cities[0], // Première ville
+        cities: cities, // Toutes les villes
+        isLoading: false,
+        error: null,
+      });
+    }, 300);
   }, [isValidPostalCodeFormat]);
 
-  // Fonction de réinitialisation
+  // Réinitialisation
   const resetValidation = useCallback(() => {
     setValidationState(initialState);
   }, []);
 
-  // Mémoriser le retour pour éviter les re-renders inutiles
+  // Retour mémorisé
   const returnValue = useMemo(() => ({
     validationState,
     validatePostalCode,

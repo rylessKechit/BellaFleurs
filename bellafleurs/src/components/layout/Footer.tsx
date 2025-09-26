@@ -136,37 +136,74 @@ export default function Footer() {
 
         {/* Navigation rapide */}
         <div className="border-t border-gray-200 py-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 gap-6">
+            
+            {/* Navigation */}
+            <div>
+              <h5 className="font-medium text-gray-900 mb-3">Navigation</h5>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <Link href="/a-propos" className="text-gray-600 hover:text-primary-600 transition-colors">
+                    À propos
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/savoir-faire" className="text-gray-600 hover:text-primary-600 transition-colors">
+                    Savoir-faire
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/produits" className="text-gray-600 hover:text-primary-600 transition-colors">
+                    Mes créations
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/abonnement" className="text-gray-600 hover:text-primary-600 transition-colors">
+                    Abonnement
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Nos Créations */}
             <div>
               <h5 className="font-medium text-gray-900 mb-3">Nos Créations</h5>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/produits/bouquets" className="text-gray-600 hover:text-primary-600 transition-colors">Bouquets</Link></li>
-                <li><Link href="/produits/compositions" className="text-gray-600 hover:text-primary-600 transition-colors">Compositions</Link></li>
-                <li><Link href="/produits/plantes" className="text-gray-600 hover:text-primary-600 transition-colors">Plantes</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-medium text-gray-900 mb-3">Événements</h5>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="/evenements/mariage" className="text-gray-600 hover:text-primary-600 transition-colors">Naissance</Link></li>
-                <li><Link href="/evenements/deuil" className="text-gray-600 hover:text-primary-600 transition-colors">Deuil</Link></li>
-                <li><Link href="/evenements/anniversaire" className="text-gray-600 hover:text-primary-600 transition-colors">Anniversaire</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-medium text-gray-900 mb-3">Services</h5>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="/services/livraison" className="text-gray-600 hover:text-primary-600 transition-colors">Livraison</Link></li>
-                <li><Link href="/services/conseil" className="text-gray-600 hover:text-primary-600 transition-colors">Conseil</Link></li>
-                <li><Link href="/services/sur-mesure" className="text-gray-600 hover:text-primary-600 transition-colors">Sur mesure</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-medium text-gray-900 mb-3">Support</h5>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="/aide" className="text-gray-600 hover:text-primary-600 transition-colors">Aide</Link></li>
-                <li><Link href="/faq" className="text-gray-600 hover:text-primary-600 transition-colors">FAQ</Link></li>
-                <li><Link href="/contact" className="text-gray-600 hover:text-primary-600 transition-colors">Contact</Link></li>
+                <li>
+                  <Link href="/produits?category=Fleurs%20de%20saisons" className="text-gray-600 hover:text-primary-600 transition-colors">
+                    Fleurs de saisons
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/produits?category=Incontournable" className="text-gray-600 hover:text-primary-600 transition-colors">
+                    Incontournables
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/produits?category=Bouquets" className="text-gray-600 hover:text-primary-600 transition-colors">
+                    Bouquets
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/produits?category=Roses" className="text-gray-600 hover:text-primary-600 transition-colors">
+                    Roses
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/produits?category=Compositions%20piqu%C3%A9es" className="text-gray-600 hover:text-primary-600 transition-colors">
+                    Compositions piquées
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/produits?category=Orchid%C3%A9es" className="text-gray-600 hover:text-primary-600 transition-colors">
+                    Orchidées
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/produits?category=Deuil" className="text-gray-600 hover:text-primary-600 transition-colors">
+                    Deuil
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
