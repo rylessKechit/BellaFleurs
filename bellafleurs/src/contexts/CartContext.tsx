@@ -1,4 +1,3 @@
-// src/contexts/CartContext.tsx - Version améliorée
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -8,15 +7,16 @@ interface CartContextType {
   isLoading: boolean;
   incrementCartCount: (quantity?: number) => void;
   decrementCartCount: (quantity?: number) => void;
+  setCartCount: (count: number) => void;
   clearCartCount: () => void;
-  updateCartCount: () => Promise<void>;
+  updateCartCount: (silent?: boolean) => Promise<void>;
   forceRefresh: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [cartCount, setCartCount] = useState(0);
+  const [cartCount, setCartCountState] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   // Fonction pour récupérer le nombre d'articles dans le panier
@@ -27,7 +27,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const response = await fetch('/api/cart', {
         method: 'GET',
         credentials: 'include',
-        cache: 'no-store' // Force le refresh
+        cache: 'no-store'
       });
 
       if (response.ok) {
@@ -37,27 +37,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
         let totalItems = 0;
         if (data.success && data.data && data.data.items && Array.isArray(data.data.items)) {
           totalItems = data.data.items.reduce((sum: number, item: any) => {
-            // S'assurer que quantity est un nombre valide
             const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
             return sum + quantity;
           }, 0);
         }
         
-        // Mettre à jour le compteur
-        setCartCount(Math.max(0, totalItems));
-        
-        console.log('🛒 Cart count updated:', totalItems);
+        setCartCountState(Math.max(0, totalItems));
         
       } else if (response.status === 404) {
-        // Panier non trouvé = panier vide
-        setCartCount(0);
-      } else {
-        console.warn('Erreur lors de la récupération du panier:', response.status);
-        // En cas d'erreur, ne pas modifier le compteur existant
+        setCartCountState(0);
       }
     } catch (error) {
       console.error('Erreur lors de la récupération du panier:', error);
-      // En cas d'erreur réseau, garder le compteur actuel
     } finally {
       if (!silent) setIsLoading(false);
     }
@@ -68,63 +59,62 @@ export function CartProvider({ children }: { children: ReactNode }) {
     await updateCartCount(false);
   }, [updateCartCount]);
 
-  // Incrémenter le compteur localement (optimiste)
+  // ✅ OPTIMISATION : Mise à jour instantanée (optimiste)
   const incrementCartCount = useCallback((quantity: number = 1) => {
-    setCartCount(prev => {
+    setCartCountState(prev => {
       const newCount = Math.max(0, prev + quantity);
-      console.log('🛒 Cart count incremented:', prev, '→', newCount);
+      console.log('🛒 Cart count incremented (optimistic):', prev, '→', newCount);
       return newCount;
     });
   }, []);
 
-  // Décrémenter le compteur localement (optimiste)
+  // ✅ OPTIMISATION : Décrémentation instantanée (optimiste)
   const decrementCartCount = useCallback((quantity: number = 1) => {
-    setCartCount(prev => {
+    setCartCountState(prev => {
       const newCount = Math.max(0, prev - quantity);
-      console.log('🛒 Cart count decremented:', prev, '→', newCount);
+      console.log('🛒 Cart count decremented (optimistic):', prev, '→', newCount);
       return newCount;
     });
+  }, []);
+
+  // ✅ NOUVEAU : Setter direct pour mise à jour depuis l'API
+  const setCartCount = useCallback((count: number) => {
+    setCartCountState(Math.max(0, count));
   }, []);
 
   // Vider le compteur
   const clearCartCount = useCallback(() => {
-    setCartCount(0);
+    setCartCountState(0);
     console.log('🛒 Cart cleared');
   }, []);
 
-  // Synchroniser périodiquement (toutes les 30 secondes)
+  // ✅ OPTIMISATION : Sync moins fréquente et plus smart
   useEffect(() => {
+    // Sync toutes les 60 secondes au lieu de 30
     const interval = setInterval(() => {
-      updateCartCount(true); // Silent refresh
-    }, 30000);
+      updateCartCount(true);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [updateCartCount]);
 
-  // Synchroniser quand l'onglet redevient actif
+  // Sync quand l'onglet redevient actif
   useEffect(() => {
-    const handleFocus = () => {
-      updateCartCount(true);
-    };
-
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         updateCartCount(true);
       }
     };
 
-    window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
     return () => {
-      window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [updateCartCount]);
 
   // Charger le panier au montage
   useEffect(() => {
-    updateCartCount();
+    updateCartCount(true); // Silent au démarrage
   }, [updateCartCount]);
 
   return (
@@ -133,6 +123,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       isLoading,
       incrementCartCount,
       decrementCartCount,
+      setCartCount,
       clearCartCount,
       updateCartCount,
       forceRefresh

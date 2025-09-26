@@ -63,32 +63,77 @@ export default function CartPage() {
     }
   };
 
-  const { decrementCartCount, clearCartCount } = useCart();
+  const { decrementCartCount, clearCartCount, incrementCartCount, setCartCount } = useCart();
 
   // Mettre à jour la quantité
-  const updateQuantity = async (productId: string, newQuantity: number) => {
+  const updateQuantity = async (productId: string, newQuantity: number, variantId?: string) => {
     if (newQuantity < 1) return;
 
+    // ✅ OPTIMISATION : Calculer la différence pour le cartCount
+    const currentItem = cartItems.find(item => 
+      item._id === productId || 
+      (item._id === productId)
+    );
+    
+    if (!currentItem) return;
+
+    const quantityDiff = newQuantity - currentItem.quantity;
+    
     setUpdatingItems(prev => [...prev, productId]);
+
+    // ✅ MISE À JOUR OPTIMISTE : UI instantanée
+    setCartItems(prev => 
+      prev.map(item => {
+        if (item._id === productId || (item._id === productId)) {
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      })
+    );
+
+    // ✅ MISE À JOUR IMMÉDIATE du cartCount
+    if (quantityDiff > 0) {
+      incrementCartCount(quantityDiff);
+    } else if (quantityDiff < 0) {
+      decrementCartCount(Math.abs(quantityDiff));
+    }
 
     try {
       const response = await fetch(`/api/cart/${productId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ quantity: newQuantity })
+        body: JSON.stringify({ 
+          quantity: newQuantity,
+          ...(variantId && { variantId })
+        })
       });
 
       if (response.ok) {
-        setCartItems(prev => 
-          prev.map(item => 
-            item._id === productId 
-              ? { ...item, quantity: newQuantity }
-              : item
-          )
-        );
+        const data = await response.json();
+        // ✅ SYNC : Confirmation avec la vraie valeur du serveur
+        if (data.data?.cartItemsCount !== undefined) {
+          setCartCount(data.data.cartItemsCount);
+        }
         toast.success('Quantité mise à jour');
       } else {
+        // ✅ ROLLBACK : Restaurer en cas d'erreur
+        setCartItems(prev => 
+          prev.map(item => {
+            if (item._id === productId || (item._id === productId)) {
+              return { ...item, quantity: currentItem.quantity };
+            }
+            return item;
+          })
+        );
+        
+        // Rollback du cartCount
+        if (quantityDiff > 0) {
+          decrementCartCount(quantityDiff);
+        } else if (quantityDiff < 0) {
+          incrementCartCount(Math.abs(quantityDiff));
+        }
+
         const data = await response.json();
         throw new Error(data.error?.message || 'Erreur lors de la mise à jour');
       }
@@ -101,22 +146,50 @@ export default function CartPage() {
   };
 
   // Supprimer un produit
-  const removeItem = async (productId: string) => {
+  const removeItem = async (productId: string, variantId?: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) return;
+
+    // ✅ OPTIMISATION : Trouver l'item à supprimer pour décrémenter immédiatement
+    const itemToRemove = cartItems.find(item => 
+      item._id === productId || 
+      (item._id === productId)
+    );
+
+    if (!itemToRemove) return;
 
     setUpdatingItems(prev => [...prev, productId]);
 
+    // ✅ MISE À JOUR OPTIMISTE : UI instantanée
+    setCartItems(prev => prev.filter(item => 
+      item._id !== productId && 
+      !(item._id === productId)
+    ));
+    
+    // ✅ DÉCRÉMENTATION IMMÉDIATE du cartCount
+    decrementCartCount(itemToRemove.quantity);
+
     try {
-      const response = await fetch(`/api/cart/${productId}`, {
+      const url = variantId 
+        ? `/api/cart/${productId}?variantId=${variantId}`
+        : `/api/cart/${productId}`;
+        
+      const response = await fetch(url, {
         method: 'DELETE',
         credentials: 'include'
       });
 
       if (response.ok) {
-        setCartItems(prev => prev.filter(item => item._id !== productId));
-        decrementCartCount();
+        const data = await response.json();
+        // ✅ SYNC : Mettre à jour avec la vraie valeur du serveur
+        if (data.data?.cartItemsCount !== undefined) {
+          setCartCount(data.data.cartItemsCount);
+        }
         toast.success('Article supprimé du panier');
       } else {
+        // ✅ ROLLBACK : Restaurer en cas d'erreur
+        setCartItems(prev => [...prev, itemToRemove]);
+        incrementCartCount(itemToRemove.quantity);
+        
         const data = await response.json();
         throw new Error(data.error?.message || 'Erreur lors de la suppression');
       }

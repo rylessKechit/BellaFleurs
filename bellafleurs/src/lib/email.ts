@@ -520,8 +520,18 @@ L'équipe Bella Fleurs
   }, 'client');
 }
 
-// Template spécial structuré pour les notifications admin
+// Template spécial structuré pour les notifications admin - VERSION AMÉLIORÉE
 function generateAdminOrderHTML(order: any): string {
+  // Helper pour formater l'heure de livraison
+  const formatTimeSlot = (timeSlot: string) => {
+    const timeSlots = {
+      'morning': 'Matin (9h-12h)',
+      'afternoon': 'Après-midi (13h-17h)',
+      'evening': 'Soirée (17h-19h)'
+    };
+    return timeSlots[timeSlot as keyof typeof timeSlots] || timeSlot || 'Non spécifié';
+  };
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -576,60 +586,135 @@ function generateAdminOrderHTML(order: any): string {
             padding: 20px;
             margin: 20px;
             text-align: center;
+            border-left: 6px solid #f59e0b;
         }
         .urgent-banner h3 {
             margin: 0 0 8px 0;
             color: #92400e;
-            font-size: 18px;
-            font-weight: 700;
-        }
-        .info-section {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px;
-            border-left: 4px solid #22c55e;
-        }
-        .info-section h3 {
-            margin: 0 0 12px 0;
-            color: #1e293b;
             font-size: 16px;
             font-weight: 700;
         }
-        .items-section {
-            background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
-            border: 1px solid #fbbf24;
+        .urgent-banner p {
+            margin: 0;
+            color: #92400e;
+            font-weight: 500;
+        }
+        .gift-banner {
+            background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+            border: 2px solid #ec4899;
             border-radius: 8px;
             padding: 20px;
             margin: 20px;
+            text-align: center;
+            border-left: 6px solid #ec4899;
         }
-        .total {
-            color: #15803d;
+        .gift-banner h3 {
+            margin: 0 0 8px 0;
+            color: #be185d;
+            font-size: 16px;
             font-weight: 700;
-            font-size: 18px;
-            text-align: right;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 2px solid #22c55e;
+        }
+        .gift-banner p {
+            margin: 0;
+            color: #be185d;
+            font-weight: 500;
+        }
+        .content {
+            padding: 30px;
+        }
+        .order-section {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #22c55e;
+        }
+        .order-section h3 {
+            margin: 0 0 15px 0;
+            color: #16a34a;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .order-section p {
+            margin: 5px 0;
+            color: #374151;
+        }
+        .order-section strong {
+            color: #111827;
+        }
+        .items-list {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        .item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .item:last-child {
+            border-bottom: none;
+        }
+        .item-name {
+            font-weight: 500;
+            color: #111827;
+        }
+        .item-details {
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .item-price {
+            font-weight: 600;
+            color: #16a34a;
+        }
+        .total-section {
+            background: #16a34a;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .total-amount {
+            font-size: 24px;
+            font-weight: 700;
         }
         .action-button {
+            display: inline-block;
             background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
             color: white;
-            padding: 16px 32px;
+            padding: 15px 30px;
             text-decoration: none;
             border-radius: 8px;
             font-weight: 600;
-            text-align: center;
-            display: block;
-            margin: 30px 20px;
+            margin-top: 20px;
+            transition: all 0.3s ease;
             box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
         }
         .footer {
             background: #f1f5f9;
             padding: 30px;
             text-align: center;
             border-top: 1px solid #e2e8f0;
+        }
+        
+        @media (max-width: 650px) {
+            .container { margin: 10px; }
+            .header, .content, .footer { padding: 20px; }
+            .urgent-banner, .gift-banner { margin: 15px; }
+            .item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
         }
     </style>
 </head>
@@ -644,37 +729,75 @@ function generateAdminOrderHTML(order: any): string {
             <h3>⚡ ACTION REQUISE</h3>
             <p>Une nouvelle commande nécessite votre attention et doit être traitée rapidement.</p>
         </div>
+        
+        ${order.isGift ? `
+        <div class="gift-banner">
+            <h3>🎁 COMMANDE CADEAU</h3>
+            <p>Cette commande est un cadeau - Attention aux informations de destinataire</p>
+        </div>
+        ` : ''}
+        
+        <div class="content">
+            <!-- Informations client -->
+            <div class="order-section">
+                <h3>👤 Informations Client</h3>
+                <p><strong>Nom :</strong> ${order.customerInfo.name}</p>
+                <p><strong>Email :</strong> ${order.customerInfo.email}</p>
+                <p><strong>Téléphone :</strong> ${order.customerInfo.phone}</p>
+                ${order.isGift && order.giftInfo ? `
+                <p><strong>🎁 Message cadeau :</strong> ${order.giftInfo.message || 'Aucun message'}</p>
+                ${order.giftInfo.recipientName ? `<p><strong>🎁 Destinataire :</strong> ${order.giftInfo.recipientName}</p>` : ''}
+                ` : ''}
+            </div>
 
-        <div class="info-section">
-            <h3>👤 INFORMATIONS CLIENT</h3>
-            <p><strong>Nom :</strong> ${order.customerInfo.name}</p>
-            <p><strong>Email :</strong> <a href="mailto:${order.customerInfo.email}">${order.customerInfo.email}</a></p>
-            <p><strong>Téléphone :</strong> <a href="tel:${order.customerInfo.phone}">${order.customerInfo.phone}</a></p>
+            <!-- Articles commandés -->
+            <div class="order-section">
+                <h3>🌸 Articles Commandés</h3>
+                <div class="items-list">
+                    ${order.items.map((item: any) => `
+                    <div class="item">
+                        <div>
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-details">Quantité: ${item.quantity}</div>
+                        </div>
+                        <div class="item-price">${(item.price * item.quantity).toFixed(2)}€</div>
+                    </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- Total -->
+            <div class="total-section">
+                <div>Montant Total</div>
+                <div class="total-amount">${order.totalAmount.toFixed(2)}€</div>
+            </div>
+
+            <!-- Informations de livraison -->
+            <div class="order-section">
+                <h3>🚚 Informations de Livraison</h3>
+                <p><strong>Mode :</strong> ${order.deliveryInfo.type === 'delivery' ? 'Livraison à domicile' : 'Retrait en boutique'}</p>
+                <p><strong>Date prévue :</strong> ${new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}</p>
+                ${order.deliveryInfo.timeSlot ? `
+                <p><strong>Créneau horaire :</strong> ${formatTimeSlot(order.deliveryInfo.timeSlot)}</p>
+                ` : ''}
+                ${order.deliveryInfo.address ? `
+                <p><strong>Adresse de livraison :</strong><br>
+                ${order.deliveryInfo.address.street}<br>
+                ${order.deliveryInfo.address.zipCode} ${order.deliveryInfo.address.city}</p>
+                ` : ''}
+                ${order.deliveryInfo.notes ? `
+                <p><strong>Notes spéciales :</strong><br>
+                ${order.deliveryInfo.notes}</p>
+                ` : ''}
+            </div>
+            
+            <!-- Bouton d'action -->
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="https://www.bellafleurs.fr/auth/signin" class="action-button" target="_blank">
+                    🌸 Accéder au Dashboard Admin
+                </a>
+            </div>
         </div>
-        
-        <div class="items-section">
-            <h3>🌸 ARTICLES COMMANDÉS</h3>
-            ${order.items.map((item: any) => `
-            <p>• <strong>${item.name}</strong> (x${item.quantity}) - ${(item.price * item.quantity).toFixed(2)}€</p>
-            `).join('')}
-            <div class="total">💰 TOTAL : ${order.totalAmount.toFixed(2)}€</div>
-        </div>
-        
-        <div class="info-section">
-            <h3>🚚 LIVRAISON</h3>
-            <p><strong>Type :</strong> ${order.deliveryInfo.type === 'delivery' ? 'Livraison à domicile' : 'Retrait en boutique'}</p>
-            <p><strong>Date prévue :</strong> ${new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}</p>
-            ${order.deliveryInfo.address ? `
-            <p><strong>Adresse :</strong><br>
-            ${order.deliveryInfo.address.street}<br>
-            ${order.deliveryInfo.address.zipCode} ${order.deliveryInfo.address.city}</p>
-            ` : ''}
-            ${order.deliveryInfo.notes ? `<p><strong>Notes :</strong> ${order.deliveryInfo.notes}</p>` : ''}
-        </div>
-        
-        <a href="#" class="action-button">
-            🌸 Accéder au Dashboard Admin
-        </a>
         
         <div class="footer">
             <p style="color: #64748b; margin: 0; font-weight: 600;">

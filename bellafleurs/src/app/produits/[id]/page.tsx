@@ -604,31 +604,6 @@ export default function ProductDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Conseils d'entretien détaillés */}
-            {(product.entretien || product.careInstructions) && (
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4 text-xl">Conseils d&apos;entretien</h3>
-                  <div className="prose prose-sm max-w-none text-gray-700">
-                    <p className="whitespace-pre-line leading-relaxed">
-                      {product.entretien || product.careInstructions}
-                    </p>
-                    
-                    {/* Conseils généraux par défaut */}
-                    <div className="mt-4 bg-blue-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-900 mb-2">Conseils généraux :</h4>
-                      <ul className="text-sm text-blue-800 space-y-1">
-                        <li>• Coupez les tiges en biseau sous l&apos;eau froide</li>
-                        <li>• Changez l&apos;eau tous les 2-3 jours</li>
-                        <li>• Retirez les feuilles qui trempent dans l&apos;eau</li>
-                        <li>• Placez dans un endroit frais, à l&apos;abri du soleil direct</li>
-                      </ul>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Produits similaires ou recommandations */}
             <Card>
               <CardContent className="p-6">
