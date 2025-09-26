@@ -100,14 +100,17 @@ export default function ProductDetailPage() {
           
           // Initialiser variants seulement si réellement présents
           if (productData.hasVariants && productData.variants?.length > 0) {
-            console.log('Initialisation variants:', productData.variants);
-            const firstActiveVariant = productData.variants.find((v: any) => v.isActive !== false);
-            if (firstActiveVariant) {
-              setSelectedVariant(firstActiveVariant._id || '');
-            }
-            console.log('Variant sélectionné:', firstActiveVariant);
+  console.log('Initialisation variants:', productData.variants);
+  const firstActiveVariant = productData.variants.find((v: any) => v.isActive !== false);
+  if (firstActiveVariant && firstActiveVariant._id) {
+    setSelectedVariant(firstActiveVariant._id);
+  } else if (productData.variants[0]?._id) {
+    // Si aucun variant actif, prendre le premier
+    setSelectedVariant(productData.variants[0]._id);
+  }
+  console.log('Variant sélectionné:', firstActiveVariant);
           } else {
-            setSelectedVariant('');
+            // Pour les produits sans variants, on ne touche pas à selectedVariant
             console.log('Produit simple, pas de variants');
           }
           
@@ -316,21 +319,22 @@ export default function ProductDetailPage() {
                 </h1>
                 
                 {/* Section Prix */}
-                <div className="space-y-4">
-                  {product.pricingType === 'custom_range' && product.customPricing ? (
-                    <div>
-                      <div className="text-2xl font-bold text-gray-900 mb-4">
-                        À partir de {product.customPricing.minPrice.toFixed(2)} €
-                      </div>
-                      <PriceSelector
-                        minPrice={product.customPricing.minPrice}
-                        maxPrice={product.customPricing.maxPrice}
-                        onPriceChange={setCustomPrice}
-                      />
+                {product.pricingType === 'custom_range' && product.customPricing ? (
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900 mb-4">
+                      À partir de {product.customPricing.minPrice.toFixed(2)} €
                     </div>
-                  ) : product.hasVariants && product.variants.length > 0 ? (
-                    <div>
-                      <Label className="text-base font-medium">Choisir une taille</Label>
+                    <PriceSelector
+                      minPrice={product.customPricing.minPrice}
+                      maxPrice={product.customPricing.maxPrice}
+                      onPriceChange={setCustomPrice}
+                    />
+                  </div>
+                ) : product.hasVariants && product.variants.length > 0 ? (
+                  <div>
+                    <Label className="text-base font-medium">Choisir une taille</Label>
+                    {/* SOLUTION : Afficher le Select seulement si on a un variant sélectionné */}
+                    {selectedVariant ? (
                       <Select value={selectedVariant} onValueChange={setSelectedVariant}>
                         <SelectTrigger className="w-full mt-2">
                           <SelectValue placeholder="Sélectionner une taille" />
@@ -345,20 +349,24 @@ export default function ProductDetailPage() {
                             ))}
                         </SelectContent>
                       </Select>
-                      {selectedVariantData && (
-                        <div className="mt-2">
-                          <span className="text-2xl font-bold text-gray-900">
-                            {selectedVariantData.price.toFixed(2)} €
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-2xl font-bold text-gray-900">
-                      {product.price?.toFixed(2)} €
-                    </div>
-                  )}
-                </div>
+                    ) : (
+                      <div className="mt-2 text-gray-500">
+                        Chargement des tailles...
+                      </div>
+                    )}
+                    {selectedVariantData && (
+                      <div className="mt-2">
+                        <span className="text-2xl font-bold text-gray-900">
+                          {selectedVariantData.price.toFixed(2)} €
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-2xl font-bold text-gray-900">
+                    {product.price?.toFixed(2)} €
+                  </div>
+                )}
 
                 {/* Rating */}
                 {product.averageRating && product.reviewsCount ? (
