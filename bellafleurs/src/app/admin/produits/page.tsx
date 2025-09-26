@@ -45,6 +45,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import AdminLayout from '@/components/admin/AdminLayout';
+import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
 
 // Catégories fixes
@@ -72,12 +73,17 @@ interface Product {
   _id: string;
   name: string;
   description: string;
-  price?: number;                  // Optionnel si hasVariants = true
-  hasVariants: boolean;            // Nouveau champ
-  variants: ProductVariant[];      // Nouveau champ
-  displayPrice?: number;           // Prix à afficher
-  displayPriceFormatted?: string;  // Prix formaté
-  priceRangeFormatted?: string;    // Fourchette de prix
+  price?: number;
+  hasVariants: boolean;
+  variants: ProductVariant[];
+  pricingType?: 'fixed' | 'variants' | 'custom_range';
+  customPricing?: {
+    minPrice: number;
+    maxPrice: number;
+  };
+  displayPrice?: number;
+  displayPriceFormatted?: string;
+  priceRangeFormatted?: string;
   category: string;
   images: string[];
   isActive: boolean;
@@ -94,6 +100,11 @@ interface ProductForm {
   price?: number;
   hasVariants: boolean;
   variants: ProductVariant[];
+  pricingType: 'fixed' | 'variants' | 'custom_range';
+  customPricing?: {
+    minPrice: number;
+    maxPrice: number;
+  };
   category: string;
   tags: string[];
   isActive: boolean;
@@ -107,6 +118,7 @@ const initialForm: ProductForm = {
   price: 0,
   hasVariants: false,
   variants: [],
+  pricingType: 'fixed',
   category: 'Bouquets',
   tags: [],
   isActive: true,
@@ -417,7 +429,7 @@ function ImageUpload({
   );
 }
 
-// Composant de formulaire produit avec support des variants
+// Composant de formulaire produit avec support des variants et prix personnalisé
 function ProductForm({ 
   product, 
   isEdit = false, 
@@ -436,6 +448,8 @@ function ProductForm({
       price: product.price,
       hasVariants: product.hasVariants || false,
       variants: product.variants || [],
+      pricingType: product.pricingType || 'fixed',
+      customPricing: product.customPricing,
       category: product.category,
       tags: product.tags || [],
       isActive: product.isActive,
@@ -465,17 +479,28 @@ function ProductForm({
       return;
     }
 
-    if (!form.hasVariants && (!form.price || form.price <= 0)) {
-      toast.error('Le prix est requis pour les produits sans variants');
+    if (form.pricingType === 'fixed' && (!form.price || form.price <= 0)) {
+      toast.error('Le prix est requis pour les produits à prix fixe');
       return;
     }
 
-    if (form.hasVariants && (!form.variants || form.variants.length === 0)) {
+    if (form.pricingType === 'variants' && (!form.variants || form.variants.length === 0)) {
       toast.error('Au moins une variante est requise pour les produits avec variants');
       return;
     }
 
-    if (form.hasVariants) {
+    if (form.pricingType === 'custom_range') {
+      if (!form.customPricing || !form.customPricing.minPrice || !form.customPricing.maxPrice) {
+        toast.error('Prix minimum et maximum requis pour un prix personnalisable');
+        return;
+      }
+      if (form.customPricing.maxPrice <= form.customPricing.minPrice) {
+        toast.error('Le prix maximum doit être supérieur au prix minimum');
+        return;
+      }
+    }
+
+    if (form.pricingType === 'variants') {
       // Valider chaque variante
       for (let i = 0; i < form.variants.length; i++) {
         const variant = form.variants[i];
@@ -495,7 +520,7 @@ function ProductForm({
       return;
     }
 
-    // NOUVEAU : Validation des images comme strings
+    // Validation des images comme strings
     const validImages = images.filter(img => typeof img === 'string' && img.trim().length > 0);
     if (validImages.length === 0) {
       toast.error('Les images ne sont pas valides. Veuillez les re-uploader.');
@@ -504,23 +529,26 @@ function ProductForm({
 
     setIsSaving(true);
     try {
-      await onSave(form, validImages); // Utiliser les images validées
+      await onSave(form, validImages);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Gestion du toggle variants
-  const handleVariantsToggle = (enabled: boolean) => {
+  // Gestion du toggle variants et pricing type
+  const handlePricingTypeChange = (pricingType: 'fixed' | 'variants' | 'custom_range') => {
     setForm(prev => ({
       ...prev,
-      hasVariants: enabled,
-      // Si on active les variants et qu'il n'y en a pas, on en crée une par défaut
-      variants: enabled && prev.variants.length === 0 
+      pricingType,
+      hasVariants: pricingType === 'variants',
+      // Initialiser les variants si on passe en mode variants
+      variants: pricingType === 'variants' && prev.variants.length === 0 
         ? [{ ...initialVariant, name: 'Taille unique', price: prev.price || 0 }]
         : prev.variants,
-      // Si on désactive les variants, on prend le prix de la première variante
-      price: !enabled && prev.variants.length > 0 ? prev.variants[0].price : prev.price
+      // Initialiser customPricing si on passe en mode custom_range
+      customPricing: pricingType === 'custom_range' && !prev.customPricing
+        ? { minPrice: 0, maxPrice: 0 }
+        : prev.customPricing
     }));
   };
 
@@ -635,28 +663,104 @@ function ProductForm({
         </CardContent>
       </Card>
 
-      {/* Gestion des prix et variants */}
+      {/* Type de prix */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Prix et variantes</CardTitle>
+          <CardTitle className="text-lg">Type de prix</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Toggle pour activer les variants */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div>
-              <Label className="text-sm font-medium">Produit avec différentes tailles</Label>
-              <p className="text-xs text-gray-600 mt-1">
-                Activez cette option si votre produit propose plusieurs tailles avec des prix différents
-              </p>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <input
+                type="radio"
+                id="fixed"
+                name="pricingType"
+                value="fixed"
+                checked={form.pricingType === 'fixed'}
+                onChange={(e) => handlePricingTypeChange(e.target.value as any)}
+                className="w-4 h-4 text-green-600"
+              />
+              <Label htmlFor="fixed">Prix fixe</Label>
             </div>
-            <Switch
-              checked={form.hasVariants}
-              onCheckedChange={handleVariantsToggle}
-            />
+            
+            <div className="flex items-center space-x-2">
+              <input
+                type="radio"
+                id="variants"
+                name="pricingType"
+                value="variants"
+                checked={form.pricingType === 'variants'}
+                onChange={(e) => handlePricingTypeChange(e.target.value as any)}
+                className="w-4 h-4 text-green-600"
+              />
+              <Label htmlFor="variants">Prix par taille (variants)</Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <input
+                type="radio"
+                id="custom_range"
+                name="pricingType"
+                value="custom_range"
+                checked={form.pricingType === 'custom_range'}
+                onChange={(e) => handlePricingTypeChange(e.target.value as any)}
+                className="w-4 h-4 text-green-600"
+              />
+              <Label htmlFor="custom_range">Prix personnalisable</Label>
+            </div>
           </div>
 
-          {/* Prix simple OU gestion des variants */}
-          {!form.hasVariants ? (
+          {form.pricingType === 'custom_range' && (
+            <div className="grid grid-cols-2 gap-4 mt-4 p-4 bg-gray-50 rounded-lg">
+              <div>
+                <Label htmlFor="minPrice">Prix minimum (€) *</Label>
+                <Input
+                  id="minPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.customPricing?.minPrice || ''}
+                  onChange={(e) => setForm(prev => ({
+                    ...prev,
+                    customPricing: {
+                      ...prev.customPricing,
+                      minPrice: parseFloat(e.target.value) || 0,
+                      maxPrice: prev.customPricing?.maxPrice || 0
+                    }
+                  }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="maxPrice">Prix maximum (€) *</Label>
+                <Input
+                  id="maxPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.customPricing?.maxPrice || ''}
+                  onChange={(e) => setForm(prev => ({
+                    ...prev,
+                    customPricing: {
+                      minPrice: prev.customPricing?.minPrice || 0,
+                      maxPrice: parseFloat(e.target.value) || 0
+                    }
+                  }))}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Prix fixe */}
+      {form.pricingType === 'fixed' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Prix</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div>
               <Label htmlFor="price">Prix (€) *</Label>
               <Input
@@ -670,14 +774,24 @@ function ProductForm({
                 className="mt-1"
               />
             </div>
-          ) : (
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Variants */}
+      {form.pricingType === 'variants' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Variants (tailles)</CardTitle>
+          </CardHeader>
+          <CardContent>
             <VariantManager
               variants={form.variants}
               onChange={(variants) => setForm(prev => ({ ...prev, variants }))}
             />
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Images */}
       <Card>
@@ -795,6 +909,7 @@ export default function AdminProducts() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const { incrementCartCount } = useCart();
 
   useEffect(() => {
     fetchProducts();
@@ -804,10 +919,10 @@ export default function AdminProducts() {
     try {
       setIsLoading(true);
       const params = new URLSearchParams({
-        activeOnly: 'false', // Afficher tous les produits en admin
+        activeOnly: 'false',
         search: searchTerm,
         category: selectedCategory === 'all' ? '' : selectedCategory,
-        limit: '100' // Afficher plus de produits en admin
+        limit: '100'
       });
 
       const response = await fetch(`/api/products?${params}`);
@@ -835,7 +950,7 @@ export default function AdminProducts() {
 
       const url = editingProduct 
         ? `/api/admin/products/${editingProduct._id}` 
-        : '/api/products';
+        : '/api/admin/products';
       
       const method = editingProduct ? 'PUT' : 'POST';
 
@@ -844,6 +959,7 @@ export default function AdminProducts() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(productData),
       });
 
@@ -853,7 +969,7 @@ export default function AdminProducts() {
         toast.success(editingProduct ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
         setShowForm(false);
         setEditingProduct(null);
-        fetchProducts(); // Recharger la liste
+        fetchProducts();
       } else {
         toast.error(result.error?.message || 'Erreur lors de la sauvegarde');
       }
@@ -871,6 +987,7 @@ export default function AdminProducts() {
     try {
       const response = await fetch(`/api/admin/products/${product._id}`, {
         method: 'DELETE',
+        credentials: 'include'
       });
 
       const result = await response.json();
@@ -889,7 +1006,9 @@ export default function AdminProducts() {
 
   // Fonction pour afficher le prix d'un produit
   const displayProductPrice = (product: Product) => {
-    if (product.hasVariants) {
+    if (product.pricingType === 'custom_range' && product.customPricing) {
+      return `${product.customPricing.minPrice}€ - ${product.customPricing.maxPrice}€`;
+    } else if (product.hasVariants) {
       return product.priceRangeFormatted || 'Prix non défini';
     } else {
       return product.displayPriceFormatted || `${product.price}€`;
@@ -1018,14 +1137,19 @@ export default function AdminProducts() {
                     </DropdownMenu>
                   </div>
                   
-                  {/* Badge pour les produits avec variants */}
-                  {product.hasVariants && (
-                    <div className="absolute top-2 left-2">
+                  {/* Badge pour le type de produit */}
+                  <div className="absolute top-2 left-2">
+                    {product.pricingType === 'custom_range' && (
+                      <Badge variant="default" className="text-xs">
+                        Prix personnalisable
+                      </Badge>
+                    )}
+                    {product.hasVariants && (
                       <Badge variant="secondary" className="text-xs">
                         Multi-tailles
                       </Badge>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 <CardContent className="p-4">
@@ -1081,6 +1205,16 @@ export default function AdminProducts() {
                           </Badge>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Affichage pour prix personnalisable */}
+                  {product.pricingType === 'custom_range' && product.customPricing && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-xs text-gray-500 mb-1">Fourchette de prix :</p>
+                      <p className="text-sm font-medium">
+                        {product.customPricing.minPrice}€ - {product.customPricing.maxPrice}€
+                      </p>
                     </div>
                   )}
                 </CardContent>

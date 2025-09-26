@@ -9,12 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
+import PriceSelector from '@/components/product/PriceSelector';
 
 interface ProductVariant {
+  _id?: string;
   name: string;
   price: number;
   description?: string;
@@ -30,6 +34,11 @@ interface Product {
   price?: number;
   hasVariants: boolean;
   variants: ProductVariant[];
+  pricingType?: 'fixed' | 'variants' | 'custom_range';
+  customPricing?: {
+    minPrice: number;
+    maxPrice: number;
+  };
   images: string[];
   category: string;
   isActive: boolean;
@@ -52,10 +61,11 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [dataReady, setDataReady] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
+  const [selectedVariant, setSelectedVariant] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isInWishlist, setIsInWishlist] = useState(false);
+  const [customPrice, setCustomPrice] = useState<number | null>(null);
 
   const difficultyColors = {
     'facile': 'bg-green-100 text-green-800',
@@ -91,12 +101,13 @@ export default function ProductDetailPage() {
           // Initialiser variants seulement si réellement présents
           if (productData.hasVariants && productData.variants?.length > 0) {
             console.log('Initialisation variants:', productData.variants);
-            const firstActiveIndex = productData.variants.findIndex((v: any) => v.isActive !== false);
-            const indexToUse = firstActiveIndex >= 0 ? firstActiveIndex : 0;
-            setSelectedVariantIndex(indexToUse);
-            console.log('Index variant sélectionné:', indexToUse);
+            const firstActiveVariant = productData.variants.find((v: any) => v.isActive !== false);
+            if (firstActiveVariant) {
+              setSelectedVariant(firstActiveVariant._id || '');
+            }
+            console.log('Variant sélectionné:', firstActiveVariant);
           } else {
-            setSelectedVariantIndex(0);
+            setSelectedVariant('');
             console.log('Produit simple, pas de variants');
           }
           
@@ -118,83 +129,61 @@ export default function ProductDetailPage() {
     fetchProduct();
   }, [params.id, router]);
 
-  // Fonction prix unifiée
-  const getCurrentPrice = () => {
-    if (!product) return 0;
-    
-    if (!product.hasVariants) {
-      return product.price || 0;
-    }
-    
-    if (product.variants?.length > 0 && product.variants[selectedVariantIndex]) {
-      return product.variants[selectedVariantIndex].price;
-    }
-    
-    return 0;
-  };
-
-  // Fonction prix formaté unifiée
-  const getFormattedPrice = () => {
-    const price = getCurrentPrice();
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(price);
-  };
-
-  // Obtenir le variant actuel ou null
-  const getCurrentVariant = () => {
-    if (!product?.hasVariants || !product.variants?.length) {
-      return null;
-    }
-    return product.variants[selectedVariantIndex] || null;
-  };
+  // Obtenir les données du variant sélectionné
+  const selectedVariantData = product?.variants.find(v => v._id === selectedVariant);
 
   // Ajout au panier
   const handleAddToCart = async () => {
-    if (!product || isAddingToCart) return;
+    if (!product) return;
+
+    let priceToUse: number;
+    let variantId: string | undefined;
+    let variantName: string | undefined;
+
+    if (product.pricingType === 'custom_range') {
+      if (!customPrice) {
+        toast.error('Veuillez sélectionner un budget');
+        return;
+      }
+      priceToUse = customPrice;
+    } else if (product.hasVariants) {
+      if (!selectedVariant || !selectedVariantData) {
+        toast.error('Veuillez sélectionner une taille');
+        return;
+      }
+      priceToUse = selectedVariantData.price;
+      variantId = selectedVariant;
+      variantName = selectedVariantData.name;
+    } else {
+      priceToUse = product.price || 0;
+    }
+
+    setIsAddingToCart(true);
 
     try {
-      setIsAddingToCart(true);
-
-      const requestBody: any = {
-        productId: product._id,
-        quantity: quantity
-      };
-
-      // Ajouter variantId seulement si produit a des variants
-      if (product.hasVariants && product.variants?.length > 0) {
-        requestBody.variantId = selectedVariantIndex.toString();
-      }
-
-      console.log('Ajout panier avec données:', requestBody);
-
       const response = await fetch('/api/cart', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          productId: product._id,
+          quantity,
+          variantId,
+          variantName,
+          customPrice: product.pricingType === 'custom_range' ? customPrice : undefined
+        })
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        const currentVariant = getCurrentVariant();
-        const productName = currentVariant 
-          ? `${product.name} - ${currentVariant.name}`
-          : product.name;
-          
-        toast.success(`${productName} ajouté au panier`);
-        incrementCartCount(quantity);
+      if (response.ok) {
+        toast.success('Produit ajouté au panier !');
+        incrementCartCount();
       } else {
-        throw new Error(data.error?.message || 'Erreur lors de l\'ajout au panier');
+        const errorData = await response.json();
+        toast.error(errorData.error?.message || 'Erreur lors de l\'ajout au panier');
       }
-
-    } catch (error: any) {
-      console.error('Erreur addToCart:', error);
-      toast.error(error.message || 'Erreur lors de l\'ajout au panier');
+    } catch (error) {
+      console.error('Erreur ajout panier:', error);
+      toast.error('Erreur lors de l\'ajout au panier');
     } finally {
       setIsAddingToCart(false);
     }
@@ -326,15 +315,48 @@ export default function ProductDetailPage() {
                   {product.name}
                 </h1>
                 
-                {/* Prix */}
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-3xl font-bold text-pink-600">
-                    {getFormattedPrice()}
-                  </span>
-                  {product.hasVariants && product.variants?.length > 0 && (
-                    <span className="text-sm text-gray-500">
-                      par {getCurrentVariant()?.name.toLowerCase() || 'pièce'}
-                    </span>
+                {/* Section Prix */}
+                <div className="space-y-4">
+                  {product.pricingType === 'custom_range' && product.customPricing ? (
+                    <div>
+                      <div className="text-2xl font-bold text-gray-900 mb-4">
+                        À partir de {product.customPricing.minPrice.toFixed(2)} €
+                      </div>
+                      <PriceSelector
+                        minPrice={product.customPricing.minPrice}
+                        maxPrice={product.customPricing.maxPrice}
+                        onPriceChange={setCustomPrice}
+                      />
+                    </div>
+                  ) : product.hasVariants && product.variants.length > 0 ? (
+                    <div>
+                      <Label className="text-base font-medium">Choisir une taille</Label>
+                      <Select value={selectedVariant} onValueChange={setSelectedVariant}>
+                        <SelectTrigger className="w-full mt-2">
+                          <SelectValue placeholder="Sélectionner une taille" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {product.variants
+                            .filter(variant => variant.isActive)
+                            .map((variant) => (
+                              <SelectItem key={variant._id} value={variant._id || ''}>
+                                {variant.name} - {variant.price.toFixed(2)} €
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedVariantData && (
+                        <div className="mt-2">
+                          <span className="text-2xl font-bold text-gray-900">
+                            {selectedVariantData.price.toFixed(2)} €
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-2xl font-bold text-gray-900">
+                      {product.price?.toFixed(2)} €
+                    </div>
                   )}
                 </div>
 
@@ -360,52 +382,21 @@ export default function ProductDetailPage() {
                 ) : null}
               </div>
 
-              {/* NOUVEAU : Description du variant (seulement si produit avec variants) */}
-              {product.hasVariants && product.variants?.length > 0 && getCurrentVariant()?.description && (
+              {/* Description du variant (seulement si produit avec variants) */}
+              {product.hasVariants && product.variants?.length > 0 && selectedVariantData?.description && (
                 <Card className="bg-blue-50 border-blue-200">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Info className="w-4 h-4 text-blue-600" />
                       <h3 className="font-medium text-blue-900">
-                        À propos de "{getCurrentVariant()?.name}"
+                        À propos de "{selectedVariantData.name}"
                       </h3>
                     </div>
                     <p className="text-blue-800 text-sm leading-relaxed">
-                      {getCurrentVariant()?.description}
+                      {selectedVariantData.description}
                     </p>
                   </CardContent>
                 </Card>
-              )}
-
-              {/* Sélecteur variants seulement si hasVariants = true */}
-              {product.hasVariants && product.variants?.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-3">Choisir une taille</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {product.variants.map((variant, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setSelectedVariantIndex(index)}
-                        disabled={!variant.isActive}
-                        className={`p-3 border rounded-lg text-center transition-colors ${
-                          selectedVariantIndex === index
-                            ? 'border-pink-500 bg-pink-50 text-pink-900'
-                            : variant.isActive
-                            ? 'border-gray-200 hover:border-gray-300 text-gray-900'
-                            : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
-                        }`}
-                      >
-                        <div className="font-medium">{variant.name}</div>
-                        <div className="text-sm text-gray-600">
-                          {new Intl.NumberFormat('fr-FR', {
-                            style: 'currency',
-                            currency: 'EUR'
-                          }).format(variant.price)}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
               )}
 
               {/* Quantité et ajout panier */}
@@ -507,7 +498,7 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* NOUVEAU : Description principale déplacée sous les images */}
+          {/* Description principale déplacée sous les images */}
           <div className="mt-12 space-y-8">
             
             {/* Description principale */}

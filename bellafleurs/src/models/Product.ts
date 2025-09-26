@@ -11,7 +11,7 @@ const ProductVariantSchema = new Schema({
   },
   price: {
     type: Number,
-    required: [true, 'Variant price is required'], // ✅ Simple validation pour les variants
+    required: [true, 'Variant price is required'],
     min: [0.01, 'Price must be greater than 0'],
     max: [10000, 'Price cannot exceed 10,000€'],
     set: (v: number) => Math.round(v * 100) / 100
@@ -56,53 +56,45 @@ const ProductSchema = new Schema({
     type: Number,
     min: [0.01, 'Price must be greater than 0'],
     max: [10000, 'Price cannot exceed 10,000€'],
-    set: (v: number) => Math.round(v * 100) / 100,
-    // 🔧 VALIDATION CONDITIONNELLE AMÉLIORÉE
-    required: function(this: IProduct) {
-      // Prix requis seulement si hasVariants = false ET ce n'est pas une mise à jour qui supprime le prix
-      return this.hasVariants === false;
-    },
-    validate: {
-      validator: function(this: IProduct, value: number) {
-        // Si hasVariants = true, le prix ne devrait pas exister
-        if (this.hasVariants === true && value !== undefined) {
-          return false;
-        }
-        // Si hasVariants = false, le prix doit exister et être valide
-        if (this.hasVariants === false && (!value || value <= 0)) {
-          return false;
-        }
-        return true;
-      },
-      message: 'Prix incompatible avec la configuration des variants'
-    }
+    set: (v: number) => Math.round(v * 100) / 100
   },
   hasVariants: {
     type: Boolean,
     default: false
   },
+  pricingType: {
+    type: String,
+    enum: ['fixed', 'variants', 'custom_range'],
+    default: function(this: any) {
+      if (this.hasVariants) return 'variants';
+      return 'fixed';
+    }
+  },
+  customPricing: {
+    minPrice: {
+      type: Number,
+      min: [0.01, 'Min price must be greater than 0'],
+      required: function(this: any) {
+        return this.pricingType === 'custom_range';
+      }
+    },
+    maxPrice: {
+      type: Number,
+      min: [0.01, 'Max price must be greater than 0'],
+      required: function(this: any) {
+        return this.pricingType === 'custom_range';
+      },
+      validate: {
+        validator: function(this: any, value: number) {
+          return !this.customPricing?.minPrice || value > this.customPricing.minPrice;
+        },
+        message: 'Max price must be greater than min price'
+      }
+    }
+  },
   variants: {
     type: [ProductVariantSchema],
-    default: [],
-    validate: {
-      validator: function(this: IProduct, variants: IProductVariant[]) {
-        // 🔧 VALIDATION AMÉLIORÉE POUR LES MISES À JOUR
-        
-        // Si hasVariants = true, au moins 1 variant requis
-        if (this.hasVariants === true) {
-          return variants && variants.length > 0;
-        }
-        
-        // Si hasVariants = false, aucun variant autorisé
-        if (this.hasVariants === false) {
-          return !variants || variants.length === 0;
-        }
-        
-        // Si hasVariants n'est pas défini (cas de mise à jour partielle), on accepte
-        return true;
-      },
-      message: 'Configuration variants incompatible: variants requis si hasVariants=true, interdits si hasVariants=false'
-    }
+    default: []
   },
   category: {
     type: String,
@@ -181,9 +173,8 @@ ProductSchema.index({ category: 1, isActive: 1 });
 ProductSchema.index({ isActive: 1, createdAt: -1 });
 ProductSchema.index({ slug: 1 });
 
-// Middleware de validation pré-sauvegarde
+// Middleware de validation pré-sauvegarde CORRIGÉ
 ProductSchema.pre('save', function(next) {
-  // Cast explicite pour éviter les erreurs TypeScript
   const doc = this as any;
   
   // Générer le slug automatiquement
@@ -202,50 +193,83 @@ ProductSchema.pre('save', function(next) {
     doc.variants.sort((a: any, b: any) => a.order - b.order);
   }
 
-  // 🔧 VALIDATION SUPPLÉMENTAIRE AVANT SAUVEGARDE
-  if (doc.hasVariants) {
-    // Produit avec variants : supprimer le prix s'il existe
+  // CORRECTION : Gestion des différents types de pricing
+  if (doc.pricingType === 'custom_range') {
+    // Prix personnalisable : supprimer price et variants, s'assurer que customPricing existe
+    doc.hasVariants = false;
+    doc.variants = [];
     if (doc.price !== undefined) {
       doc.price = undefined;
+    }
+    if (!doc.customPricing || !doc.customPricing.minPrice || !doc.customPricing.maxPrice) {
+      return next(new Error('customPricing avec minPrice et maxPrice requis pour pricingType custom_range'));
+    }
+  } else if (doc.pricingType === 'variants' || doc.hasVariants) {
+    // Produit avec variants : supprimer le prix, garder les variants
+    doc.hasVariants = true;
+    doc.pricingType = 'variants';
+    if (doc.price !== undefined) {
+      doc.price = undefined;
+    }
+    if (doc.customPricing) {
+      doc.customPricing = undefined;
     }
     // Vérifier qu'il y a au moins un variant
     if (!doc.variants || !Array.isArray(doc.variants) || doc.variants.length === 0) {
       return next(new Error('Au moins un variant requis pour un produit avec variants'));
     }
   } else {
-    // Produit sans variants : supprimer les variants et s'assurer qu'il y a un prix
+    // Prix fixe : supprimer variants et customPricing, s'assurer qu'il y a un prix
+    doc.hasVariants = false;
+    doc.pricingType = 'fixed';
     doc.variants = [];
+    if (doc.customPricing) {
+      doc.customPricing = undefined;
+    }
     if (!doc.price || doc.price <= 0) {
-      return next(new Error('Prix requis pour un produit sans variants'));
+      return next(new Error('Prix requis pour un produit à prix fixe'));
     }
   }
 
   next();
 });
 
-// Middleware pré-update pour les mises à jour
+// Middleware pré-update pour les mises à jour CORRIGÉ
 ProductSchema.pre(['findOneAndUpdate', 'updateOne', 'updateMany'], function(next) {
   const update = this.getUpdate() as any;
   
-  // 🔧 GESTION DES MISES À JOUR AVEC VARIANTS
   if (update.$set) {
-    const hasVariants = update.$set.hasVariants;
+    const pricingType = update.$set.pricingType;
     
-    if (hasVariants === true) {
-      // Produit avec variants : s'assurer que le prix est supprimé
+    if (pricingType === 'custom_range') {
+      // Prix personnalisable
+      update.$set.hasVariants = false;
+      update.$set.variants = [];
       if (!update.$unset) update.$unset = {};
       update.$unset.price = 1;
       
-      // Vérifier qu'il y a des variants
+      if (!update.$set.customPricing || !update.$set.customPricing.minPrice || !update.$set.customPricing.maxPrice) {
+        return next(new Error('customPricing avec minPrice et maxPrice requis pour pricingType custom_range'));
+      }
+    } else if (pricingType === 'variants') {
+      // Produit avec variants
+      update.$set.hasVariants = true;
+      if (!update.$unset) update.$unset = {};
+      update.$unset.price = 1;
+      update.$unset.customPricing = 1;
+      
       if (!update.$set.variants || !Array.isArray(update.$set.variants) || update.$set.variants.length === 0) {
         return next(new Error('Au moins un variant requis pour un produit avec variants'));
       }
-    } else if (hasVariants === false) {
-      // Produit sans variants : supprimer les variants et vérifier le prix
+    } else if (pricingType === 'fixed') {
+      // Prix fixe
+      update.$set.hasVariants = false;
       update.$set.variants = [];
+      if (!update.$unset) update.$unset = {};
+      update.$unset.customPricing = 1;
       
       if (!update.$set.price || update.$set.price <= 0) {
-        return next(new Error('Prix requis pour un produit sans variants'));
+        return next(new Error('Prix requis pour un produit à prix fixe'));
       }
     }
   }
@@ -269,8 +293,12 @@ ProductSchema.virtual('priceFormatted').get(function() {
   }).format(price) : null;
 });
 
-// Nouveau : Prix à afficher (simple ou premier variant)
+// Prix à afficher (simple ou premier variant)
 ProductSchema.virtual('displayPrice').get(function(this: IProduct) {
+  if (this.pricingType === 'custom_range' && this.customPricing) {
+    return this.customPricing.minPrice;
+  }
+  
   if (!this.hasVariants) {
     return this.price;
   }
@@ -283,8 +311,12 @@ ProductSchema.virtual('displayPrice').get(function(this: IProduct) {
   return null;
 });
 
-// Nouveau : Fourchette de prix pour les variants
+// Fourchette de prix pour les variants
 ProductSchema.virtual('priceRange').get(function(this: IProduct) {
+  if (this.pricingType === 'custom_range' && this.customPricing) {
+    return { min: this.customPricing.minPrice, max: this.customPricing.maxPrice };
+  }
+  
   if (!this.hasVariants || !this.variants || this.variants.length === 0) {
     return null;
   }
@@ -300,7 +332,7 @@ ProductSchema.virtual('priceRange').get(function(this: IProduct) {
 });
 
 ProductSchema.virtual('priceRangeFormatted').get(function(this: IProduct) {
-  const range = (this as any).priceRange; // Accès au virtual priceRange
+  const range = (this as any).priceRange;
   if (!range) return this.priceFormatted;
 
   const formatter = new Intl.NumberFormat('fr-FR', {
@@ -393,19 +425,16 @@ ProductSchema.statics.searchProducts = function(
 ) {
   const query: any = { isActive: true };
   
-  // Filtres existants
   if (filters.category) query.category = filters.category;
   if (filters.minPrice || filters.maxPrice) {
-    // Pour les produits avec variants, chercher dans les prix des variants
     const priceConditions: any = {};
     if (filters.minPrice) priceConditions.$gte = filters.minPrice;
     if (filters.maxPrice) priceConditions.$lte = filters.maxPrice;
     
     query.$or = [
-      // Produits sans variants
-      { hasVariants: false, price: priceConditions },
-      // Produits avec variants
-      { hasVariants: true, 'variants.price': priceConditions }
+      { hasVariants: false, pricingType: 'fixed', price: priceConditions },
+      { hasVariants: true, pricingType: 'variants', 'variants.price': priceConditions },
+      { pricingType: 'custom_range', 'customPricing.minPrice': { $lte: filters.maxPrice || 999999 }, 'customPricing.maxPrice': { $gte: filters.minPrice || 0 } }
     ];
   }
   if (filters.tags && filters.tags.length > 0) {
@@ -418,7 +447,6 @@ ProductSchema.statics.searchProducts = function(
     query.hasVariants = filters.hasVariants;
   }
 
-  // Tri
   let sort: any = { createdAt: -1 };
   if (pagination.sortBy) {
     sort = { [pagination.sortBy]: pagination.sortOrder === 'desc' ? -1 : 1 };
@@ -447,7 +475,6 @@ interface IProductModel extends Model<IProduct> {
   };
 }
 
-// Éviter la recompilation du modèle
 const Product = (mongoose.models.Product as unknown as IProductModel) || 
   mongoose.model<IProduct, IProductModel>('Product', ProductSchema);
 

@@ -12,6 +12,7 @@ export interface ICartItem {
   // NOUVEAU : Support variants
   variantId?: string;
   variantName?: string;
+  customPrice?: number;
 }
 
 // Interface pour les méthodes d'instance - MISE À JOUR
@@ -90,6 +91,11 @@ const CartItemSchema = new Schema({
     type: String,
     required: false,
     trim: true
+  },
+  customPrice: {
+    type: Number,
+    required: false,
+    min: [0, 'Custom price must be positive']
   }
 }, { _id: false });
 

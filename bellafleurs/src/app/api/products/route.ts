@@ -1,297 +1,195 @@
-// src/app/api/products/route.ts - API pour les produits avec support des variants
-export const dynamic = 'force-dynamic';
-
+// src/app/api/products/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
-import { IProduct, IProductVariant } from '@/../types';
 
-// Catégories fixes
-const VALID_CATEGORIES = [
-  'Bouquets',
-  'Fleurs de saisons',
-  'Compositions piquées', 
-  'Roses',
-  'Orchidées',
-  'Deuil',
-  'Incontournable',
-];
-
-// Interface pour le produit de base de données avec variants
-interface DBProduct {
-  _id: string;
-  name: string;
-  description: string;
-  price?: number;                  // Optionnel si hasVariants = true
-  hasVariants: boolean;            // Nouveau champ
-  variants: IProductVariant[];     // Array des variantes
-  images: string[];
-  category: string;
-  isActive: boolean;
-  tags: string[];
-  slug?: string;
-  averageRating?: number;
-  reviewsCount?: number;
-  entretien?: string;
-  careInstructions?: string;
-  difficulty?: string;
-  composition?: string;
-  motsClesSEO?: string[];
-  createdAt?: Date;
-}
-
-// Interface pour le produit formaté avec prix d'affichage
+// Interface pour le produit formaté
 interface FormattedProduct {
   _id: string;
   name: string;
   description: string;
   price?: number;
   hasVariants: boolean;
-  variants: IProductVariant[];
-  displayPrice: number;            // Prix à afficher (simple ou premier variant)
-  displayPriceFormatted: string;   // Prix formaté
-  priceRangeFormatted: string;     // "À partir de 25€" ou "25€ - 45€"
-  images: string[];
+  variants: any[];
+  pricingType: string;
+  customPricing?: {
+    minPrice: number;
+    maxPrice: number;
+  };
   category: string;
+  images: string[];
   isActive: boolean;
   tags: string[];
   slug?: string;
-  averageRating: number;
-  reviewsCount: number;
   entretien?: string;
   careInstructions?: string;
-  difficulty?: string;
   composition?: string;
-  motsClesSEO?: string[];
-  createdAt?: Date;
+  motsClesSEO: string[];
+  averageRating: number;
+  reviewsCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  displayPrice?: number;
+  displayPriceFormatted?: string;
+  priceRangeFormatted?: string;
 }
 
-// Helper pour formater un produit avec gestion des variants
-function formatProduct(product: DBProduct): FormattedProduct {
-  let displayPrice: number;
-  let priceRangeFormatted: string;
-  
-  if (!product.hasVariants) {
-    // Produit simple : utiliser le prix principal
-    displayPrice = product.price || 0;
-    priceRangeFormatted = new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(displayPrice);
-  } else {
-    // Produit avec variants : utiliser le premier variant actif
-    const activeVariants = product.variants.filter((v: IProductVariant) => v.isActive);
-    
-    if (activeVariants.length === 0) {
-      displayPrice = 0;
-      priceRangeFormatted = 'Prix non disponible';
-    } else {
-      const prices = activeVariants.map((v: IProductVariant) => v.price);
-      const minPrice = Math.min(...prices);
-      const maxPrice = Math.max(...prices);
-      
-      displayPrice = activeVariants[0].price; // Premier variant pour displayPrice
-      
-      const formatter = new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'EUR'
-      });
-      
-      if (minPrice === maxPrice) {
-        priceRangeFormatted = formatter.format(minPrice);
-      } else {
-        priceRangeFormatted = `${formatter.format(minPrice)} - ${formatter.format(maxPrice)}`;
-      }
-    }
-  }
-
-  const displayPriceFormatted = new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR'
-  }).format(displayPrice);
-
-  return {
+// Helper pour formater un produit
+function formatProduct(product: any): FormattedProduct {
+  const formattedProduct: FormattedProduct = {
     _id: product._id,
     name: product.name,
     description: product.description,
     price: product.price,
-    hasVariants: product.hasVariants,
-    variants: product.variants,
-    displayPrice,
-    displayPriceFormatted,
-    priceRangeFormatted,
-    images: product.images,
+    hasVariants: product.hasVariants || false,
+    variants: product.variants || [],
+    pricingType: product.pricingType || 'fixed',
+    customPricing: product.customPricing,
     category: product.category,
+    images: product.images || [],
     isActive: product.isActive,
-    tags: product.tags,
+    tags: product.tags || [],
     slug: product.slug,
-    averageRating: product.averageRating || 0,
-    reviewsCount: product.reviewsCount || 0,
     entretien: product.entretien,
     careInstructions: product.careInstructions,
-    difficulty: product.difficulty,
     composition: product.composition,
-    motsClesSEO: product.motsClesSEO,
+    motsClesSEO: product.motsClesSEO || [],
+    averageRating: product.averageRating || 0,
+    reviewsCount: product.reviewsCount || 0,
     createdAt: product.createdAt,
+    updatedAt: product.updatedAt
   };
+
+  // Calculer le prix d'affichage selon le type
+  if (product.pricingType === 'custom_range' && product.customPricing) {
+    formattedProduct.displayPrice = product.customPricing.minPrice;
+    formattedProduct.displayPriceFormatted = `À partir de ${product.customPricing.minPrice.toFixed(2)} €`;
+    formattedProduct.priceRangeFormatted = `${product.customPricing.minPrice.toFixed(2)} € - ${product.customPricing.maxPrice.toFixed(2)} €`;
+  } else if (product.hasVariants && product.variants?.length > 0) {
+    const activeVariants = product.variants.filter((v: any) => v.isActive !== false);
+    if (activeVariants.length > 0) {
+      const prices = activeVariants.map((v: any) => v.price);
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+      
+      formattedProduct.displayPrice = minPrice;
+      formattedProduct.displayPriceFormatted = `${minPrice.toFixed(2)} €`;
+      formattedProduct.priceRangeFormatted = minPrice === maxPrice 
+        ? `${minPrice.toFixed(2)} €`
+        : `${minPrice.toFixed(2)} € - ${maxPrice.toFixed(2)} €`;
+    }
+  } else if (product.price) {
+    formattedProduct.displayPrice = product.price;
+    formattedProduct.displayPriceFormatted = `${product.price.toFixed(2)} €`;
+    formattedProduct.priceRangeFormatted = `${product.price.toFixed(2)} €`;
+  }
+
+  return formattedProduct;
 }
 
-// Helper pour générer un slug unique
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-}
-
-// GET /api/products - Récupérer la liste des produits avec filtres et pagination
+// GET /api/products - Liste des produits avec filtres
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
-    
+
     const { searchParams } = new URL(request.url);
     
-    // Paramètres de recherche et filtrage
-    const search = searchParams.get('search') || '';
-    const category = searchParams.get('category') || '';
-    const tags = searchParams.get('tags') || '';
-    const sort = searchParams.get('sort') || 'name';
+    // Paramètres de pagination
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '12');
+    const skip = (page - 1) * limit;
+
+    // Paramètres de filtrage
+    const category = searchParams.get('category');
+    const search = searchParams.get('search');
     const minPrice = parseFloat(searchParams.get('minPrice') || '0');
     const maxPrice = parseFloat(searchParams.get('maxPrice') || '999999');
-    const activeOnly = searchParams.get('activeOnly') !== 'false'; // Par défaut true
-    const hasVariants = searchParams.get('hasVariants'); // Nouveau filtre
+    const tags = searchParams.get('tags')?.split(',').filter(Boolean);
+    const activeOnly = searchParams.get('activeOnly') !== 'false';
 
-    // Construction du filtre
-    const filter: Record<string, any> = {};
+    // Paramètres de tri
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
+
+    // Construction de la requête
+    const query: any = {};
     
-    // Filtrer uniquement les produits actifs par défaut
     if (activeOnly) {
-      filter.isActive = true;
+      query.isActive = true;
     }
-    
-    // Recherche textuelle
+
+    if (category) {
+      query.category = category;
+    }
+
     if (search) {
-      filter.$or = [
+      query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
         { tags: { $in: [new RegExp(search, 'i')] } }
       ];
     }
-    
-    // Filtres par catégorie
-    if (category && category !== 'all') {
-      filter.category = category;
+
+    if (tags && tags.length > 0) {
+      query.tags = { $in: tags };
     }
-    
-    // Filtres par prix - GESTION DES VARIANTS
+
+    // Filtre de prix complexe pour tous les types de produits
     if (minPrice > 0 || maxPrice < 999999) {
-      const priceConditions: Record<string, number> = {};
-      if (minPrice > 0) priceConditions.$gte = minPrice;
-      if (maxPrice < 999999) priceConditions.$lte = maxPrice;
-      
-      filter.$or = [
-        // Produits sans variants
-        { hasVariants: false, price: priceConditions },
-        // Produits avec variants - chercher dans les prix des variants
-        { hasVariants: true, 'variants.price': priceConditions, 'variants.isActive': true }
+      query.$or = [
+        // Produits à prix fixe
+        { 
+          pricingType: 'fixed', 
+          price: { $gte: minPrice, $lte: maxPrice } 
+        },
+        // Produits avec variants
+        { 
+          pricingType: 'variants', 
+          'variants.price': { $gte: minPrice, $lte: maxPrice } 
+        },
+        // Produits à prix personnalisable
+        { 
+          pricingType: 'custom_range',
+          'customPricing.minPrice': { $lte: maxPrice },
+          'customPricing.maxPrice': { $gte: minPrice }
+        }
       ];
     }
-    
-    // Filtres par tags
-    if (tags) {
-      const tagArray = tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
-      if (tagArray.length > 0) {
-        filter.tags = { $in: tagArray };
-      }
-    }
-    
-    // Nouveau : Filtre par type de produit (avec ou sans variants)
-    if (hasVariants === 'true') {
-      filter.hasVariants = true;
-    } else if (hasVariants === 'false') {
-      filter.hasVariants = false;
-    }
 
-    // Options de tri
-    let sortOptions: { [key: string]: 1 | -1 } = { createdAt: -1 };
-    
-    switch (sort) {
-      case 'name':
-        sortOptions = { name: 1 };
-        break;
-      case 'price':
-        // Pour le tri par prix avec variants, on utilise un aggregation pipeline plus tard
-        sortOptions = { price: 1 };
-        break;
-      case 'newest':
-        sortOptions = { createdAt: -1 };
-        break;
-      case 'oldest':
-        sortOptions = { createdAt: 1 };
-        break;
-      case 'rating':
-        sortOptions = { averageRating: -1 };
-        break;
-      default:
-        sortOptions = { createdAt: -1 };
-    }
+    // Tri
+    const sortOptions: any = {};
+    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
-    // Pagination
-    const skip = (page - 1) * limit;
-
-    // Exécution de la requête
+    // Exécution des requêtes
     const [products, totalCount] = await Promise.all([
-      Product.find(filter)
+      Product.find(query)
         .sort(sortOptions)
         .skip(skip)
         .limit(limit)
-        .lean<DBProduct[]>(),
-      Product.countDocuments(filter)
+        .lean(),
+      Product.countDocuments(query)
     ]);
 
-    // Formatage des produits avec gestion des variants
-    const formattedProducts = products.map((product: DBProduct) => formatProduct(product));
-
-    // Calculs de pagination
-    const totalPages = Math.ceil(totalCount / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
+    // Formatage des produits
+    const formattedProducts = products.map(formatProduct);
 
     return NextResponse.json({
       success: true,
       data: {
         products: formattedProducts,
         pagination: {
-          page,
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          totalCount,
           limit,
-          total: totalCount,
-          totalPages,
-          hasNextPage,
-          hasPrevPage,
-          nextPage: hasNextPage ? page + 1 : null,
-          prevPage: hasPrevPage ? page - 1 : null
-        },
-        filters: {
-          search,
-          category,
-          tags,
-          sort,
-          minPrice,
-          maxPrice,
-          activeOnly,
-          hasVariants
+          hasNextPage: page < Math.ceil(totalCount / limit),
+          hasPrevPage: page > 1
         }
       }
     });
 
   } catch (error: unknown) {
-    console.error('❌ Products API error:', error);
+    console.error('❌ Products API GET error:', error);
     return NextResponse.json({
       success: false,
       error: {
@@ -302,104 +200,93 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/products - Créer un nouveau produit avec support des variants
+// POST /api/products - Créer un nouveau produit
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
-    
-    // TODO: Ajouter la vérification d'authentification admin
-    // const session = await getServerSession(authOptions);
-    // if (!session?.user?.isAdmin) {
-    //   return NextResponse.json({
-    //     success: false,
-    //     error: { message: 'Accès non autorisé', code: 'UNAUTHORIZED' }
-    //   }, { status: 401 });
-    // }
 
-    const body = await request.json();
-    
     const {
       name,
       description,
       price,
-      hasVariants = false,
-      variants = [],
-      images,
+      hasVariants,
+      variants,
+      pricingType = 'fixed',
+      customPricing,
       category,
-      tags = [],
-      entretien = '',
-      careInstructions = '',
-      difficulty = 'facile',
-      composition = '',
-      motsClesSEO = []
-    } = body;
+      images,
+      tags,
+      entretien,
+      careInstructions,
+      difficulty,
+      composition,
+      motsClesSEO
+    } = await request.json();
 
     // Validation des champs requis
-    if (!name || !description || !category) {
+    if (!name?.trim() || !description?.trim() || !category || !images?.length) {
       return NextResponse.json({
         success: false,
         error: {
-          message: 'Champs requis manquants (name, description, category)',
+          message: 'Champs requis manquants (nom, description, catégorie, images)',
           code: 'MISSING_REQUIRED_FIELDS'
         }
       }, { status: 400 });
     }
 
-    // Validation spécifique côté serveur
-    if (!hasVariants && (!price || price <= 0)) {
+    // Validation selon le type de prix
+    if (pricingType === 'fixed' && (!price || price <= 0)) {
       return NextResponse.json({
         success: false,
         error: {
-          message: 'Le prix est requis pour les produits sans variants',
-          code: 'MISSING_PRICE'
+          message: 'Prix requis pour un produit à prix fixe',
+          code: 'VALIDATION_ERROR'
         }
       }, { status: 400 });
     }
 
-    if (hasVariants && (!variants || variants.length === 0)) {
+    if (pricingType === 'variants' && (!variants || !Array.isArray(variants) || variants.length === 0)) {
       return NextResponse.json({
         success: false,
         error: {
-          message: 'Au moins une variante est requise pour les produits avec variants',
-          code: 'MISSING_VARIANTS'
+          message: 'Au moins un variant requis pour un produit avec variants',
+          code: 'VALIDATION_ERROR'
         }
       }, { status: 400 });
     }
 
-    // Validation de la catégorie
-    if (!VALID_CATEGORIES.includes(category)) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: `Catégorie invalide. Catégories autorisées: ${VALID_CATEGORIES.join(', ')}`,
-          code: 'INVALID_CATEGORY'
-        }
-      }, { status: 400 });
+    if (pricingType === 'custom_range') {
+      if (!customPricing || !customPricing.minPrice || !customPricing.maxPrice) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            message: 'Prix minimum et maximum requis pour un prix personnalisable',
+            code: 'VALIDATION_ERROR'
+          }
+        }, { status: 400 });
+      }
+      
+      if (customPricing.maxPrice <= customPricing.minPrice) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            message: 'Le prix maximum doit être supérieur au prix minimum',
+            code: 'VALIDATION_ERROR'
+          }
+        }, { status: 400 });
+      }
     }
 
-    // Validation des images
-    if (!images || images.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Au moins une image est requise',
-          code: 'MISSING_IMAGES'
-        }
-      }, { status: 400 });
-    }
+    // Générer le slug
+    const slug = name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
 
-    // Génération du slug unique
-    const baseSlug = generateSlug(name);
-    let slug = baseSlug;
-    let slugCounter = 1;
-    
-    // Vérifier l'unicité du slug
-    while (await Product.findOne({ slug })) {
-      slug = `${baseSlug}-${slugCounter}`;
-      slugCounter++;
-    }
-
-    // Traitement des tags et mots-clés SEO
+    // Traitement des tags
     const processedTags = Array.isArray(tags) 
       ? tags.map((tag: string) => tag.toLowerCase().trim()) 
       : [];
@@ -409,27 +296,26 @@ export async function POST(request: NextRequest) {
       : [];
 
     // Traitement des variants si applicable
-    let processedVariants: IProductVariant[] = [];
-    if (hasVariants && variants) {
+    let processedVariants: any[] = [];
+    if (pricingType === 'variants' && variants) {
       processedVariants = variants.map((variant: any, index: number) => ({
         name: variant.name.trim(),
         price: variant.price,
         description: variant.description?.trim() || '',
         image: variant.image || '',
-        isActive: variant.isActive !== false, // Par défaut true
+        isActive: variant.isActive !== false,
         order: variant.order || index
       }));
       
       // Trier par ordre
-      processedVariants.sort((a: IProductVariant, b: IProductVariant) => a.order - b.order);
+      processedVariants.sort((a: any, b: any) => a.order - b.order);
     }
 
     // Créer le nouveau produit
-    const productData: Partial<IProduct> = {
+    const productData: any = {
       name: name.trim(),
       description: description.trim(),
-      hasVariants,
-      variants: processedVariants,
+      pricingType,
       images,
       category: category.trim(),
       isActive: true,
@@ -444,8 +330,18 @@ export async function POST(request: NextRequest) {
       reviewsCount: 0
     };
 
-    // Ajouter le prix seulement si pas de variants
-    if (!hasVariants) {
+    // Logique conditionnelle selon le type de prix
+    if (pricingType === 'custom_range') {
+      productData.hasVariants = false;
+      productData.customPricing = {
+        minPrice: customPricing.minPrice,
+        maxPrice: customPricing.maxPrice
+      };
+    } else if (pricingType === 'variants') {
+      productData.hasVariants = true;
+      productData.variants = processedVariants;
+    } else {
+      productData.hasVariants = false;
       productData.price = price;
     }
 
@@ -453,7 +349,7 @@ export async function POST(request: NextRequest) {
     await newProduct.save();
 
     // Formater la réponse
-    const formattedProduct = formatProduct(newProduct.toObject() as DBProduct);
+    const formattedProduct = formatProduct(newProduct.toObject());
 
     return NextResponse.json({
       success: true,

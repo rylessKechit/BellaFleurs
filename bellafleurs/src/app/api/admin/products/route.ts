@@ -1,50 +1,47 @@
-// src/app/api/admin/products/route.ts - Version corrigée avec variable request
-export const dynamic = 'force-dynamic';
-
+// src/app/api/admin/products/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import Product from '@/models/Product';
-import { checkAdminAccess } from '@/lib/auth-helpers';
-import { formatProductResponse } from '@/lib/utils/formatProductResponse';
-import { IProduct, IProductVariant } from '@/../types';
+import { IProduct, IProductVariant } from '@/types/index';
+import { z } from 'zod';
 
-// Validation Zod (garde le schema existant)
-const productVariantSchema = z.object({
-  name: z.string().min(1, 'Nom de la variante requis'),
-  price: z.number().min(0.01, 'Prix minimum: 0,01€'),
-  description: z.string().optional(),
-  image: z.string().optional(),
-  isActive: z.boolean().default(true),
-  order: z.number().default(0)
-});
+// Helper pour vérifier les droits admin
+async function checkAdminAccess() {
+  const session = await getServerSession(authOptions);
+  return session?.user?.role === 'admin';
+}
 
-const createProductSchema = z.object({
-  name: z.string().min(1, 'Nom requis'),
-  description: z.string().min(10, 'Description trop courte'),
-  price: z.number().min(0.01).optional(),
-  hasVariants: z.boolean().default(false),
-  variants: z.array(productVariantSchema).default([]),
-  category: z.string().min(1, 'Catégorie requise'),
-  images: z.array(z.string().url()).min(1, 'Au moins une image requise'),
-  tags: z.array(z.string()).default([]),
-  entretien: z.string().optional(),
-  careInstructions: z.string().optional(),
-  composition: z.string().optional(),
-  motsClesSEO: z.array(z.string()).default([])
-}).refine((data) => {
-  // Si hasVariants = true, variants requis et pas de prix simple
-  if (data.hasVariants) {
-    return data.variants.length > 0;
-  }
-  // Si hasVariants = false, prix simple requis
-  return data.price !== undefined && data.price > 0;
-}, {
-  message: "Produit avec variants: variants requis. Produit simple: prix requis."
-});
+// Helper pour formater la réponse produit
+function formatProductResponse(product: any): any {
+  return {
+    _id: product._id,
+    name: product.name,
+    description: product.description,
+    price: product.price,
+    hasVariants: product.hasVariants,
+    variants: product.variants || [],
+    pricingType: product.pricingType || 'fixed',
+    customPricing: product.customPricing,
+    category: product.category,
+    images: product.images || [],
+    isActive: product.isActive,
+    tags: product.tags || [],
+    slug: product.slug,
+    entretien: product.entretien,
+    careInstructions: product.careInstructions,
+    composition: product.composition,
+    motsClesSEO: product.motsClesSEO || [],
+    averageRating: product.averageRating || 0,
+    reviewsCount: product.reviewsCount || 0,
+    createdAt: product.createdAt,
+    updatedAt: product.updatedAt
+  };
+}
 
-// GET /api/admin/products - Récupérer tous les produits (admin)
-export async function GET(req: NextRequest) {
+// GET /api/admin/products - Liste des produits (admin)
+export async function GET(request: NextRequest) {
   try {
     if (!await checkAdminAccess()) {
       return NextResponse.json({
@@ -58,64 +55,56 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const category = searchParams.get('category');
-    const isActive = searchParams.get('isActive');
-    const search = searchParams.get('search');
-    const hasVariants = searchParams.get('hasVariants');
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const limit = parseInt(url.searchParams.get('limit') || '20');
+    const search = url.searchParams.get('search') || '';
+    const category = url.searchParams.get('category') || '';
+    const sortBy = url.searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = url.searchParams.get('sortOrder') || 'desc';
 
-    const query: Record<string, any> = {};
-    
-    if (category && category !== 'all') {
-      query.category = category;
-    }
-    
-    if (isActive !== null && isActive !== undefined) {
-      query.isActive = isActive === 'true';
-    }
+    // Construire le filtre
+    const filter: any = {};
     
     if (search) {
-      query.$or = [
+      filter.$or = [
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
         { tags: { $in: [new RegExp(search, 'i')] } }
       ];
     }
-
-    // Filtre par type de produit (avec ou sans variants)
-    if (hasVariants === 'true') {
-      query.hasVariants = true;
-    } else if (hasVariants === 'false') {
-      query.hasVariants = false;
+    
+    if (category) {
+      filter.category = category;
     }
 
-    const skip = (page - 1) * limit;
+    // Construire le tri
+    const sortOptions: any = {};
+    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
-    const [products, total] = await Promise.all([
-      Product.find(query)
-        .sort({ createdAt: -1 })
+    // Requête avec pagination
+    const skip = (page - 1) * limit;
+    
+    const [products, totalCount] = await Promise.all([
+      Product.find(filter)
+        .sort(sortOptions)
         .skip(skip)
         .limit(limit)
         .lean(),
-      Product.countDocuments(query)
+      Product.countDocuments(filter)
     ]);
 
-    // 🔧 CORRECTION : Utiliser le formateur unifié
-    const formattedProducts = products.map((product: any) => formatProductResponse(product));
+    const formattedProducts = products.map(formatProductResponse);
 
     return NextResponse.json({
       success: true,
       data: {
         products: formattedProducts,
         pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit),
-          hasNextPage: page < Math.ceil(total / limit),
-          hasPrevPage: page > 1
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          totalCount,
+          limit
         }
       }
     });
@@ -132,8 +121,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/admin/products - Créer un nouveau produit (admin)
-export async function POST(request: NextRequest) { // 🔧 CORRECTION : variable request
+// POST /api/admin/products - Créer un produit (admin)
+export async function POST(request: NextRequest) {
   try {
     if (!await checkAdminAccess()) {
       return NextResponse.json({
@@ -147,21 +136,6 @@ export async function POST(request: NextRequest) { // 🔧 CORRECTION : variable
 
     await connectDB();
 
-    const body = await request.json(); // 🔧 CORRECTION : utiliser request
-    
-    // Validation avec Zod
-    const validationResult = createProductSchema.safeParse(body);
-    if (!validationResult.success) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Données invalides',
-          code: 'VALIDATION_ERROR',
-          details: validationResult.error.errors
-        }
-      }, { status: 400 });
-    }
-
     const {
       name,
       description,
@@ -174,8 +148,79 @@ export async function POST(request: NextRequest) { // 🔧 CORRECTION : variable
       entretien,
       careInstructions,
       composition,
-      motsClesSEO
-    } = validationResult.data;
+      motsClesSEO,
+      pricingType = 'fixed',
+      customPricing
+    } = await request.json();
+
+    // Validation des champs requis
+    if (!name?.trim() || !description?.trim() || !category || !images?.length) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          message: 'Champs requis manquants (nom, description, catégorie, images)',
+          code: 'MISSING_REQUIRED_FIELDS'
+        }
+      }, { status: 400 });
+    }
+
+    // Validation selon le type de prix
+    if (pricingType === 'fixed') {
+      if (!price || price <= 0) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            message: 'Prix requis et doit être supérieur à 0 pour un prix fixe',
+            code: 'VALIDATION_ERROR'
+          }
+        }, { status: 400 });
+      }
+    }
+
+    if (pricingType === 'variants') {
+      if (!variants || !Array.isArray(variants) || variants.length === 0) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            message: 'Au moins un variant requis pour un produit avec variants',
+            code: 'VALIDATION_ERROR'
+          }
+        }, { status: 400 });
+      }
+      
+      const invalidVariants = variants.filter((v: any) => !v.name?.trim() || !v.price || v.price <= 0);
+      if (invalidVariants.length > 0) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            message: 'Tous les variants doivent avoir un nom et un prix valide',
+            code: 'VALIDATION_ERROR'
+          }
+        }, { status: 400 });
+      }
+    }
+
+    if (pricingType === 'custom_range') {
+      if (!customPricing || !customPricing.minPrice || !customPricing.maxPrice) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            message: 'Prix minimum et maximum requis pour un prix personnalisable',
+            code: 'VALIDATION_ERROR'
+          }
+        }, { status: 400 });
+      }
+      
+      if (customPricing.maxPrice <= customPricing.minPrice) {
+        return NextResponse.json({
+          success: false,
+          error: {
+            message: 'Le prix maximum doit être supérieur au prix minimum',
+            code: 'VALIDATION_ERROR'
+          }
+        }, { status: 400 });
+      }
+    }
 
     // Générer le slug
     const slug = name
@@ -186,50 +231,68 @@ export async function POST(request: NextRequest) { // 🔧 CORRECTION : variable
       .trim()
       .replace(/\s+/g, '-');
 
+    // Traitement des tags
+    const processedTags = Array.isArray(tags) 
+      ? tags.map((tag: string) => tag.toLowerCase().trim()) 
+      : [];
+    
+    const processedMotsClesSEO = Array.isArray(motsClesSEO) 
+      ? motsClesSEO.map((mot: string) => mot.trim()) 
+      : [];
+
     // Traitement des variants si applicable
     let processedVariants: IProductVariant[] = [];
-    if (hasVariants && variants) {
+    if (pricingType === 'variants' && variants) {
       processedVariants = variants.map((variant: any, index: number) => ({
         name: variant.name.trim(),
         price: variant.price,
         description: variant.description?.trim() || '',
         image: variant.image || '',
         isActive: variant.isActive !== false,
-        order: variant.order !== undefined ? variant.order : index
+        order: variant.order || index
       }));
       
       // Trier par ordre
       processedVariants.sort((a: IProductVariant, b: IProductVariant) => a.order - b.order);
     }
 
-    // Créer le produit
+    // Créer les données produit
     const productData: Partial<IProduct> = {
       name: name.trim(),
       description: description.trim(),
-      hasVariants,
-      variants: processedVariants,
+      pricingType,
       images,
       category: category as IProduct['category'],
       isActive: true,
-      tags: tags.map((tag: string) => tag.toLowerCase().trim()),
+      tags: processedTags,
       slug,
       entretien: entretien?.trim() || '',
       careInstructions: careInstructions?.trim() || '',
       composition: composition?.trim() || '',
-      motsClesSEO: motsClesSEO.map((mot: string) => mot.trim()),
+      motsClesSEO: processedMotsClesSEO,
       averageRating: 0,
       reviewsCount: 0
     };
 
-    // Ajouter le prix seulement si pas de variants
-    if (!hasVariants) {
+    // Logique conditionnelle selon le type de prix
+    if (pricingType === 'custom_range') {
+      productData.hasVariants = false;
+      productData.customPricing = {
+        minPrice: customPricing.minPrice,
+        maxPrice: customPricing.maxPrice
+      };
+    } else if (pricingType === 'variants') {
+      productData.hasVariants = true;
+      productData.variants = processedVariants;
+    } else {
+      productData.hasVariants = false;
       productData.price = price;
     }
 
     const product = new Product(productData);
     await product.save();
 
-    // 🔧 CORRECTION : Utiliser le formateur unifié
+    // Formater la réponse
     const formattedProduct = formatProductResponse(product.toObject());
 
     return NextResponse.json({
@@ -241,17 +304,6 @@ export async function POST(request: NextRequest) { // 🔧 CORRECTION : variable
   } catch (error: unknown) {
     console.error('❌ Admin product POST error:', error);
     
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Données invalides',
-          code: 'VALIDATION_ERROR',
-          details: error.errors
-        }
-      }, { status: 400 });
-    }
-
     if (error && typeof error === 'object' && 'name' in error && error.name === 'ValidationError') {
       const validationError = error as any;
       const validationErrors = Object.values(validationError.errors).map((err: any) => err.message);

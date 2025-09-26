@@ -49,7 +49,12 @@ export interface IProduct extends BaseDocument {
   name: string;
   description: string;
   price?: number;                  // Optionnel si hasVariants = true
-  hasVariants: boolean;          // Nouveau : true = produit avec tailles multiples
+  hasVariants: boolean; 
+  pricingType: 'fixed' | 'variants' | 'custom_range';
+  customPricing?: {
+    minPrice: number;
+    maxPrice: number;
+  };         // Nouveau : true = produit avec tailles multiples
   variants: IProductVariant[];     // Nouveau : array des variantes
   category: 'Bouquets' | 'Fleurs de saisons' | 'Compositions piquées' | 'Roses' | 'Orchidées' | 'Deuil' | 'Incontournable';
   subcategory?: string;            // Garder pour compatibilité

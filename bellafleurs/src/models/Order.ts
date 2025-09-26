@@ -8,6 +8,9 @@ export interface IOrderItem {
   price: number;
   quantity: number;
   image: string;
+  variantId?: string;
+  variantName?: string;
+  customPrice?: number;
 }
 
 export interface IDeliveryAddress {
@@ -108,6 +111,20 @@ const OrderItemSchema = new Schema({
   image: {
     type: String,
     required: [true, 'Product image is required']
+  },
+  variantId: {
+    type: String,
+    required: false
+  },
+  variantName: {
+    type: String,
+    required: false,
+    trim: true
+  },
+  customPrice: {
+    type: Number,
+    required: false,
+    min: [0, 'Custom price cannot be negative']
   }
 }, { _id: false });
 

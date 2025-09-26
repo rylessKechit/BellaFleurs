@@ -1,41 +1,46 @@
-// src/app/panier/page.tsx - Page panier optimisée responsive
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { 
-  ShoppingCart, 
-  Trash2, 
-  Plus, 
-  Minus, 
-  ArrowRight,
-  ArrowLeft,
-  Truck,
-  Gift,
-  AlertTriangle
-} from 'lucide-react';
+import Link from 'next/link';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
+import { toast } from 'sonner';
 
 interface CartItem {
-  _id: string;
+  _id?: string;
+  product: string;
   name: string;
   price: number;
   quantity: number;
   image: string;
-  isActive: boolean;
+  addedAt: Date;
+  variantId?: string;
+  variantName?: string;
+  customPrice?: number;
+}
+
+interface Cart {
+  _id: string;
+  items: CartItem[];
+  totalItems: number;
+  totalAmount: number;
 }
 
 export default function CartPage() {
   const router = useRouter();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [updatingItems, setUpdatingItems] = useState<string[]>([]);
+  const { incrementCartCount } = useCart();
+  
+  const [cart, setCart] = useState<Cart | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [updatingItems, setUpdatingItems] = useState<Set<string>>(new Set());
 
   // Charger le panier
   useEffect(() => {
@@ -44,202 +49,136 @@ export default function CartPage() {
 
   const fetchCart = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/cart', {
-        method: 'GET',
         credentials: 'include'
       });
-
+      
       if (response.ok) {
         const data = await response.json();
-        setCartItems(data.data.items || []);
+        setCart(data.data.cart);
       } else {
-        throw new Error('Erreur lors du chargement du panier');
+        console.error('Erreur chargement panier');
       }
     } catch (error) {
-      console.error('Erreur panier:', error);
+      console.error('Erreur:', error);
       toast.error('Erreur lors du chargement du panier');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const { decrementCartCount, clearCartCount, incrementCartCount, setCartCount } = useCart();
-
   // Mettre à jour la quantité
   const updateQuantity = async (productId: string, newQuantity: number, variantId?: string) => {
-    if (newQuantity < 1) return;
-
-    // ✅ OPTIMISATION : Calculer la différence pour le cartCount
-    const currentItem = cartItems.find(item => 
-      item._id === productId || 
-      (item._id === productId)
-    );
+    const itemKey = variantId ? `${productId}_${variantId}` : productId;
     
-    if (!currentItem) return;
-
-    const quantityDiff = newQuantity - currentItem.quantity;
+    if (newQuantity < 1 || newQuantity > 50) return;
     
-    setUpdatingItems(prev => [...prev, productId]);
-
-    // ✅ MISE À JOUR OPTIMISTE : UI instantanée
-    setCartItems(prev => 
-      prev.map(item => {
-        if (item._id === productId || (item._id === productId)) {
-          return { ...item, quantity: newQuantity };
-        }
-        return item;
-      })
-    );
-
-    // ✅ MISE À JOUR IMMÉDIATE du cartCount
-    if (quantityDiff > 0) {
-      incrementCartCount(quantityDiff);
-    } else if (quantityDiff < 0) {
-      decrementCartCount(Math.abs(quantityDiff));
-    }
-
+    setUpdatingItems(prev => new Set(prev).add(itemKey));
+    
     try {
-      const response = await fetch(`/api/cart/${productId}`, {
+      const response = await fetch('/api/cart', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ 
+        body: JSON.stringify({
+          productId,
           quantity: newQuantity,
-          ...(variantId && { variantId })
+          variantId
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        // ✅ SYNC : Confirmation avec la vraie valeur du serveur
-        if (data.data?.cartItemsCount !== undefined) {
-          setCartCount(data.data.cartItemsCount);
-        }
-        toast.success('Quantité mise à jour');
+        setCart(data.data.cart);
+        incrementCartCount();
       } else {
-        // ✅ ROLLBACK : Restaurer en cas d'erreur
-        setCartItems(prev => 
-          prev.map(item => {
-            if (item._id === productId || (item._id === productId)) {
-              return { ...item, quantity: currentItem.quantity };
-            }
-            return item;
-          })
-        );
-        
-        // Rollback du cartCount
-        if (quantityDiff > 0) {
-          decrementCartCount(quantityDiff);
-        } else if (quantityDiff < 0) {
-          incrementCartCount(Math.abs(quantityDiff));
-        }
-
-        const data = await response.json();
-        throw new Error(data.error?.message || 'Erreur lors de la mise à jour');
+        toast.error('Erreur lors de la mise à jour');
       }
-    } catch (error: any) {
-      console.error('Erreur mise à jour:', error);
-      toast.error(error.message || 'Erreur lors de la mise à jour');
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de la mise à jour');
     } finally {
-      setUpdatingItems(prev => prev.filter(id => id !== productId));
+      setUpdatingItems(prev => {
+        const updated = new Set(prev);
+        updated.delete(itemKey);
+        return updated;
+      });
     }
   };
 
-  // Supprimer un produit
+  // Supprimer un item
   const removeItem = async (productId: string, variantId?: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) return;
-
-    // ✅ OPTIMISATION : Trouver l'item à supprimer pour décrémenter immédiatement
-    const itemToRemove = cartItems.find(item => 
-      item._id === productId || 
-      (item._id === productId)
-    );
-
-    if (!itemToRemove) return;
-
-    setUpdatingItems(prev => [...prev, productId]);
-
-    // ✅ MISE À JOUR OPTIMISTE : UI instantanée
-    setCartItems(prev => prev.filter(item => 
-      item._id !== productId && 
-      !(item._id === productId)
-    ));
+    const itemKey = variantId ? `${productId}_${variantId}` : productId;
+    setUpdatingItems(prev => new Set(prev).add(itemKey));
     
-    // ✅ DÉCRÉMENTATION IMMÉDIATE du cartCount
-    decrementCartCount(itemToRemove.quantity);
-
     try {
-      const url = variantId 
-        ? `/api/cart/${productId}?variantId=${variantId}`
-        : `/api/cart/${productId}`;
-        
-      const response = await fetch(url, {
+      const params = new URLSearchParams({ productId });
+      if (variantId) params.append('variantId', variantId);
+      
+      const response = await fetch(`/api/cart?${params}`, {
         method: 'DELETE',
         credentials: 'include'
       });
 
       if (response.ok) {
         const data = await response.json();
-        // ✅ SYNC : Mettre à jour avec la vraie valeur du serveur
-        if (data.data?.cartItemsCount !== undefined) {
-          setCartCount(data.data.cartItemsCount);
-        }
-        toast.success('Article supprimé du panier');
+        setCart(data.data.cart);
+        incrementCartCount();
+        toast.success('Produit supprimé du panier');
       } else {
-        // ✅ ROLLBACK : Restaurer en cas d'erreur
-        setCartItems(prev => [...prev, itemToRemove]);
-        incrementCartCount(itemToRemove.quantity);
-        
-        const data = await response.json();
-        throw new Error(data.error?.message || 'Erreur lors de la suppression');
+        toast.error('Erreur lors de la suppression');
       }
-    } catch (error: any) {
-      console.error('Erreur suppression:', error);
-      toast.error(error.message || 'Erreur lors de la suppression');
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de la suppression');
     } finally {
-      setUpdatingItems(prev => prev.filter(id => id !== productId));
+      setUpdatingItems(prev => {
+        const updated = new Set(prev);
+        updated.delete(itemKey);
+        return updated;
+      });
     }
   };
 
   // Vider le panier
   const clearCart = async () => {
-    if (!confirm('Êtes-vous sûr de vouloir vider votre panier ?')) return;
-
     try {
-      const response = await fetch('/api/cart/clear', {
-        method: 'POST',
+      const response = await fetch('/api/cart?clearAll=true', {
+        method: 'DELETE',
         credentials: 'include'
       });
 
       if (response.ok) {
-        setCartItems([]);
-        clearCartCount();
+        const data = await response.json();
+        setCart(data.data.cart);
+        incrementCartCount();
         toast.success('Panier vidé');
       } else {
-        throw new Error('Erreur lors du vidage du panier');
+        toast.error('Erreur lors du vidage du panier');
       }
     } catch (error) {
-      console.error('Erreur vidage panier:', error);
+      console.error('Erreur:', error);
       toast.error('Erreur lors du vidage du panier');
     }
   };
 
-  // Calculs
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = subtotal >= 50 ? 0 : 5;
-  const total = subtotal + shipping;
+  // Calculer les frais de livraison
+  const deliveryFee = cart && cart.totalAmount >= 50 ? 0 : 5.99;
+  const finalTotal = cart ? cart.totalAmount + deliveryFee : 0;
 
-  if (isLoading) {
+  // Loading state
+  if (loading) {
     return (
       <>
         <Header />
-        <main className="min-h-screen bg-gray-50 pt-16 flex items-center justify-center">
+        <div className="min-h-screen bg-gray-50 pt-16 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Chargement du panier...</p>
           </div>
-        </main>
+        </div>
+        <Footer />
       </>
     );
   }
@@ -247,229 +186,264 @@ export default function CartPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-gray-50 pt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      
+      <div className="min-h-screen bg-gray-50 pt-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           
-          {/* Header responsive */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mon panier</h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-1">
-                {totalItems > 0 
-                  ? `${totalItems} article${totalItems > 1 ? 's' : ''} dans votre panier`
-                  : 'Votre panier est vide'
-                }
-              </p>
-            </div>
-            
+          {/* En-tête */}
+          <div className="mb-8">
             <Button 
               variant="outline" 
-              onClick={() => router.push('/produits')}
-              className="flex items-center w-full sm:w-auto justify-center sm:justify-start"
+              onClick={() => router.back()}
+              className="mb-4"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Continuer les achats
+              Continuer mes achats
             </Button>
+            
+            <h1 className="text-3xl font-bold text-gray-900">Mon panier</h1>
+            {cart && cart.items.length > 0 && (
+              <p className="text-gray-600 mt-2">
+                {cart.totalItems} article{cart.totalItems > 1 ? 's' : ''} dans votre panier
+              </p>
+            )}
           </div>
 
-          {cartItems.length === 0 ? (
+          {/* Contenu du panier */}
+          {!cart || cart.items.length === 0 ? (
             // Panier vide
-            <Card className="text-center py-12 sm:py-16">
-              <CardContent>
-                <ShoppingCart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                  Votre panier est vide
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Découvrez nos magnifiques créations florales
-                </p>
-                <Button onClick={() => router.push('/produits')} size="lg">
+            <div className="text-center py-16">
+              <ShoppingBag className="w-24 h-24 text-gray-300 mx-auto mb-6" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Votre panier est vide</h2>
+              <p className="text-gray-600 mb-8">
+                Découvrez nos magnifiques créations florales et ajoutez-les à votre panier
+              </p>
+              <Button asChild size="lg">
+                <Link href="/produits">
                   Découvrir nos produits
-                </Button>
-              </CardContent>
-            </Card>
+                </Link>
+              </Button>
+            </div>
           ) : (
             // Panier avec articles
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
-              {/* Articles du panier */}
+              {/* Liste des articles - 2/3 */}
               <div className="lg:col-span-2 space-y-4">
-                
-                {/* Action vider panier */}
-                <div className="flex justify-end">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={clearCart}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Vider le panier
-                  </Button>
-                </div>
-
-                {cartItems.map((item) => (
-                  <Card key={item._id}>
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        
-                        {/* Image produit */}
-                        <div className="flex-shrink-0 mx-auto sm:mx-0">
-                          <Image
-                            src={item.image || '/placeholder-product.jpg'}
-                            alt={item.name}
-                            width={120}
-                            height={120}
-                            className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 object-cover rounded-lg"
-                            sizes="(max-width: 640px) 80px, (max-width: 1024px) 96px, 112px"
-                          />
-                        </div>
-
-                        {/* Informations produit */}
-                        <div className="flex-1 min-w-0 text-center sm:text-left">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
-                            {item.name}
-                          </h3>
-                          <p className="text-lg font-bold text-green-600 mb-3">
-                            {item.price.toFixed(2)} € <span className="text-sm font-normal text-gray-500">/ unité</span>
-                          </p>
-
-                          {/* Contrôles quantité et suppression */}
-                          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
-                            {/* Sélecteur quantité */}
-                            <div className="flex items-center border border-gray-300 rounded-lg">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => updateQuantity(item._id, item.quantity - 1)}
-                                disabled={item.quantity <= 1 || updatingItems.includes(item._id)}
-                                className="px-2 sm:px-3"
-                              >
-                                <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
-                              </Button>
-                              <span className="px-3 sm:px-4 py-2 text-center min-w-[3rem] text-sm sm:text-base">
-                                {updatingItems.includes(item._id) ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mx-auto" />
-                                ) : (
-                                  item.quantity
-                                )}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => updateQuantity(item._id, item.quantity + 1)}
-                                disabled={updatingItems.includes(item._id)}
-                                className="px-2 sm:px-3"
-                              >
-                                <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                              </Button>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Articles ({cart.totalItems})</CardTitle>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={clearCart}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Vider le panier
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {cart.items.map((item, index) => {
+                      const itemKey = item.variantId ? `${item.product}_${item.variantId}` : item.product;
+                      const isUpdating = updatingItems.has(itemKey);
+                      
+                      return (
+                        <div key={index}>
+                          <div className="flex gap-4">
+                            {/* Image */}
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-lg overflow-hidden flex-shrink-0">
+                              <Image
+                                src={item.image || '/api/placeholder/100/100'}
+                                alt={item.name}
+                                width={100}
+                                height={100}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = '/api/placeholder/100/100';
+                                }}
+                              />
                             </div>
 
-                            {/* Prix total et suppression */}
-                            <div className="flex items-center gap-3 sm:gap-4">
-                              <p className="font-bold text-gray-900 text-base sm:text-lg">
-                                {(item.price * item.quantity).toFixed(2)} €
+                            {/* Informations */}
+                            <div className="flex-1">
+                              <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
+                              {item.variantName && (
+                                <p className="text-sm text-gray-600 mt-1">Taille: {item.variantName}</p>
+                              )}
+                              {item.customPrice && (
+                                <p className="text-sm text-green-600 mt-1 font-medium">Budget personnalisé</p>
+                              )}
+                              <p className="text-sm text-gray-500 mt-2">
+                                Prix unitaire: {item.price.toFixed(2)} €
                               </p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeItem(item._id)}
-                                disabled={updatingItems.includes(item._id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+
+                              {/* Contrôles quantité - Mobile et Desktop */}
+                              <div className="flex items-center justify-between mt-4">
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => updateQuantity(item.product, item.quantity - 1, item.variantId)}
+                                    disabled={item.quantity <= 1 || isUpdating}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <Minus className="w-4 h-4" />
+                                  </Button>
+                                  
+                                  <span className="font-medium min-w-[3rem] text-center">
+                                    {isUpdating ? '...' : item.quantity}
+                                  </span>
+                                  
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => updateQuantity(item.product, item.quantity + 1, item.variantId)}
+                                    disabled={item.quantity >= 50 || isUpdating}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </Button>
+                                </div>
+
+                                <div className="flex items-center gap-4">
+                                  <p className="font-semibold text-lg">
+                                    {(item.price * item.quantity).toFixed(2)} €
+                                  </p>
+                                  
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => removeItem(item.product, item.variantId)}
+                                    disabled={isUpdating}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
                             </div>
                           </div>
+                          
+                          {index < cart.items.length - 1 && <Separator className="mt-6" />}
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      );
+                    })}
+                  </CardContent>
+                </Card>
               </div>
 
-              {/* Récapitulatif commande - Sticky sur desktop */}
-              <div className="lg:col-span-1">
-                <div className="lg:sticky lg:top-24">
-                  <Card>
-                    <CardContent className="p-4 sm:p-6">
-                      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">
-                        Récapitulatif
-                      </h2>
-                      
-                      <div className="space-y-3 sm:space-y-4">
-                        {/* Sous-total */}
-                        <div className="flex justify-between text-sm sm:text-base">
-                          <span className="text-gray-600">
-                            Sous-total ({totalItems} article{totalItems > 1 ? 's' : ''})
-                          </span>
-                          <span className="font-medium">{subtotal.toFixed(2)} €</span>
-                        </div>
-                        
-                        {/* Livraison */}
-                        <div className="flex justify-between text-sm sm:text-base">
-                          <span className="text-gray-600">Livraison</span>
-                          <span className="font-medium">
-                            {shipping === 0 ? (
-                              <span className="text-green-600">Gratuite</span>
-                            ) : (
-                              `${shipping.toFixed(2)} €`
-                            )}
-                          </span>
-                        </div>
-                        
-                        {/* Message livraison gratuite */}
-                        {shipping > 0 && (
-                          <div className="bg-blue-50 p-3 rounded-lg">
-                            <div className="flex items-start gap-2">
-                              <Truck className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                              <p className="text-xs sm:text-sm text-blue-700">
-                                Plus que <strong>{(50 - subtotal).toFixed(2)} €</strong> pour la livraison gratuite
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        
-                        <hr className="border-gray-200" />
-                        
-                        {/* Total */}
-                        <div className="flex justify-between text-lg sm:text-xl font-bold">
-                          <span>Total</span>
-                          <span className="text-green-600">{total.toFixed(2)} €</span>
-                        </div>
+              {/* Résumé - 1/3 */}
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Résumé de la commande</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span>Sous-total</span>
+                        <span>{cart.totalAmount.toFixed(2)} €</span>
                       </div>
                       
-                      {/* Bouton commander */}
-                      <Button 
-                        onClick={() => router.push('/checkout')}
-                        className="w-full mt-6 py-3 sm:py-4 text-base sm:text-lg font-semibold"
-                        size="lg"
-                      >
-                        <div className="flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 w-full">
-                          Passer commande
-                          <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <div className="flex justify-between">
+                        <span>Livraison</span>
+                        <span>
+                          {deliveryFee === 0 ? (
+                            <span className="text-green-600 font-medium">Gratuite</span>
+                          ) : (
+                            `${deliveryFee.toFixed(2)} €`
+                          )}
+                        </span>
+                      </div>
+                      
+                      {deliveryFee === 0 && (
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <Truck className="w-4 h-4" />
+                          <span>Livraison gratuite dès 50€</span>
                         </div>
+                      )}
+                      
+                      {cart.totalAmount < 50 && (
+                        <div className="text-sm text-gray-600">
+                          Encore {(50 - cart.totalAmount).toFixed(2)} € pour la livraison gratuite
+                        </div>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    <div className="flex justify-between text-lg font-bold">
+                      <span>Total</span>
+                      <span>{finalTotal.toFixed(2)} €</span>
+                    </div>
+
+                    <Button 
+                      asChild 
+                      size="lg" 
+                      className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                      <Link href="/checkout">
+                        Procéder au paiement
+                      </Link>
+                    </Button>
+
+                    <div className="text-center">
+                      <Button variant="link" asChild>
+                        <Link href="/produits">
+                          Continuer mes achats
+                        </Link>
                       </Button>
-                      
-                      {/* Avantages */}
-                      <div className="mt-4 sm:mt-6 space-y-2 sm:space-y-3">
-                        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
-                          <Truck className="w-4 h-4 text-green-600" />
-                          <span>Livraison 24h à Brétigny-sur-Orge et alentours</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
-                          <Gift className="w-4 h-4 text-green-600" />
-                          <span>Emballage soigné inclus</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Informations livraison */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Truck className="w-5 h-5 text-green-600" />
+                        <div>
+                          <p className="font-medium text-sm">Livraison</p>
+                          <p className="text-xs text-gray-600">
+                            {deliveryFee === 0 ? 'Gratuite' : 'À partir de 5,99€'}
+                          </p>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                      
+                      <div className="text-xs text-gray-600">
+                        <p>• Livraison en région parisienne</p>
+                        <p>• Fraîcheur garantie 48h</p>
+                        <p>• Livraison gratuite dès 50€</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Produits recommandés */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Vous pourriez aussi aimer</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-4">
+                      <p className="text-sm text-gray-600 mb-4">
+                        Découvrez nos autres créations florales
+                      </p>
+                      <Button variant="outline" asChild size="sm">
+                        <Link href="/produits">
+                          Voir tous nos produits
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           )}
         </div>
-      </main>
+      </div>
+
       <Footer />
     </>
   );
