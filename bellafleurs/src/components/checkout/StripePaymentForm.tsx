@@ -329,12 +329,12 @@ function PaymentForm({
             <Button
               type="submit"
               disabled={!stripe || !cardComplete || isProcessing || disabled}
-              className="w-full py-3 text-lg"
+              className="w-full py-3 text-lg bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition-all duration-200 transform hover:scale-105"
               size="lg"
             >
               {isProcessing ? (
                 <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2 "></div>
                   Traitement en cours...
                 </div>
               ) : (

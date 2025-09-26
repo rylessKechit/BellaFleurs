@@ -463,7 +463,7 @@ export default function ProductsPage() {
                 <Button 
                   onClick={handleAddToCart}
                   disabled={!product.isActive || isAdding}
-                  className="transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300"
+                  className="transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
                 >
                   <ShoppingCart className="w-4 h-4 mr-2" />
                   {isAdding 

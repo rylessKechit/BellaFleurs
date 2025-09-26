@@ -440,7 +440,7 @@ export default function ProductDetailPage() {
                   <Button
                     onClick={handleAddToCart}
                     disabled={isAddingToCart || !product.isActive}
-                    className="flex-1"
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
                     size="lg"
                   >
                     {isAddingToCart ? (

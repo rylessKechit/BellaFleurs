@@ -445,7 +445,7 @@ export default function CartPage() {
                         className="w-full mt-6 py-3 sm:py-4 text-base sm:text-lg font-semibold"
                         size="lg"
                       >
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-2 bg-green-700 hover:bg-green-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 w-full">
                           Passer commande
                           <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>

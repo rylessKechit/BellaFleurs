@@ -455,7 +455,10 @@ export default function CheckoutPage() {
                   </div>
 
                   <div className="flex justify-end pt-4">
-                    <Button onClick={nextStep}>
+                    <Button
+                      onClick={nextStep}
+                      className="bg-green-700 hover:bg-green-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
+                    >
                       Continuer
                     </Button>
                   </div>
@@ -715,7 +718,7 @@ export default function CheckoutPage() {
                       <Button 
                         onClick={nextStep}
                         disabled={!validationState.isDeliverable}
-                        className={!validationState.isDeliverable ? 'opacity-50 cursor-not-allowed' : ''}
+                        className={!validationState.isDeliverable ? 'bg-green-700 hover:bg-green-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 opacity-50 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200'}
                       >
                         Continuer vers le paiement
                       </Button>
