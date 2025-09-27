@@ -1,3 +1,4 @@
+// src/contexts/CartContext.tsx - Fichier complet
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -8,7 +9,7 @@ interface CartContextType {
   incrementCartCount: (quantity?: number) => void;
   decrementCartCount: (quantity?: number) => void;
   setCartCount: (count: number) => void;
-  setCartCountFromAPI: (count: number) => void; // ✅ NOUVEAU
+  setCartCountFromAPI: (count: number) => void;
   clearCartCount: () => void;
   updateCartCount: (silent?: boolean) => Promise<void>;
   forceRefresh: () => Promise<void>;
@@ -36,20 +37,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
         
         // Calculer le nombre total d'articles
         let totalItems = 0;
-        if (data.success && data.data && data.data.items && Array.isArray(data.data.items)) {
-          totalItems = data.data.items.reduce((sum: number, item: any) => {
+        if (data.success && data.data && data.data.cart && Array.isArray(data.data.cart.items)) {
+          totalItems = data.data.cart.items.reduce((sum: number, item: any) => {
             const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
             return sum + quantity;
           }, 0);
         }
         
         setCartCountState(Math.max(0, totalItems));
+        console.log('🛒 Cart count updated from API:', totalItems);
         
       } else if (response.status === 404) {
         setCartCountState(0);
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération du panier:', error);
+      console.error('❌ Erreur lors de la récupération du panier:', error);
     } finally {
       if (!silent) setIsLoading(false);
     }
@@ -60,7 +62,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     await updateCartCount(false);
   }, [updateCartCount]);
 
-  // ✅ OPTIMISATION : Mise à jour instantanée (optimiste)
+  // ✅ Incrémentation optimiste immédiate
   const incrementCartCount = useCallback((quantity: number = 1) => {
     setCartCountState(prev => {
       const newCount = Math.max(0, prev + quantity);
@@ -69,7 +71,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // ✅ OPTIMISATION : Décrémentation instantanée (optimiste)
+  // ✅ Décrémentation optimiste immédiate
   const decrementCartCount = useCallback((quantity: number = 1) => {
     setCartCountState(prev => {
       const newCount = Math.max(0, prev - quantity);
@@ -78,15 +80,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // ✅ NOUVEAU : Setter direct pour mise à jour depuis l'API
+  // ✅ Setter direct pour mise à jour manuelle
   const setCartCount = useCallback((count: number) => {
     setCartCountState(Math.max(0, count));
+    console.log('🛒 Cart count set manually:', count);
   }, []);
 
-  // ✅ NOUVEAU : Setter spécifique pour les retours API
+  // ✅ Setter spécifique pour les retours API
   const setCartCountFromAPI = useCallback((count: number) => {
-    console.log('🛒 Setting cart count from API:', count);
-    setCartCountState(Math.max(0, count));
+    const finalCount = Math.max(0, count);
+    console.log('🛒 Setting cart count from API:', finalCount);
+    setCartCountState(finalCount);
   }, []);
 
   // Vider le compteur
@@ -95,11 +99,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     console.log('🛒 Cart cleared');
   }, []);
 
-  // ✅ OPTIMISATION : Sync moins fréquente et plus smart
+  // Synchronisation périodique (moins fréquente)
   useEffect(() => {
-    // Sync toutes les 60 secondes au lieu de 30
     const interval = setInterval(() => {
-      updateCartCount(true);
+      updateCartCount(true); // Silent sync toutes les 60 secondes
     }, 60000);
 
     return () => clearInterval(interval);
@@ -131,7 +134,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       incrementCartCount,
       decrementCartCount,
       setCartCount,
-      setCartCountFromAPI, // ✅ NOUVEAU
+      setCartCountFromAPI,
       clearCartCount,
       updateCartCount,
       forceRefresh
