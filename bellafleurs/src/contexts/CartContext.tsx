@@ -8,6 +8,7 @@ interface CartContextType {
   incrementCartCount: (quantity?: number) => void;
   decrementCartCount: (quantity?: number) => void;
   setCartCount: (count: number) => void;
+  setCartCountFromAPI: (count: number) => void; // ✅ NOUVEAU
   clearCartCount: () => void;
   updateCartCount: (silent?: boolean) => Promise<void>;
   forceRefresh: () => Promise<void>;
@@ -82,6 +83,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCartCountState(Math.max(0, count));
   }, []);
 
+  // ✅ NOUVEAU : Setter spécifique pour les retours API
+  const setCartCountFromAPI = useCallback((count: number) => {
+    console.log('🛒 Setting cart count from API:', count);
+    setCartCountState(Math.max(0, count));
+  }, []);
+
   // Vider le compteur
   const clearCartCount = useCallback(() => {
     setCartCountState(0);
@@ -124,6 +131,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       incrementCartCount,
       decrementCartCount,
       setCartCount,
+      setCartCountFromAPI, // ✅ NOUVEAU
       clearCartCount,
       updateCartCount,
       forceRefresh

@@ -253,20 +253,26 @@ export async function DELETE(request: NextRequest) {
     const variantId = url.searchParams.get('variantId');
     const clearAll = url.searchParams.get('clearAll') === 'true';
 
+    console.log('🗑️ DELETE Cart - Params:', { productId, variantId, clearAll });
+
     const session = await getServerSession(authOptions);
     let cart;
 
     if (session?.user) {
       const userId = (session.user as any).id;
       cart = await Cart.findByUser(userId);
+      console.log('🔍 Found cart for user:', userId, '- Cart ID:', cart?._id);
     } else {
       const sessionId = request.cookies.get('cart-session')?.value;
+      console.log('🔍 Looking for cart with session:', sessionId);
       if (sessionId) {
         cart = await Cart.findBySession(sessionId);
+        console.log('🔍 Found cart for session:', sessionId, '- Cart ID:', cart?._id);
       }
     }
 
     if (!cart) {
+      console.log('❌ No cart found');
       return NextResponse.json({
         success: false,
         error: {
@@ -276,12 +282,38 @@ export async function DELETE(request: NextRequest) {
       }, { status: 404 });
     }
 
+    console.log('📋 Cart before deletion:', {
+      totalItems: cart.totalItems,
+      itemsCount: cart.items.length,
+      items: cart.items.map(item => ({
+        product: item.product,
+        variantId: item.variantId,
+        name: item.name,
+        quantity: item.quantity
+      }))
+    });
+
     let updatedCart;
 
     if (clearAll) {
+      console.log('🧹 Clearing all items...');
       updatedCart = await cart.clearItems();
     } else if (productId) {
+      console.log('🗑️ Removing item:', productId, 'variant:', variantId);
+      
+      // ✅ CORRECTION : Appeler removeItem avec les bons paramètres
       updatedCart = await cart.removeItem(productId, variantId || undefined);
+      
+      console.log('📋 Cart after deletion:', {
+        totalItems: updatedCart.totalItems,
+        itemsCount: updatedCart.items.length,
+        items: updatedCart.items.map(item => ({
+          product: item.product,
+          variantId: item.variantId,
+          name: item.name,
+          quantity: item.quantity
+        }))
+      });
     } else {
       return NextResponse.json({
         success: false,
@@ -292,9 +324,13 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // ✅ NOUVEAU : Retourner le cart avec cartItemsCount pour la synchronisation
     return NextResponse.json({
       success: true,
-      data: { cart: updatedCart },
+      data: { 
+        cart: updatedCart,
+        cartItemsCount: updatedCart.totalItems  // ✅ AJOUT pour la sync
+      },
       message: clearAll ? 'Panier vidé' : 'Produit supprimé du panier'
     });
 
@@ -304,7 +340,8 @@ export async function DELETE(request: NextRequest) {
       success: false,
       error: {
         message: 'Erreur lors de la suppression',
-        code: 'CART_DELETE_ERROR'
+        code: 'CART_DELETE_ERROR',
+        details: typeof error === 'object' && error !== null && 'message' in error ? (error as { message: string }).message : String(error)
       }
     }, { status: 500 });
   }
