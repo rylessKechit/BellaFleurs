@@ -222,7 +222,7 @@ export default function CustomerInfoStep({
             </p>
           )}
           <p className="text-sm text-gray-500 mt-1">
-            Format attendu : 07 80 66 27 32 ou +33 1 23 45 67 89
+            Format attendu : 07 80 66 27 32 ou 07 80 66 27 32
           </p>
         </div>
 
