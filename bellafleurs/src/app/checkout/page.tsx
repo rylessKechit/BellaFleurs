@@ -18,13 +18,16 @@ import { usePostalCodeValidation } from '@/hooks/usePostalCodeValidation';
 
 // Types
 interface CartItem {
-  _id: string;
+  _id?: string;
+  product: string | { _id: string }; // ✅ Ajouter le champ product
   name: string;
   price: number;
   quantity: number;
   image: string;
+  addedAt: Date;
   variantId?: string;
   variantName?: string;
+  customPrice?: number;
 }
 
 interface CustomerInfo {
@@ -138,7 +141,7 @@ export default function CheckoutPage() {
   // Gestion ville - simplifié
   const [showCitySelect, setShowCitySelect] = useState(false);
 
-  // Synchroniser la ville basé sur la validation du code postal
+  // ✅ CORRECTION: Synchroniser la ville basé sur la validation du code postal
   useEffect(() => {
     if (validationState.cities.length === 1) {
       // Une seule ville - remplir automatiquement
@@ -150,19 +153,23 @@ export default function CheckoutPage() {
     } else if (validationState.cities.length > 1) {
       // Plusieurs villes - montrer le select
       setShowCitySelect(true);
-      setDeliveryInfo(prev => ({
-        ...prev,
-        address: { ...prev.address, city: '' }
-      }));
-    } else {
-      // Aucune ville - reset
+      // ✅ NE PAS vider la ville si elle est déjà sélectionnée et valide
+      const currentCity = deliveryInfo.address.city;
+      if (!currentCity || !validationState.cities.includes(currentCity)) {
+        setDeliveryInfo(prev => ({
+          ...prev,
+          address: { ...prev.address, city: '' }
+        }));
+      }
+    } else if (deliveryInfo.address.zipCode) {
+      // Code postal saisi mais aucune ville trouvée
       setShowCitySelect(false);
       setDeliveryInfo(prev => ({
         ...prev,
         address: { ...prev.address, city: '' }
       }));
     }
-  }, [validationState.cities]);
+  }, [validationState.cities, deliveryInfo.address.zipCode]);
 
   // Charger le panier
   useEffect(() => {
@@ -174,8 +181,9 @@ export default function CheckoutPage() {
 
         if (response.ok) {
           const data = await response.json();
-          if (data.success && data.data?.items) {
-            setCartItems(data.data.items);
+          // ✅ CORRECTION : Utiliser data.data.cart.items
+          if (data.success && data.data?.cart?.items) {
+            setCartItems(data.data.cart.items);
           }
         }
       } catch (error) {
@@ -206,13 +214,50 @@ export default function CheckoutPage() {
   const deliveryFee = subtotal >= 50 ? 0 : 5;
   const total = subtotal + deliveryFee;
 
+  // ✅ VALIDATION avant paiement
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    // Vérifications client
+    if (!customerInfo.firstName.trim()) newErrors.firstName = 'Prénom requis';
+    if (!customerInfo.lastName.trim()) newErrors.lastName = 'Nom requis';
+    if (!customerInfo.email.trim()) newErrors.email = 'Email requis';
+    if (!customerInfo.phone.trim()) newErrors.phone = 'Téléphone requis';
+    
+    // Vérifications adresse
+    if (!deliveryInfo.address.street.trim()) newErrors.street = 'Adresse requise';
+    if (!deliveryInfo.address.zipCode.trim()) newErrors.zipCode = 'Code postal requis';
+    if (!deliveryInfo.address.city.trim()) newErrors.city = 'Ville requise';
+    
+    // Vérifications livraison
+    if (!deliveryInfo.date) newErrors.date = 'Date de livraison requise';
+    if (!selectedTimeSlot) newErrors.timeSlot = 'Créneau requis';
+    
+    // Vérification zone de livraison
+    if (!validationState.isDeliverable) {
+      newErrors.zipCode = 'Cette zone n\'est pas couverte par nos livraisons';
+    }
+    
+    // Validation cadeau
+    if (giftInfo.isGift) {
+      if (!giftInfo.recipientFirstName.trim()) newErrors.recipientFirstName = 'Prénom du destinataire requis';
+      if (!giftInfo.recipientLastName.trim()) newErrors.recipientLastName = 'Nom du destinataire requis';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   // Données pour le paiement
   const orderDataForPayment = useMemo(() => {
     if (cartItems.length === 0) return null;
     
     return {
       items: cartItems.map(item => ({
-        product: item._id,        // CORRIGÉ : 'product' au lieu de 'productId'
+        // ✅ SOLUTION: Gérer les deux cas de structure
+        product: typeof item.product === 'string' 
+          ? item.product 
+          : (item.product as any)?._id || item._id,
         name: item.name,
         price: item.price,
         quantity: item.quantity,
@@ -222,8 +267,8 @@ export default function CheckoutPage() {
       })),
       customerInfo: {
         name: giftInfo.isGift 
-          ? `${giftInfo.recipientFirstName} ${giftInfo.recipientLastName}` 
-          : `${customerInfo.firstName} ${customerInfo.lastName}`,
+          ? `${giftInfo.recipientFirstName} ${giftInfo.recipientLastName}`.trim()
+          : `${customerInfo.firstName} ${customerInfo.lastName}`.trim(),
         email: customerInfo.email,
         phone: customerInfo.phone
       },
@@ -232,17 +277,17 @@ export default function CheckoutPage() {
         address: deliveryInfo.address,
         date: new Date(deliveryInfo.date),
         timeSlot: selectedTimeSlot,
-        notes: deliveryInfo.notes,
+        notes: deliveryInfo.notes || undefined,
         isGift: giftInfo.isGift,
         giftInfo: giftInfo.isGift ? {
-          recipientName: `${giftInfo.recipientFirstName} ${giftInfo.recipientLastName}`,
-          senderName: `${customerInfo.firstName} ${customerInfo.lastName}`
+          recipientName: `${giftInfo.recipientFirstName} ${giftInfo.recipientLastName}`.trim(),
+          senderName: `${customerInfo.firstName} ${customerInfo.lastName}`.trim()
         } : undefined
       },
       paymentMethod: 'card',
       totalAmount: total
     };
-  }, [cartItems, customerInfo, deliveryInfo, giftInfo, selectedTimeSlot, total]);
+  }, [cartItems, customerInfo, deliveryInfo, selectedTimeSlot, giftInfo, total]);
 
   // Gérer le succès du paiement
   const handlePaymentSuccess = async (paymentIntent: any) => {
@@ -290,27 +335,9 @@ export default function CheckoutPage() {
     }
 
     if (currentStep === 2) {
-      // Valider les infos de livraison
-      const newErrors: Record<string, string> = {};
-      if (!deliveryInfo.address.street.trim()) newErrors.street = 'Adresse requise';
-      if (!deliveryInfo.address.zipCode.trim()) newErrors.zipCode = 'Code postal requis';
-      if (!deliveryInfo.address.city.trim()) newErrors.city = 'Ville requise';
-      if (!deliveryInfo.date) newErrors.date = 'Date de livraison requise';
-      if (!selectedTimeSlot) newErrors.timeSlot = 'Créneau de livraison requis';
-      
-      // Validation zone de livraison simplifiée
-      if (!validationState.isDeliverable) {
-        newErrors.zipCode = 'Zone non couverte par nos services de livraison';
-      }
-      
-      // Validation cadeau
-      if (giftInfo.isGift) {
-        if (!giftInfo.recipientFirstName.trim()) newErrors.recipientFirstName = 'Prénom du destinataire requis';
-        if (!giftInfo.recipientLastName.trim()) newErrors.recipientLastName = 'Nom du destinataire requis';
-      }
-
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
+      // ✅ UTILISER la validation complète
+      if (!validateForm()) {
+        toast.error('Veuillez remplir tous les champs obligatoires');
         return;
       }
     }
