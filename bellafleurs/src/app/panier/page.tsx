@@ -228,7 +228,7 @@ export default function CartPage() {
     }
   };
 
-  const deliveryFee = cart && cart.totalAmount >= 50 ? 0 : 5.99;
+  const deliveryFee = cart && cart.totalAmount >= 50 ? 0 : 5.00;
   const finalTotal = cart ? cart.totalAmount + deliveryFee : 0;
   const isUpdating = updatingItems.size > 0;
 
