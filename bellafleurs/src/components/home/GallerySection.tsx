@@ -10,24 +10,29 @@ export default function GallerySection() {
   // 7 catégories de services avec mapping vers les catégories API
   const items = [
     { 
-      name: 'Bouquets', 
-      image: '/images/bouquets.webp',
-      category: 'Bouquets' // Nom exact de la catégorie dans l'API
-    },
-    { 
       name: 'Fleurs de saisons', 
       image: '/images/fleurs-saisons.webp',
       category: 'Fleurs de saisons'
     },
     { 
-      name: 'Compositions piquées', 
-      image: '/images/compositions.webp',
-      category: 'Compositions piquées'
+      name: 'Incontournable', 
+      image: '/images/incontournables.webp',
+      category: 'Incontournable'
+    },
+    { 
+      name: 'Bouquets', 
+      image: '/images/bouquets.webp',
+      category: 'Bouquets' // Nom exact de la catégorie dans l'API
     },
     { 
       name: 'Roses', 
       image: '/images/roses.webp',
       category: 'Roses'
+    },
+    { 
+      name: 'Compositions piquées', 
+      image: '/images/compositions.webp',
+      category: 'Compositions piquées'
     },
     { 
       name: 'Orchidées', 
@@ -39,11 +44,6 @@ export default function GallerySection() {
       image: '/images/deuil.webp',
       category: 'Deuil'
     },
-    { 
-      name: 'Incontournable', 
-      image: '/images/incontournables.webp',
-      category: 'Incontournable'
-    }
   ];
 
   // Fonction pour naviguer vers la page produits avec filtre
