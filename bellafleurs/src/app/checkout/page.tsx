@@ -211,7 +211,7 @@ export default function CheckoutPage() {
 
   // Calculs
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const deliveryFee = subtotal >= 50 ? 0 : 5;
+  const deliveryFee = subtotal >= 50 ? 0 : 0;
   const total = subtotal + deliveryFee;
 
   // ✅ VALIDATION avant paiement
@@ -825,7 +825,7 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Livraison</span>
-                    <span>{deliveryFee === 0 ? 'Gratuite' : `${deliveryFee.toFixed(2)} €`}</span>
+                    <span>{deliveryFee === 0 ? 'Gratuite' : `${deliveryFee} €`}</span>
                   </div>
                   {deliveryFee === 0 && (
                     <p className="text-xs text-green-600">
