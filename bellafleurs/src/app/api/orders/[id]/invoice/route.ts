@@ -504,7 +504,7 @@ function generateClientInvoiceHTML(order: any): string {
             
             <div class="contact-info">
                 <div class="contact-item">
-                    📍 123 Rue des Fleurs, 75001 Paris
+                    📍 Brétigny-sur-Orge 91220
                 </div>
                 <div class="contact-item">
                     ☎️ 07 80 66 27 32
