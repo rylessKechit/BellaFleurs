@@ -64,29 +64,36 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
       return;
     }
 
-    // Vérifier si déjà traitée
+    // CHANGEMENT : On enlève le return qui empêchait l'envoi des emails
     if (existingOrder.paymentStatus === 'paid') {
       console.log('⚠️ Commande déjà payée:', existingOrder.orderNumber);
-      return;
+      // SUPPRIMÉ: return; ← ça c'était le problème !
     }
 
-    // MISE À JOUR : Confirmer le paiement seulement
-    const updatedOrder = await Order.findByIdAndUpdate(
-      orderId,
-      {
-        paymentStatus: 'paid',
-        // Pas de changement de status car déjà 'payée'
-        stripePaymentIntentId: paymentIntent.id, // Sécurité
-        $push: {
-          timeline: {
-            status: 'payée',
-            date: new Date(),
-            note: 'Paiement confirmé via webhook Stripe'
+    // MISE À JOUR : Confirmer le paiement seulement si pas encore fait
+    let updatedOrder;
+    
+    if (existingOrder.paymentStatus !== 'paid') {
+      updatedOrder = await Order.findByIdAndUpdate(
+        orderId,
+        {
+          paymentStatus: 'paid',
+          // Pas de changement de status car déjà 'payée'
+          stripePaymentIntentId: paymentIntent.id, // Sécurité
+          $push: {
+            timeline: {
+              status: 'payée',
+              date: new Date(),
+              note: 'Paiement confirmé via webhook Stripe'
+            }
           }
-        }
-      },
-      { new: true }
-    ).populate('items.product', 'name images');
+        },
+        { new: true }
+      ).populate('items.product', 'name images');
+    } else {
+      // Si déjà payé, on récupère juste la commande avec populate
+      updatedOrder = await Order.findById(orderId).populate('items.product', 'name images');
+    }
 
     if (!updatedOrder) {
       console.error('❌ Erreur mise à jour commande');
@@ -105,7 +112,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
       }
     }
 
-    // ENVOI DES EMAILS
+    // ENVOI DES EMAILS - maintenant ça va marcher !
     try {
       // 1. Email de confirmation au client
       console.log('📧 Envoi email de confirmation...');
@@ -124,15 +131,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
       } else {
         console.error('❌ Échec notification admin');
       }
-
-      // Mettre à jour la commande avec le statut d'envoi des emails
-      await Order.findByIdAndUpdate(orderId, {
-        emailsSent: {
-          confirmation: confirmationSent,
-          adminNotification: adminNotificationSent,
-          sentAt: new Date()
-        }
-      });
 
     } catch (emailError) {
       console.error('❌ Erreur envoi emails:', emailError);
