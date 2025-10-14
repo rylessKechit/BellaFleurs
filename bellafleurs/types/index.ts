@@ -61,6 +61,14 @@ export interface IProduct extends BaseDocument {
   subcategory?: string;
   tags: string[];
   isActive: boolean;
+
+  hasVariants: boolean;
+
+  slug?: string;
+  entretien?: string;
+  composition?: string;
+  averageRating?: number;
+  reviewsCount?: number;
   
   // ✨ NOUVEAU : Gestion flexible des prix avec variants
   pricingType: 'fixed' | 'variants' | 'custom_range';
