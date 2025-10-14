@@ -815,17 +815,18 @@ function generateAdminOrderHTML(order: any): string {
 
 // Email de notification de nouvelle commande pour l'ADMIN
 export async function sendNewOrderNotification(order: any): Promise<boolean> {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@bellafleurs.fr';
+  // CHANGEMENT : Destinataire = EMAIL_ADMIN_USER au lieu d'ADMIN_EMAIL
+  const adminEmail = process.env.EMAIL_ADMIN_USER || 'bellafleurs30@gmail.com';
   
   const subject = `🔔 Nouvelle commande ${order.orderNumber} - Action requise`;
   const html = generateAdminOrderHTML(order);
   
-  // UTILISATION DU COMPTE ADMIN
+  // CHANGEMENT : Utiliser le compte CLIENT au lieu du compte ADMIN
   return await sendEmail({
     to: adminEmail,
     subject,
     html
-  }, 'admin');
+  }, 'client'); // ← 'client' au lieu de 'admin'
 }
 
 // Email de changement de statut pour le client

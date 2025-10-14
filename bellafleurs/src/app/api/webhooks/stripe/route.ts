@@ -1,4 +1,4 @@
-// src/app/api/webhooks/stripe/route.ts - Solution Long Terme
+// src/app/api/webhooks/stripe/route.ts - Version Production
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { stripe } from '@/lib/stripe';
@@ -10,35 +10,67 @@ import { sendOrderConfirmation, sendNewOrderNotification } from '@/lib/email';
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(req: NextRequest) {
-  const body = await req.text();
-  const headersList = headers();
-  const signature = headersList.get('stripe-signature');
-
-  if (!signature) {
-    console.error('❌ Signature Stripe manquante');
-    return NextResponse.json({ error: 'Signature manquante' }, { status: 400 });
-  }
-
-  let event;
-
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-  } catch (error: any) {
-    console.error('❌ Erreur de signature webhook:', error.message);
-    return NextResponse.json({ error: `Erreur de signature: ${error.message}` }, { status: 400 });
-  }
+    const body = await req.text();
+    const headersList = headers();
+    const signature = headersList.get('stripe-signature');
 
-  await connectDB();
-  console.log(`🔔 Webhook reçu: ${event.type}`);
+    // PRODUCTION : Logs de debug
+    console.log('🔔 Webhook reçu en production');
+    console.log('📋 Headers disponibles:', Object.fromEntries(headersList.entries()));
+    console.log('🔑 Webhook secret configuré:', webhookSecret ? 'OUI' : 'NON');
+    console.log('✍️ Signature présente:', signature ? 'OUI' : 'NON');
 
-  try {
-    if (event.type === 'payment_intent.succeeded') {
-      await handlePaymentIntentSucceeded(event.data.object);
+    if (!signature) {
+      console.error('❌ Signature Stripe manquante');
+      console.error('📋 Headers reçus:', Object.fromEntries(headersList.entries()));
+      return NextResponse.json({ error: 'Signature manquante' }, { status: 400 });
     }
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error(`❌ Erreur traitement webhook:`, error);
-    return NextResponse.json({ error: 'Erreur traitement webhook' }, { status: 500 });
+
+    if (!webhookSecret) {
+      console.error('❌ STRIPE_WEBHOOK_SECRET non configuré');
+      return NextResponse.json({ error: 'Webhook secret non configuré' }, { status: 500 });
+    }
+
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      console.log('✅ Signature webhook validée');
+    } catch (error: any) {
+      console.error('❌ Erreur de signature webhook:', {
+        message: error.message,
+        type: error.type,
+        webhookSecretLength: webhookSecret?.length,
+        signatureLength: signature?.length
+      });
+      return NextResponse.json({ 
+        error: `Erreur de signature: ${error.message}` 
+      }, { status: 400 });
+    }
+
+    await connectDB();
+    console.log(`🔔 Webhook reçu: ${event.type}`);
+
+    try {
+      if (event.type === 'payment_intent.succeeded') {
+        await handlePaymentIntentSucceeded(event.data.object);
+      }
+      return NextResponse.json({ received: true });
+    } catch (error: any) {
+      console.error(`❌ Erreur traitement webhook:`, error);
+      return NextResponse.json({ 
+        error: 'Erreur traitement webhook',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      }, { status: 500 });
+    }
+
+  } catch (error: any) {
+    console.error('❌ Erreur générale webhook:', error);
+    return NextResponse.json({ 
+      error: 'Erreur serveur webhook',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    }, { status: 500 });
   }
 }
 
@@ -48,11 +80,11 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 
     const metadata = paymentIntent.metadata;
     
-    // NOUVEAU : Récupérer l'ID de commande depuis les métadonnées
+    // Récupérer l'ID de commande depuis les métadonnées
     const orderId = metadata.order_id;
     
     if (!orderId) {
-      console.error('❌ Order ID manquant dans les métadonnées');
+      console.error('❌ Order ID manquant dans les métadonnées:', metadata);
       return;
     }
 
@@ -66,8 +98,8 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 
     // CHANGEMENT : On enlève le return qui empêchait l'envoi des emails
     if (existingOrder.paymentStatus === 'paid') {
-      console.log('⚠️ Commande déjà payée:', existingOrder.orderNumber);
-      // SUPPRIMÉ: return; ← ça c'était le problème !
+      console.log('⚠️ Commande déjà payée, mais on continue pour les emails:', existingOrder.orderNumber);
+      // Pas de return ici !
     }
 
     // MISE À JOUR : Confirmer le paiement seulement si pas encore fait
@@ -78,8 +110,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
         orderId,
         {
           paymentStatus: 'paid',
-          // Pas de changement de status car déjà 'payée'
-          stripePaymentIntentId: paymentIntent.id, // Sécurité
+          stripePaymentIntentId: paymentIntent.id,
           $push: {
             timeline: {
               status: 'payée',
@@ -112,8 +143,10 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
       }
     }
 
-    // ENVOI DES EMAILS - maintenant ça va marcher !
+    // ENVOI DES EMAILS
     try {
+      console.log('📧 Début envoi des emails...');
+
       // 1. Email de confirmation au client
       console.log('📧 Envoi email de confirmation...');
       const confirmationSent = await sendOrderConfirmation(updatedOrder);
@@ -131,6 +164,11 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
       } else {
         console.error('❌ Échec notification admin');
       }
+
+      console.log('📊 Résultat envoi emails:', {
+        confirmation: confirmationSent,
+        adminNotification: adminNotificationSent
+      });
 
     } catch (emailError) {
       console.error('❌ Erreur envoi emails:', emailError);
