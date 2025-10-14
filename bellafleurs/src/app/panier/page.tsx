@@ -228,7 +228,7 @@ export default function CartPage() {
     }
   };
 
-  const deliveryFee = cart && cart.totalAmount >= 50 ? 0 : 0;
+  const deliveryFee = cart && cart.totalAmount >= 50 ? 0 : 5.00;
   const finalTotal = cart ? cart.totalAmount + deliveryFee : 0;
   const isUpdating = updatingItems.size > 0;
 
@@ -393,7 +393,7 @@ export default function CartPage() {
                         {deliveryFee === 0 ? (
                           <Badge variant="secondary">Gratuite</Badge>
                         ) : (
-                          `${deliveryFee} €`
+                          `${deliveryFee.toFixed(2)} €`
                         )}
                       </span>
                     </div>
