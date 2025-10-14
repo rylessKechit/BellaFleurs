@@ -248,6 +248,42 @@ export default function CheckoutPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedDate = e.target.value;
+    
+    if (!selectedDate) {
+      setDeliveryInfo({...deliveryInfo, date: ''});
+      return;
+    }
+    
+    // VALIDATION TEMPS RÉEL : Vérifier que la date n'est pas aujourd'hui
+    const selected = new Date(selectedDate);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const selectedMidnight = new Date(selected);
+    selectedMidnight.setHours(0, 0, 0, 0);
+    
+    if (selectedMidnight < tomorrow) {
+      // EMPÊCHER la sélection et afficher un message
+      setErrors(prev => ({
+        ...prev,
+        date: 'Livraison impossible aujourd\'hui. Sélectionnez une date à partir de demain.'
+      }));
+      // Ne pas mettre à jour la date
+      return;
+    }
+    
+    // Date valide
+    setDeliveryInfo({...deliveryInfo, date: selectedDate});
+    setErrors(prev => {
+      const newErrors = {...prev};
+      delete newErrors.date;
+      return newErrors;
+    });
+  };
+
   // Données pour le paiement
   const orderDataForPayment = useMemo(() => {
     if (cartItems.length === 0) return null;
@@ -320,13 +356,32 @@ export default function CheckoutPage() {
 
   // Navigation entre étapes
   const nextStep = () => {
+    // Nettoyer les erreurs précédentes
+    setErrors({});
+    
     if (currentStep === 1) {
-      // Valider les infos client
+      // Validation des informations client
       const newErrors: Record<string, string> = {};
-      if (!customerInfo.firstName.trim()) newErrors.firstName = 'Prénom requis';
-      if (!customerInfo.lastName.trim()) newErrors.lastName = 'Nom requis';
-      if (!customerInfo.email.trim()) newErrors.email = 'Email requis';
-      if (!customerInfo.phone.trim()) newErrors.phone = 'Téléphone requis';
+      
+      if (!customerInfo.firstName.trim()) {
+        newErrors.firstName = 'Prénom requis';
+      }
+      
+      if (!customerInfo.lastName.trim()) {
+        newErrors.lastName = 'Nom requis';
+      }
+      
+      if (!customerInfo.email.trim()) {
+        newErrors.email = 'Email requis';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
+        newErrors.email = 'Format d\'email invalide';
+      }
+      
+      if (!customerInfo.phone.trim()) {
+        newErrors.phone = 'Téléphone requis';
+      } else if (!/^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/.test(customerInfo.phone.replace(/\s/g, ''))) {
+        newErrors.phone = 'Format de téléphone invalide';
+      }
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
@@ -335,14 +390,81 @@ export default function CheckoutPage() {
     }
 
     if (currentStep === 2) {
-      // ✅ UTILISER la validation complète
-      if (!validateForm()) {
-        toast.error('Veuillez remplir tous les champs obligatoires');
+      // Validation des informations de livraison
+      const newErrors: Record<string, string> = {};
+      
+      // Validation de l'adresse
+      if (!deliveryInfo.address.street.trim()) {
+        newErrors.street = 'Adresse requise';
+      }
+      
+      if (!deliveryInfo.address.zipCode.trim()) {
+        newErrors.zipCode = 'Code postal requis';
+      } else if (!/^\d{5}$/.test(deliveryInfo.address.zipCode.trim())) {
+        newErrors.zipCode = 'Code postal invalide (5 chiffres)';
+      }
+      
+      if (!deliveryInfo.address.city.trim()) {
+        newErrors.city = 'Ville requise';
+      }
+      
+      // VALIDATION STRICTE DE LA DATE - NOUVELLE VERSION MOBILE
+      if (!deliveryInfo.date) {
+        newErrors.date = 'Date de livraison requise';
+      } else {
+        // Calculer demain à 00h00
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        
+        // Date sélectionnée à 00h00
+        const selectedDate = new Date(deliveryInfo.date);
+        selectedDate.setHours(0, 0, 0, 0);
+        
+        // Vérification stricte : la date doit être >= demain
+        if (selectedDate < tomorrow) {
+          newErrors.date = 'Livraison impossible aujourd\'hui. Veuillez sélectionner une date à partir de demain.';
+        }
+        
+        // Vérification week-end (optionnel - supprime si tu livres le dimanche)
+        const dayOfWeek = selectedDate.getDay();
+        if (dayOfWeek === 0) { // 0 = Dimanche
+          newErrors.date = 'Pas de livraison le dimanche. Veuillez choisir un autre jour.';
+        }
+      }
+      
+      // Validation du créneau horaire
+      if (!selectedTimeSlot) {
+        newErrors.timeSlot = 'Créneau de livraison requis';
+      }
+      
+      // Validation zone de livraison
+      if (!validationState.isDeliverable) {
+        newErrors.zipCode = 'Zone non couverte par nos services de livraison';
+      }
+      
+      // Validation informations cadeau si activé
+      if (giftInfo.isGift) {
+        if (!giftInfo.recipientFirstName.trim()) {
+          newErrors.recipientFirstName = 'Prénom du destinataire requis';
+        }
+        if (!giftInfo.recipientLastName.trim()) {
+          newErrors.recipientLastName = 'Nom du destinataire requis';
+        }
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        // Faire défiler vers la première erreur
+        const firstErrorElement = document.querySelector('.border-red-300');
+        if (firstErrorElement) {
+          firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         return;
       }
     }
 
-    setErrors({});
+    // Si toutes les validations passent, passer à l'étape suivante
     setCurrentStep(prev => Math.min(prev + 1, 3));
   };
 
@@ -694,7 +816,7 @@ export default function CheckoutPage() {
                           id="date"
                           type="date"
                           value={deliveryInfo.date}
-                          onChange={(e) => setDeliveryInfo({...deliveryInfo, date: e.target.value})}
+                          onChange={handleDateChange}
                           className={errors.date ? 'border-red-300' : ''}
                           min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
                         />
