@@ -1,120 +1,66 @@
-// src/lib/email.ts - Version avec design moderne et couleurs Bella Fleurs
+// src/lib/email.ts - MISE À JOUR avec support message cadeau
 import nodemailer from 'nodemailer';
 
-// Interface pour les options d'email
 interface EmailOptions {
   to: string;
   subject: string;
-  text?: string;
-  html?: string;
-  from?: string;
+  html: string;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer;
+    contentType: string;
+  }>;
 }
 
-// Type de compte email
-type EmailAccountType = 'client' | 'admin';
+type EmailAccount = 'client' | 'admin';
 
-// Configuration du transporteur email avec double compte
-const createTransporter = (type: EmailAccountType = 'client') => {
-  let envVars: string[];
-  
-  if (type === 'admin') {
-    // Configuration pour les emails ADMIN (notifications)
-    envVars = [
-      'EMAIL_ADMIN_HOST',
-      'EMAIL_ADMIN_PORT', 
-      'EMAIL_ADMIN_USER',
-      'EMAIL_ADMIN_PASSWORD'
-    ];
+// Configuration des transporters
+const getTransporter = (account: EmailAccount) => {
+  if (account === 'client') {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_CLIENT_USER,
+        pass: process.env.EMAIL_CLIENT_PASS
+      }
+    });
   } else {
-    // Configuration pour les emails CLIENT (confirmations)
-    envVars = [
-      'EMAIL_CLIENT_HOST',
-      'EMAIL_CLIENT_PORT', 
-      'EMAIL_CLIENT_USER',
-      'EMAIL_CLIENT_PASSWORD'
-    ];
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_ADMIN_USER,
+        pass: process.env.EMAIL_ADMIN_PASS
+      }
+    });
   }
-
-  const missingVars = envVars.filter(varName => !process.env[varName]);
-  
-  if (missingVars.length > 0) {
-    console.warn(`⚠️ Variables d'environnement manquantes pour l'email ${type}: ${missingVars.join(', ')}`);
-    return null;
-  }
-
-  const config = type === 'admin' ? {
-    host: process.env.EMAIL_ADMIN_HOST,
-    port: parseInt(process.env.EMAIL_ADMIN_PORT || '587'),
-    secure: process.env.EMAIL_ADMIN_PORT === '465',
-    auth: {
-      user: process.env.EMAIL_ADMIN_USER,
-      pass: process.env.EMAIL_ADMIN_PASSWORD,
-    }
-  } : {
-    host: process.env.EMAIL_CLIENT_HOST,
-    port: parseInt(process.env.EMAIL_CLIENT_PORT || '587'),
-    secure: process.env.EMAIL_CLIENT_PORT === '465',
-    auth: {
-      user: process.env.EMAIL_CLIENT_USER,
-      pass: process.env.EMAIL_CLIENT_PASSWORD,
-    }
-  };
-
-  return nodemailer.createTransport({
-    ...config,
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
 };
 
-// Fonction principale d'envoi d'email avec type de compte
-export async function sendEmail(options: EmailOptions, accountType: EmailAccountType = 'client'): Promise<boolean> {
+// Fonction principale d'envoi d'email
+export async function sendEmail(options: EmailOptions, account: EmailAccount = 'client'): Promise<boolean> {
   try {
-    const transporter = createTransporter(accountType);
-    
-    if (!transporter) {
-      console.error(`❌ Impossible de créer le transporteur email ${accountType} - variables d'environnement manquantes`);
-      return false;
-    }
+    const transporter = getTransporter(account);
+    const fromEmail = account === 'client' 
+      ? process.env.EMAIL_CLIENT_USER 
+      : process.env.EMAIL_ADMIN_USER;
 
-    // Définir l'expéditeur selon le type de compte
-    const defaultFrom = accountType === 'admin' 
-      ? process.env.EMAIL_ADMIN_FROM || process.env.EMAIL_ADMIN_USER
-      : process.env.EMAIL_CLIENT_FROM || process.env.EMAIL_CLIENT_USER;
-
-    const emailOptions = {
-      from: options.from || defaultFrom,
+    const mailOptions = {
+      from: `"Bella Fleurs" <${fromEmail}>`,
       to: options.to,
       subject: options.subject,
-      text: options.text,
-      html: options.html || (accountType === 'admin' ? generateAdminHTML(options.subject, options.text || '') : generateClientHTML(options.subject, options.text || ''))
+      html: options.html,
+      attachments: options.attachments || []
     };
 
-    const info = await transporter.sendMail(emailOptions);
-    
-    console.log(`✅ Email ${accountType} envoyé:`, {
-      to: options.to,
-      subject: options.subject,
-      messageId: info.messageId,
-      account: accountType
-    });
-    
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email sent successfully via ${account} account:`, result.messageId);
     return true;
-
-  } catch (error: any) {
-    console.error(`❌ Erreur envoi email ${accountType}:`, {
-      error: error.message,
-      code: error.code,
-      to: options.to,
-      subject: options.subject,
-      account: accountType
-    });
+  } catch (error) {
+    console.error(`❌ Error sending email via ${account} account:`, error);
     return false;
   }
 }
 
-// Template HTML moderne pour les CLIENTS (design chaleureux)
+// Template HTML moderne pour les CLIENTS (design chaleureux et élégant)
 function generateClientHTML(subject: string, text: string): string {
   return `
 <!DOCTYPE html>
@@ -127,8 +73,8 @@ function generateClientHTML(subject: string, text: string): string {
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             line-height: 1.6;
-            color: #1f2937;
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            color: #374151;
+            background: linear-gradient(135deg, #fef7ed 0%, #fef3c7 100%);
             margin: 0;
             padding: 20px;
         }
@@ -138,7 +84,8 @@ function generateClientHTML(subject: string, text: string): string {
             background: white;
             border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-top: 4px solid #22c55e;
         }
         .header {
             background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
@@ -148,109 +95,91 @@ function generateClientHTML(subject: string, text: string): string {
             position: relative;
         }
         .header::before {
-            content: '';
+            content: '🌸';
             position: absolute;
-            bottom: -10px;
-            left: 0;
-            right: 0;
-            height: 20px;
-            background: white;
-            border-radius: 20px 20px 0 0;
+            right: 30px;
+            top: 30px;
+            font-size: 24px;
         }
         .header h1 {
             margin: 0;
-            font-size: 32px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-        .tagline {
-            margin-top: 8px;
-            opacity: 0.95;
-            font-size: 16px;
-            font-weight: 300;
-        }
-        .emoji {
             font-size: 24px;
-            margin: 0 8px;
+            font-weight: 600;
         }
         .content {
-            padding: 50px 40px 40px;
-        }
-        .content p {
-            margin: 0 0 18px 0;
-            font-size: 16px;
-            line-height: 1.7;
-            color: #374151;
-        }
-        .highlight-box {
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-            border: 2px solid #22c55e;
-            border-radius: 12px;
-            padding: 24px;
-            margin: 24px 0;
-            position: relative;
-        }
-        .highlight-box::before {
-            content: '✨';
-            position: absolute;
-            top: -12px;
-            left: 20px;
-            background: white;
-            padding: 0 8px;
-            font-size: 20px;
+            padding: 40px 30px;
         }
         .order-details {
-            background: #f9fafb;
+            background: #f8fafc;
+            border-left: 4px solid #22c55e;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .highlight-box {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 1px solid #86efac;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        .gift-message-box {
+            background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+            border: 2px solid #f9a8d4;
             border-radius: 12px;
             padding: 20px;
             margin: 20px 0;
-            border-left: 4px solid #22c55e;
+            text-align: center;
+        }
+        .gift-message-box .title {
+            color: #be185d;
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .gift-message-box .message {
+            color: #831843;
+            font-style: italic;
+            font-size: 15px;
+            line-height: 1.5;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid #f9a8d4;
         }
         .footer {
-            background: #f8fafc;
-            padding: 40px 30px;
+            background: #f1f5f9;
+            padding: 30px;
             text-align: center;
-            border-top: 1px solid #e5e7eb;
+            border-top: 1px solid #e2e8f0;
         }
         .footer-logo {
-            font-size: 28px;
-            font-weight: 700;
-            color: #16a34a;
-            margin-bottom: 12px;
-        }
-        .social-links {
-            margin: 20px 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #22c55e;
+            margin-bottom: 10px;
         }
         .social-links a {
             color: #22c55e;
             text-decoration: none;
-            margin: 0 12px;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-        .social-links a:hover {
-            color: #16a34a;
+            margin: 0 5px;
         }
         .contact-info {
-            margin-top: 24px;
-            font-size: 14px;
-            color: #6b7280;
-            line-height: 1.6;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
         }
         
-        @media (max-width: 600px) {
-            .container { margin: 10px; border-radius: 12px; }
-            .header, .content, .footer { padding: 30px 20px; }
-            .header h1 { font-size: 26px; }
-            .content { padding: 40px 20px 30px; }
+        @media (max-width: 650px) {
+            .container { margin: 10px; }
+            .header, .content, .footer { padding: 20px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1><span class="emoji">🌸</span>Bella Fleurs</h1>
-            <div class="tagline">Créations florales d'exception</div>
+            <h1>${subject}</h1>
         </div>
         
         <div class="content">
@@ -258,7 +187,17 @@ function generateClientHTML(subject: string, text: string): string {
                 const trimmed = line.trim();
                 if (!trimmed) return '';
                 
-                // Détection de sections importantes
+                // ✨ NOUVEAU : Détection des messages cadeaux
+                if (trimmed.startsWith('🎁 Message cadeau :')) {
+                    const message = trimmed.replace('🎁 Message cadeau : ', '').replace(/^"/, '').replace(/"$/, '');
+                    return `
+                    <div class="gift-message-box">
+                        <div class="title">🎁 Message cadeau</div>
+                        <div class="message">"${message}"</div>
+                    </div>`;
+                }
+                
+                // Détection des sections importantes
                 if (trimmed.includes('DÉTAILS DE VOTRE COMMANDE') || trimmed.includes('ARTICLES COMMANDÉS') || trimmed.includes('INFORMATIONS DE LIVRAISON')) {
                     return `<div class="order-details"><strong>${trimmed}</strong></div>`;
                 }
@@ -289,7 +228,10 @@ function generateClientHTML(subject: string, text: string): string {
                 <p style="font-weight: 500; color: #22c55e;">Créations uniques • Livraison locale • Service personnalisé</p>
                 <p style="margin-top: 16px; font-size: 12px; color: #9ca3af;">
                     Vous recevez cet email car vous avez passé commande chez Bella Fleurs.<br>
-                    Merci de votre confiance ! 💚
+                    Merci de votre confiance !
+                </p>
+                <p style="margin-top: 12px; font-size: 11px; color: #9ca3af;">
+                    💚
                 </p>
             </div>
         </div>
@@ -299,235 +241,16 @@ function generateClientHTML(subject: string, text: string): string {
   `;
 }
 
-// Template HTML moderne pour les ADMINS (design professionnel et urgent)
-function generateAdminHTML(subject: string, text: string): string {
-  return `
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${subject}</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-            line-height: 1.6;
-            color: #111827;
-            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 650px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border: 2px solid #22c55e;
-        }
-        .header {
-            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-            position: relative;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .header .order-number {
-            background: rgba(255,255,255,0.2);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-            margin-top: 10px;
-            display: inline-block;
-        }
-        .urgent-banner {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 2px solid #f59e0b;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px;
-            text-align: center;
-            position: relative;
-        }
-        .urgent-banner h3 {
-            margin: 0 0 8px 0;
-            color: #92400e;
-            font-size: 18px;
-            font-weight: 700;
-        }
-        .urgent-banner p {
-            margin: 0;
-            color: #b45309;
-            font-weight: 500;
-        }
-        .content {
-            padding: 0 30px 30px;
-        }
-        .info-section {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-            border-left: 4px solid #22c55e;
-        }
-        .info-section h3 {
-            margin: 0 0 12px 0;
-            color: #1e293b;
-            font-size: 16px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-        }
-        .info-section h3::before {
-            content: attr(data-icon);
-            margin-right: 8px;
-            font-size: 18px;
-        }
-        .items-section {
-            background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
-            border: 1px solid #fbbf24;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        .total {
-            color: #15803d;
-            font-weight: 700;
-            font-size: 18px;
-            text-align: right;
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 2px solid #22c55e;
-        }
-        .action-button {
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            color: white;
-            padding: 16px 32px;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            text-align: center;
-            display: inline-block;
-            margin: 20px auto;
-            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
-        }
-        .footer {
-            background: #f1f5f9;
-            padding: 30px;
-            text-align: center;
-            border-top: 1px solid #e2e8f0;
-        }
-        
-        @media (max-width: 650px) {
-            .container { margin: 10px; }
-            .header, .content, .footer { padding: 20px; }
-            .urgent-banner { margin: 15px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔔 Nouvelle Commande</h1>
-        </div>
-        
-        <div class="urgent-banner">
-            <h3>⚡ ACTION REQUISE</h3>
-            <p>Une nouvelle commande nécessite votre attention et doit être traitée rapidement.</p>
-        </div>
-        
-        <div class="content">
-            ${text.split('\n').map(line => {
-                const trimmed = line.trim();
-                if (!trimmed) return '';
-                return `<p>${trimmed}</p>`;
-            }).filter(p => p).join('')}
-            
-            <div style="text-align: center; margin-top: 30px;">
-                <a href="#" class="action-button">
-                    🌸 Accéder au Dashboard
-                </a>
-            </div>
-        </div>
-        
-        <div class="footer">
-            <p style="color: #64748b; margin: 0; font-weight: 600;">
-                Système de notifications Bella Fleurs
-            </p>
-            <p style="color: #94a3b8; margin-top: 8px; font-size: 14px;">
-                Email envoyé automatiquement • Ne pas répondre
-            </p>
-        </div>
-    </div>
-</body>
-</html>
-  `;
-}
-
-// Email de confirmation de commande au CLIENT
-export async function sendOrderConfirmation(order: any): Promise<boolean> {
-  const subject = `✅ Confirmation de votre commande ${order.orderNumber}`;
-  
-  const content = `
-Bonjour ${order.customerInfo.name},
-
-Merci beaucoup pour votre commande ! Nous avons bien reçu votre demande et nous sommes ravis de créer pour vous une composition florale exceptionnelle.
-
-DÉTAILS DE VOTRE COMMANDE :
-• Numéro de commande : ${order.orderNumber}
-• Montant total : ${order.totalAmount.toFixed(2)}€
-• Statut de paiement : Confirmé ✅
-
-ARTICLES COMMANDÉS :
-${order.items.map((item: any) => `• ${item.name} (x${item.quantity}) - ${(item.price * item.quantity).toFixed(2)}€`).join('\n')}
-
-INFORMATIONS DE LIVRAISON :
-📅 Date prévue : ${new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}
-📍 Mode : ${order.deliveryInfo.type === 'delivery' ? 'Livraison à domicile' : 'Retrait en boutique'}
-${order.deliveryInfo.address ? `📍 Adresse : ${order.deliveryInfo.address.street}, ${order.deliveryInfo.address.zipCode} ${order.deliveryInfo.address.city}` : ''}
-${order.deliveryInfo.notes ? `💬 Vos notes : ${order.deliveryInfo.notes}` : ''}
-
-PROCHAINES ÉTAPES :
-1. Nous commençons immédiatement la préparation de votre commande
-2. Vous recevrez une notification dès qu'elle sera prête
-3. ${order.deliveryInfo.type === 'delivery' ? 'Nous procéderons à la livraison' : 'Vous pourrez venir la récupérer'}
-
-Vous pouvez suivre l'état d'avancement de votre commande à tout moment en vous connectant à votre compte.
-
-Merci de votre confiance. Nos fleuristes ont hâte de créer pour vous une composition exceptionnelle !
-
-Bien à vous,
-L'équipe Bella Fleurs
-  `;
-
-  const html = generateClientHTML(subject, content);
-
-  // UTILISATION DU COMPTE CLIENT
-  return await sendEmail({
-    to: order.customerInfo.email,
-    subject,
-    html
-  }, 'client');
-}
-
-// Template spécial structuré pour les notifications admin - VERSION AMÉLIORÉE
+// Template spécial structuré pour les notifications admin - VERSION AMÉLIORÉE avec support message cadeau
 function generateAdminOrderHTML(order: any): string {
   // Helper pour formater l'heure de livraison
   const formatTimeSlot = (timeSlot: string) => {
     const timeSlots = {
       'morning': 'Matin (9h-12h)',
       'afternoon': 'Après-midi (13h-17h)',
-      'evening': 'Soirée (17h-19h)'
+      'evening': 'Soirée (17h-19h)',
+      '9h-13h': '9h - 13h (matin)',
+      '14h-19h': '14h - 19h (après-midi)'
     };
     return timeSlots[timeSlot as keyof typeof timeSlots] || timeSlot || 'Non spécifié';
   };
@@ -562,6 +285,7 @@ function generateAdminOrderHTML(order: any): string {
             color: white;
             padding: 30px;
             text-align: center;
+            position: relative;
         }
         .header h1 {
             margin: 0;
@@ -586,82 +310,76 @@ function generateAdminOrderHTML(order: any): string {
             padding: 20px;
             margin: 20px;
             text-align: center;
-            border-left: 6px solid #f59e0b;
         }
         .urgent-banner h3 {
             margin: 0 0 8px 0;
             color: #92400e;
-            font-size: 16px;
-            font-weight: 700;
-        }
-        .urgent-banner p {
-            margin: 0;
-            color: #92400e;
-            font-weight: 500;
+            font-size: 18px;
         }
         .gift-banner {
-            background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
-            border: 2px solid #ec4899;
+            background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+            border: 2px solid #f87171;
             border-radius: 8px;
             padding: 20px;
             margin: 20px;
             text-align: center;
-            border-left: 6px solid #ec4899;
         }
         .gift-banner h3 {
             margin: 0 0 8px 0;
-            color: #be185d;
-            font-size: 16px;
-            font-weight: 700;
+            color: #991b1b;
+            font-size: 18px;
         }
-        .gift-banner p {
-            margin: 0;
+        .gift-message-admin {
+            background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+            border: 2px solid #f9a8d4;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .gift-message-admin .title {
             color: #be185d;
-            font-weight: 500;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .gift-message-admin .message {
+            color: #831843;
+            font-style: italic;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #f9a8d4;
         }
         .content {
             padding: 30px;
         }
         .order-section {
             background: #f8fafc;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
             border-left: 4px solid #22c55e;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
         }
         .order-section h3 {
             margin: 0 0 15px 0;
-            color: #16a34a;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        .order-section p {
-            margin: 5px 0;
-            color: #374151;
-        }
-        .order-section strong {
-            color: #111827;
+            color: #1f2937;
+            font-size: 18px;
         }
         .items-list {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            overflow: hidden;
-            margin: 15px 0;
+            margin-top: 15px;
         }
         .item {
-            padding: 12px 16px;
-            border-bottom: 1px solid #f3f4f6;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
         }
         .item:last-child {
             border-bottom: none;
         }
         .item-name {
-            font-weight: 500;
-            color: #111827;
+            font-weight: 600;
+            color: #1f2937;
         }
         .item-details {
             color: #6b7280;
@@ -669,15 +387,20 @@ function generateAdminOrderHTML(order: any): string {
         }
         .item-price {
             font-weight: 600;
-            color: #16a34a;
+            color: #059669;
+            white-space: nowrap;
         }
         .total-section {
-            background: #16a34a;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            margin: 20px 0;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 2px solid #22c55e;
             border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 18px;
+            font-weight: 700;
         }
         .total-amount {
             font-size: 24px;
@@ -744,9 +467,17 @@ function generateAdminOrderHTML(order: any): string {
                 <p><strong>Nom :</strong> ${order.customerInfo.name}</p>
                 <p><strong>Email :</strong> ${order.customerInfo.email}</p>
                 <p><strong>Téléphone :</strong> ${order.customerInfo.phone}</p>
+                
                 ${order.isGift && order.giftInfo ? `
-                <p><strong>🎁 Message cadeau :</strong> ${order.giftInfo.message || 'Aucun message'}</p>
-                ${order.giftInfo.recipientName ? `<p><strong>🎁 Destinataire :</strong> ${order.giftInfo.recipientName}</p>` : ''}
+                <div class="gift-message-admin">
+                    <div class="title">🎁 Informations cadeau</div>
+                    <p><strong>Destinataire :</strong> ${order.giftInfo.recipientName}</p>
+                    <p><strong>Expéditeur :</strong> ${order.giftInfo.senderName}</p>
+                    ${order.giftInfo.message ? `
+                    <div class="title">💌 Message cadeau :</div>
+                    <div class="message">"${order.giftInfo.message}"</div>
+                    ` : '<p><em>Aucun message personnalisé</em></p>'}
+                </div>
                 ` : ''}
             </div>
 
@@ -759,6 +490,7 @@ function generateAdminOrderHTML(order: any): string {
                         <div>
                             <div class="item-name">${item.name}</div>
                             <div class="item-details">Quantité: ${item.quantity}</div>
+                            ${item.variantName ? `<div class="item-details">Variante: ${item.variantName}</div>` : ''}
                         </div>
                         <div class="item-price">${(item.price * item.quantity).toFixed(2)}€</div>
                     </div>
@@ -813,23 +545,21 @@ function generateAdminOrderHTML(order: any): string {
   `;
 }
 
-// Email de notification de nouvelle commande pour l'ADMIN
+// Email de notification de nouvelle commande pour l'ADMIN - MISE À JOUR avec message cadeau
 export async function sendNewOrderNotification(order: any): Promise<boolean> {
-  // CHANGEMENT : Destinataire = EMAIL_ADMIN_USER au lieu d'ADMIN_EMAIL
   const adminEmail = process.env.EMAIL_ADMIN_USER || 'bellafleurs30@gmail.com';
   
-  const subject = `🔔 Nouvelle commande ${order.orderNumber} - Action requise`;
+  const subject = `🔔 Nouvelle commande ${order.orderNumber} - ${order.isGift ? '🎁 CADEAU' : 'Standard'}`;
   const html = generateAdminOrderHTML(order);
   
-  // CHANGEMENT : Utiliser le compte CLIENT au lieu du compte ADMIN
   return await sendEmail({
     to: adminEmail,
     subject,
     html
-  }, 'client'); // ← 'client' au lieu de 'admin'
+  }, 'client');
 }
 
-// Email de changement de statut pour le client
+// Email de changement de statut pour le client - MISE À JOUR avec message cadeau
 export async function sendOrderStatusEmail(order: any, newStatus: string, note?: string): Promise<boolean> {
   const templates = {
     'en_creation': {
@@ -839,7 +569,11 @@ Bonjour ${order.customerInfo.name},
 
 Nous avons le plaisir de vous informer que votre commande ${order.orderNumber} est maintenant en cours de création.
 
+${order.isGift ? `🎁 Cette commande étant un cadeau, nous apportons une attention particulière à sa préparation.` : ''}
+
 Nos fleuristes expérimentés travaillent avec passion et minutie pour composer votre magnifique création florale selon vos souhaits.
+
+${order.isGift && order.giftInfo?.message ? `🎁 Message cadeau : "${order.giftInfo.message}"` : ''}
 
 ${note ? `Message personnalisé de nos fleuristes : ${note}` : ''}
 
@@ -856,13 +590,46 @@ Bonjour ${order.customerInfo.name},
 
 Excellente nouvelle ! Votre commande ${order.orderNumber} est maintenant prête et vous attend.
 
+${order.isGift ? `🎁 Votre cadeau a été préparé avec soin et est accompagné d'une belle carte.` : ''}
+
 ${order.deliveryInfo.type === 'pickup' 
-  ? `Vous pouvez venir la récupérer à notre boutique aux heures d'ouverture.`
-  : `Nous organisons la livraison selon les modalités convenues.`}
+  ? `Vous pouvez venir la récupérer à notre boutique aux horaires d'ouverture.`
+  : `Nous procéderons à la livraison selon les modalités convenues :`
+}
 
-${note ? `Message de nos fleuristes : ${note}` : ''}
+${order.deliveryInfo.type === 'delivery' ? `
+📅 Date de livraison : ${new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}
+📍 Adresse : ${order.deliveryInfo.address?.street}, ${order.deliveryInfo.address?.zipCode} ${order.deliveryInfo.address?.city}
+` : ''}
 
-Merci de votre confiance,
+${order.isGift && order.giftInfo?.message ? `🎁 Message cadeau inclus : "${order.giftInfo.message}"` : ''}
+
+${note ? `Note de nos fleuristes : ${note}` : ''}
+
+Merci de votre confiance !
+
+L'équipe Bella Fleurs
+      `
+    },
+    'en_livraison': {
+      subject: '🚚 Votre commande est en cours de livraison',
+      content: `
+Bonjour ${order.customerInfo.name},
+
+Votre commande ${order.orderNumber} est actuellement en cours de livraison !
+
+${order.isGift ? `🎁 Ce cadeau sera bientôt entre les mains de son destinataire.` : ''}
+
+Notre livreur se rend à l'adresse indiquée et vous contactera si nécessaire.
+
+📍 Adresse de livraison : ${order.deliveryInfo.address?.street}, ${order.deliveryInfo.address?.zipCode} ${order.deliveryInfo.address?.city}
+
+${order.isGift && order.giftInfo?.message ? `🎁 Message cadeau : "${order.giftInfo.message}"` : ''}
+
+${note ? `Information importante : ${note}` : ''}
+
+Merci de votre confiance !
+
 L'équipe Bella Fleurs
       `
     },
@@ -871,26 +638,33 @@ L'équipe Bella Fleurs
       content: `
 Bonjour ${order.customerInfo.name},
 
-Votre commande ${order.orderNumber} a été livrée avec succès !
+Parfait ! Votre commande ${order.orderNumber} a été livrée avec succès.
 
-Nous espérons que votre création florale vous apportera beaucoup de joie et que vous êtes pleinement satisfait(e) de nos services.
+${order.isGift ? `🎁 Nous espérons que ce cadeau apportera beaucoup de joie !` : ''}
+
+Nous espérons que notre création florale vous apporte satisfaction et illumine votre journée.
+
+${order.isGift && order.giftInfo?.message ? `🎁 Message cadeau transmis : "${order.giftInfo.message}"` : ''}
 
 ${note ? `Note de livraison : ${note}` : ''}
 
-N'hésitez pas à nous faire part de vos impressions et à nous faire confiance pour vos prochaines occasions spéciales.
+N'hésitez pas à nous faire part de vos commentaires et à partager une photo de votre composition sur nos réseaux sociaux !
 
-Merci de votre confiance,
+Merci de votre confiance et à bientôt,
+
 L'équipe Bella Fleurs
       `
     }
   };
 
   const template = templates[newStatus as keyof typeof templates];
-  if (!template) return false;
+  if (!template) {
+    console.error(`❌ No email template found for status: ${newStatus}`);
+    return false;
+  }
 
   const html = generateClientHTML(template.subject, template.content);
 
-  // UTILISATION DU COMPTE CLIENT pour les mises à jour de statut
   return await sendEmail({
     to: order.customerInfo.email,
     subject: template.subject,
@@ -898,66 +672,59 @@ L'équipe Bella Fleurs
   }, 'client');
 }
 
-// Test de configuration email pour les deux comptes
-export async function testEmailConfiguration(): Promise<{ client: boolean; admin: boolean }> {
-  const testEmailClient = process.env.EMAIL_CLIENT_USER;
-  const testEmailAdmin = process.env.EMAIL_ADMIN_USER;
+// Email de confirmation de commande au CLIENT - MISE À JOUR avec message cadeau
+export async function sendOrderConfirmation(order: any): Promise<boolean> {
+  const subject = `✅ Confirmation de votre commande ${order.orderNumber}${order.isGift ? ' 🎁' : ''}`;
   
-  const results = { client: false, admin: false };
+  const content = `
+Bonjour ${order.customerInfo.name},
 
-  // Test compte CLIENT
-  if (testEmailClient) {
-    const contentClient = `
-Test de configuration email CLIENT réussi !
+Merci beaucoup pour votre commande ! Nous avons bien reçu votre demande et nous sommes ravis de créer pour vous une composition florale exceptionnelle.
 
-Cette email confirme que le service d'envoi d'emails CLIENT de Bella Fleurs fonctionne correctement.
+${order.isGift ? `🎁 Cette commande étant un cadeau, nous apporterons une attention particulière à sa présentation et y joindrons une belle carte.` : ''}
 
-Configuration testée le : ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}
+DÉTAILS DE VOTRE COMMANDE :
+• Numéro de commande : ${order.orderNumber}
+• Montant total : ${order.totalAmount.toFixed(2)}€
+• Statut de paiement : Confirmé ✅
+${order.isGift ? '• Type : Cadeau 🎁' : ''}
 
-Variables d'environnement vérifiées :
-• EMAIL_CLIENT_HOST : ${process.env.EMAIL_CLIENT_HOST}
-• EMAIL_CLIENT_PORT : ${process.env.EMAIL_CLIENT_PORT}  
-• EMAIL_CLIENT_USER : ${process.env.EMAIL_CLIENT_USER?.substring(0, 3)}***
-• EMAIL_CLIENT_FROM : ${process.env.EMAIL_CLIENT_FROM}
+ARTICLES COMMANDÉS :
+${order.items.map((item: any) => `• ${item.name} (x${item.quantity}) - ${(item.price * item.quantity).toFixed(2)}€`).join('\n')}
 
-L'équipe technique Bella Fleurs
-    `;
+${order.isGift && order.giftInfo ? `
+🎁 INFORMATIONS CADEAU :
+• Destinataire : ${order.giftInfo.recipientName}
+• Expéditeur : ${order.giftInfo.senderName}
+${order.giftInfo.message ? `🎁 Message cadeau : "${order.giftInfo.message}"` : '• Message : Aucun message personnalisé'}
+` : ''}
 
-    const htmlClient = generateClientHTML('🧪 Test Email CLIENT - Bella Fleurs', contentClient);
+INFORMATIONS DE LIVRAISON :
+📅 Date prévue : ${new Date(order.deliveryInfo.date).toLocaleDateString('fr-FR')}
+📍 Mode : ${order.deliveryInfo.type === 'delivery' ? 'Livraison à domicile' : 'Retrait en boutique'}
+${order.deliveryInfo.address ? `📍 Adresse : ${order.deliveryInfo.address.street}, ${order.deliveryInfo.address.zipCode} ${order.deliveryInfo.address.city}` : ''}
+${order.deliveryInfo.notes ? `💬 Vos notes : ${order.deliveryInfo.notes}` : ''}
 
-    results.client = await sendEmail({
-      to: testEmailClient,
-      subject: '🧪 Test de configuration email CLIENT - Bella Fleurs',
-      html: htmlClient
-    }, 'client');
-  }
+PROCHAINES ÉTAPES :
+1. Nous commençons immédiatement la préparation de votre commande
+2. Vous recevrez une notification dès qu'elle sera prête
+3. ${order.deliveryInfo.type === 'delivery' ? 'Nous procéderons à la livraison' : 'Vous pourrez venir la récupérer'}
 
-  // Test compte ADMIN
-  if (testEmailAdmin) {
-    const contentAdmin = `
-Test de configuration email ADMIN réussi !
+${order.isGift ? `🎁 Pour un cadeau, nous inclurons une carte élégante avec votre message personnalisé.` : ''}
 
-Cette email confirme que le service d'envoi d'emails ADMIN de Bella Fleurs fonctionne correctement.
+Vous pouvez suivre l'état d'avancement de votre commande à tout moment en vous connectant à votre compte.
 
-Configuration testée le : ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}
+Merci de votre confiance. Nos fleuristes ont hâte de créer pour vous une composition exceptionnelle !
 
-Variables d'environnement vérifiées :
-• EMAIL_ADMIN_HOST : ${process.env.EMAIL_ADMIN_HOST}
-• EMAIL_ADMIN_PORT : ${process.env.EMAIL_ADMIN_PORT}  
-• EMAIL_ADMIN_USER : ${process.env.EMAIL_ADMIN_USER?.substring(0, 3)}***
-• EMAIL_ADMIN_FROM : ${process.env.EMAIL_ADMIN_FROM}
+Bien à vous,
+L'équipe Bella Fleurs
+  `;
 
-L'équipe technique Bella Fleurs
-    `;
+  const html = generateClientHTML(subject, content);
 
-    const htmlAdmin = generateAdminHTML('🧪 Test Email ADMIN - Bella Fleurs', contentAdmin);
-
-    results.admin = await sendEmail({
-      to: testEmailAdmin,
-      subject: '🧪 Test de configuration email ADMIN - Bella Fleurs',
-      html: htmlAdmin
-    }, 'admin');
-  }
-
-  return results;
+  return await sendEmail({
+    to: order.customerInfo.email,
+    subject,
+    html
+  }, 'client');
 }

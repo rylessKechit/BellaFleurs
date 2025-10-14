@@ -75,6 +75,7 @@ interface OrderData {
     giftInfo?: {
       recipientName: string;
       senderName: string;
+      message?: string; // ✨ SEULE MODIFICATION: Ajout message
     };
   };
   paymentMethod: string;
@@ -85,6 +86,7 @@ interface GiftInfo {
   isGift: boolean;
   recipientFirstName: string;
   recipientLastName: string;
+  message: string; // ✨ SEULE MODIFICATION: Ajout message
 }
 
 interface TimeSlot {
@@ -128,7 +130,8 @@ export default function CheckoutPage() {
   const [giftInfo, setGiftInfo] = useState<GiftInfo>({
     isGift: false,
     recipientFirstName: '',
-    recipientLastName: ''
+    recipientLastName: '',
+    message: '' // ✨ SEULE MODIFICATION: Ajout message
   });
 
   // Créneaux de livraison
@@ -317,7 +320,8 @@ export default function CheckoutPage() {
         isGift: giftInfo.isGift,
         giftInfo: giftInfo.isGift ? {
           recipientName: `${giftInfo.recipientFirstName} ${giftInfo.recipientLastName}`.trim(),
-          senderName: `${customerInfo.firstName} ${customerInfo.lastName}`.trim()
+          senderName: `${customerInfo.firstName} ${customerInfo.lastName}`.trim(),
+          message: giftInfo.message // ✨ SEULE MODIFICATION: Ajout message
         } : undefined
       },
       paymentMethod: 'card',
@@ -638,7 +642,8 @@ export default function CheckoutPage() {
                             ...prev, 
                             isGift: e.target.checked,
                             recipientFirstName: e.target.checked ? prev.recipientFirstName : '',
-                            recipientLastName: e.target.checked ? prev.recipientLastName : ''
+                            recipientLastName: e.target.checked ? prev.recipientLastName : '',
+                            message: e.target.checked ? prev.message : '' // ✨ SEULE MODIFICATION: Reset message
                           }))}
                           className="rounded border-gray-300"
                         />
@@ -686,6 +691,32 @@ export default function CheckoutPage() {
                               )}
                             </div>
                           </div>
+                          
+                          {/* ✨ SEULE MODIFICATION: Ajout du champ message */}
+                          <div>
+                            <Label htmlFor="giftMessage">Message personnalisé (optionnel)</Label>
+                            <Textarea
+                              id="giftMessage"
+                              value={giftInfo.message}
+                              onChange={(e) => setGiftInfo(prev => ({
+                                ...prev,
+                                message: e.target.value
+                              }))}
+                              placeholder="Votre message personnalisé pour accompagner ce cadeau..."
+                              maxLength={300}
+                              rows={3}
+                              className="mt-1 resize-none"
+                            />
+                            <div className="flex justify-between items-center mt-1">
+                              <p className="text-xs text-gray-500">
+                                Ce message apparaîtra sur la carte accompagnant votre cadeau
+                              </p>
+                              <span className="text-xs text-gray-400">
+                                {giftInfo.message.length}/300
+                              </span>
+                            </div>
+                          </div>
+                          {/* ✨ FIN MODIFICATION */}
                         </div>
                       )}
                     </div>
@@ -984,6 +1015,13 @@ export default function CheckoutPage() {
                               <p className="text-gray-600">
                                 {giftInfo.recipientFirstName} {giftInfo.recipientLastName}
                               </p>
+                              {/* ✨ SEULE MODIFICATION: Affichage du message dans le résumé */}
+                              {giftInfo.message && (
+                                <div className="mt-2 p-2 bg-pink-50 rounded border border-pink-200">
+                                  <p className="text-xs text-pink-800 font-medium">Message cadeau :</p>
+                                  <p className="text-xs text-pink-700 italic">"{giftInfo.message}"</p>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

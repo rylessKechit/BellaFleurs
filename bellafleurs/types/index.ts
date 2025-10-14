@@ -1,31 +1,33 @@
-import { Document } from 'mongoose';
+// types/index.ts - MISE À JOUR pour ajouter le message cadeau
 
-// Types de base pour MongoDB
+import { Document, Model } from 'mongoose';
+
+// Type de base pour tous les documents MongoDB
 export interface BaseDocument extends Document {
   _id: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Types pour l'utilisateur
+// Interface User pour MongoDB
 export interface IUser extends BaseDocument {
   name: string;
   email: string;
   password?: string;
   role: 'client' | 'admin';
+  phone?: string;
   address?: {
     street: string;
     city: string;
     zipCode: string;
     country: string;
   };
-  phone?: string;
   emailVerified?: Date;
   image?: string;
   
   // Méthodes d'instance
   comparePassword(candidatePassword: string): Promise<boolean>;
-  toPublicJSON(): Omit<IUser, 'password'>;
+  toPublicJSON(): any;
   
   // Virtuals
   fullAddress?: string;
@@ -33,52 +35,57 @@ export interface IUser extends BaseDocument {
   isEmailVerified?: boolean;
 }
 
-// Interface pour une variante de produit
-export interface IProductVariant {
-  _id?: string;
-  name: string;                    // "Petit", "Moyen", "Grand", "Taille unique"
-  price: number;                   // Prix spécifique à cette variante
-  description?: string;            // Description optionnelle de la variante
-  image?: string;                  // Image optionnelle spécifique à cette variante
-  isActive: boolean;               // Si cette variante est disponible
-  order: number;                   // Ordre d'affichage (0 = premier)
+// Interface pour le modèle User
+export interface IUserModel extends Model<IUser> {
+  findByEmail(email: string): Promise<IUser | null>;
+  findAdmins(): Promise<IUser[]>;
+  findClients(): Promise<IUser[]>;
 }
 
-// Types pour les produits - MIS À JOUR AVEC VARIANTS
+// Types pour les variants de produits
+export interface IProductVariant {
+  _id: string;
+  name: string;
+  price: number;
+  stock: number;
+  order: number;
+  description?: string;
+}
+
+// Interface Product pour MongoDB
 export interface IProduct extends BaseDocument {
   name: string;
   description: string;
-  price?: number;                  // Optionnel si hasVariants = true
-  hasVariants: boolean; 
+  images: string[];
+  category: string;
+  subcategory?: string;
+  tags: string[];
+  isActive: boolean;
+  
+  // ✨ NOUVEAU : Gestion flexible des prix avec variants
   pricingType: 'fixed' | 'variants' | 'custom_range';
-  customPricing?: {
+  price?: number;                  // Prix fixe (si pricingType = 'fixed')
+  variants?: IProductVariant[];    // Variants avec leurs prix (si pricingType = 'variants')
+  customPricing?: {               // Prix personnalisé (si pricingType = 'custom_range')
     minPrice: number;
     maxPrice: number;
-  };         // Nouveau : true = produit avec tailles multiples
-  variants: IProductVariant[];     // Nouveau : array des variantes
-  category: 'Bouquets' | 'Fleurs de saisons' | 'Compositions piquées' | 'Roses' | 'Orchidées' | 'Deuil' | 'Incontournable';
-  subcategory?: string;            // Garder pour compatibilité
-  images: string[];
-  isActive: boolean;
-  tags: string[];
-  
-  // Champs optionnels mis à jour
-  entretien?: string;
-  motsClesSEO?: string[];
-  slug?: string;
-  averageRating?: number;
-  reviewsCount?: number;
-  careInstructions?: string;
-  difficulty?: 'facile' | 'modéré' | 'difficile';
-  composition?: string;
-  
-  // Ancien champ SEO (garder pour compatibilité)
-  seo?: {
-    title: string;
-    description: string;
-    keywords: string[];
   };
-  care?: {
+  
+  // SEO et référencement
+  metaTitle?: string;
+  metaDescription?: string;
+  motsClesSEO: string[];
+  
+  // Informations produit avancées
+  featured: boolean;
+  stock: number;
+  dimensions?: {
+    height: number;
+    width: number;
+    depth: number;
+  };
+  weight?: number;
+  careInstructions?: {
     difficulty: 'facile' | 'modéré' | 'difficile';
     watering: string;
     light: string;
@@ -102,7 +109,7 @@ export interface IProduct extends BaseDocument {
   priceRangeFormatted?: string;    // "À partir de 25€" ou "25€ - 45€"
 }
 
-// Types pour les commandes - MIS À JOUR AVEC VARIANTS
+// Types pour les commandes - MIS À JOUR AVEC VARIANTS ET MESSAGE CADEAU
 export interface IOrderItem {
   product: string; // ObjectId en string
   name: string;
@@ -112,6 +119,13 @@ export interface IOrderItem {
   // NOUVEAU : Support des variants dans le panier/commandes
   variantId?: string;              // ID de la variante choisie (index)
   variantName?: string;            // Nom de la variante pour affichage
+}
+
+// ✨ NOUVEAU : Interface pour les informations cadeau avec message
+export interface IGiftInfo {
+  recipientFirstName: string;
+  recipientLastName: string;
+  message?: string;                // ✨ NOUVEAU CHAMP MESSAGE
 }
 
 export interface IOrder extends BaseDocument {
@@ -138,6 +152,11 @@ export interface IOrder extends BaseDocument {
     email: string;
     phone: string;
   };
+  
+  // ✨ NOUVEAU : Support complet du système cadeau avec message
+  isGift?: boolean;
+  giftInfo?: IGiftInfo;
+  
   adminNotes?: string;
   timeline: {
     status: IOrder['status'];
@@ -230,7 +249,7 @@ export interface CartData {
   itemsCount: number;
 }
 
-// Types pour le checkout - MIS À JOUR AVEC VARIANTS
+// Types pour le checkout - MIS À JOUR AVEC VARIANTS ET MESSAGE CADEAU
 export interface CheckoutItem {
   productId: string;
   name: string;
@@ -260,11 +279,22 @@ export interface CustomerInfo {
   phone: string;
 }
 
+// ✨ NOUVEAU : Interface GiftInfo pour le checkout avec message
+export interface GiftInfo {
+  isGift: boolean;
+  recipientFirstName: string;
+  recipientLastName: string;
+  message: string;                 // ✨ NOUVEAU CHAMP MESSAGE
+}
+
 export interface CheckoutData {
   items: CheckoutItem[];
   customerInfo: CustomerInfo;
   deliveryInfo: DeliveryInfo;
   totalAmount: number;
+  // ✨ NOUVEAU : Support du système cadeau avec message
+  isGift?: boolean;
+  giftInfo?: Omit<GiftInfo, 'isGift'>;
 }
 
 // Types pour les reviews
@@ -299,37 +329,19 @@ export interface ISiteSettings extends BaseDocument {
     facebook?: string;
     instagram?: string;
     twitter?: string;
+    youtube?: string;
+  };
+  businessHours: {
+    [key: string]: {
+      open: string;
+      close: string;
+      closed: boolean;
+    };
   };
   deliveryZones: string[];
-  deliveryFee: number;
-  minOrderForFreeDelivery: number;
-  openingHours: {
-    monday: { open: string; close: string; closed: boolean };
-    tuesday: { open: string; close: string; closed: boolean };
-    wednesday: { open: string; close: string; closed: boolean };
-    thursday: { open: string; close: string; closed: boolean };
-    friday: { open: string; close: string; closed: boolean };
-    saturday: { open: string; close: string; closed: boolean };
-    sunday: { open: string; close: string; closed: boolean };
-  };
-}
-
-// Types pour la pagination - AJOUTÉ
-export interface PaginationParams {
-  page: number;
-  limit: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-  };
+  maintenanceMode: boolean;
+  
+  // Virtuals
+  fullAddress?: string;
+  isMaintenanceMode?: boolean;
 }

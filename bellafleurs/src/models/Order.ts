@@ -1,4 +1,4 @@
-// src/models/Order.ts - Index corrigés 
+// src/models/Order.ts - MISE À JOUR avec support message cadeau
 import mongoose, { Schema, Model, Document } from 'mongoose';
 
 export interface IOrderItem {
@@ -31,6 +31,13 @@ export interface ICustomerInfo {
   name: string;
   email: string;
   phone: string;
+}
+
+// ✨ NOUVEAU : Interface pour les informations cadeau avec message
+export interface IGiftInfo {
+  recipientName: string;
+  senderName: string;
+  message?: string; // ✨ NOUVEAU CHAMP MESSAGE
 }
 
 export interface ITimelineEntry {
@@ -66,6 +73,11 @@ export interface IOrder extends Document, IOrderMethods {
   
   deliveryInfo: IDeliveryInfo;
   customerInfo: ICustomerInfo;
+  
+  // ✨ NOUVEAU : Support système cadeau avec message
+  isGift?: boolean;
+  giftInfo?: IGiftInfo;
+  
   adminNotes?: string;
   timeline: ITimelineEntry[];
   estimatedDelivery?: Date;
@@ -198,7 +210,29 @@ const CustomerInfoSchema = new Schema({
     type: String,
     required: [true, 'Customer phone is required'],
     trim: true,
-    match: [/^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/, 'Invalid phone format']
+    match: [/^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/, 'Invalid French phone number']
+  }
+}, { _id: false });
+
+// ✨ NOUVEAU : Schéma pour les informations cadeau avec message
+const GiftInfoSchema = new Schema({
+  recipientName: {
+    type: String,
+    required: [true, 'Recipient name is required for gifts'],
+    trim: true,
+    maxlength: [100, 'Recipient name cannot exceed 100 characters']
+  },
+  senderName: {
+    type: String,
+    required: [true, 'Sender name is required for gifts'],
+    trim: true,
+    maxlength: [100, 'Sender name cannot exceed 100 characters']
+  },
+  message: {
+    type: String,
+    required: false,
+    trim: true,
+    maxlength: [300, 'Gift message cannot exceed 300 characters']
   }
 }, { _id: false });
 
@@ -210,24 +244,23 @@ const TimelineSchema = new Schema({
   },
   date: {
     type: Date,
-    required: true,
-    default: Date.now
+    default: Date.now,
+    required: true
   },
   note: {
     type: String,
     trim: true,
-    maxlength: [200, 'Timeline note cannot exceed 200 characters']
+    maxlength: [500, 'Timeline note cannot exceed 500 characters']
   }
 }, { _id: false });
 
-// Schéma principal
-const OrderSchema = new Schema<IOrder, IOrderModel, IOrderMethods>({
+// Schéma principal Order - MISE À JOUR avec support cadeau et message
+const OrderSchema = new Schema({
   orderNumber: {
     type: String,
     required: [true, 'Order number is required'],
-    // CORRECTION: Pas de unique ici car on définit l'index séparément
-    trim: true,
-    match: [/^BF-\d{8}-\d{4}$/, 'Invalid order number format']
+    unique: true,
+    trim: true
   },
   user: {
     type: Schema.Types.ObjectId,
@@ -274,31 +307,19 @@ const OrderSchema = new Schema<IOrder, IOrderModel, IOrderMethods>({
       values: ['card', 'paypal'],
       message: 'Invalid payment method'
     },
-    default: 'card',
     required: [true, 'Payment method is required']
   },
   
-  // Champs Stripe - CORRECTION: pas d'index unique dans le schéma
+  // Stripe payment fields
   stripePaymentIntentId: {
     type: String,
-    match: [/^pi_[a-zA-Z0-9_]+$/, 'Invalid Stripe Payment Intent ID format']
+    unique: true,
+    sparse: true
   },
-  stripeChargeId: {
-    type: String,
-    match: [/^ch_[a-zA-Z0-9_]+$/, 'Invalid Stripe Charge ID format']
-  },
-  stripeReceiptUrl: {
-    type: String,
-    match: [/^https:\/\/pay\.stripe\.com\/receipts\//, 'Invalid Stripe receipt URL']
-  },
-  stripeRefundId: {
-    type: String,
-    match: [/^re_[a-zA-Z0-9_]+$/, 'Invalid Stripe Refund ID format']
-  },
-  stripeDisputeId: {
-    type: String,
-    match: [/^dp_[a-zA-Z0-9_]+$/, 'Invalid Stripe Dispute ID format']
-  },
+  stripeChargeId: String,
+  stripeReceiptUrl: String,
+  stripeRefundId: String,
+  stripeDisputeId: String,
   
   deliveryInfo: {
     type: DeliveryInfoSchema,
@@ -308,6 +329,19 @@ const OrderSchema = new Schema<IOrder, IOrderModel, IOrderMethods>({
     type: CustomerInfoSchema,
     required: [true, 'Customer information is required']
   },
+  
+  // ✨ NOUVEAU : Champs cadeau avec message
+  isGift: {
+    type: Boolean,
+    default: false
+  },
+  giftInfo: {
+    type: GiftInfoSchema,
+    required: function(this: any) {
+      return this.isGift === true;
+    }
+  },
+  
   adminNotes: {
     type: String,
     trim: true,
@@ -345,7 +379,7 @@ const OrderSchema = new Schema<IOrder, IOrderModel, IOrderMethods>({
   toObject: { virtuals: true }
 });
 
-// CORRECTION: Index définis UNE SEULE FOIS ici
+// Index
 OrderSchema.index({ user: 1, createdAt: -1 });
 OrderSchema.index({ 'customerInfo.email': 1, createdAt: -1 });
 OrderSchema.index({ orderNumber: 1 }, { unique: true });
@@ -354,6 +388,7 @@ OrderSchema.index({ paymentStatus: 1 });
 OrderSchema.index({ stripePaymentIntentId: 1 }, { unique: true, sparse: true });
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ estimatedDelivery: 1 });
+OrderSchema.index({ isGift: 1 }); // ✨ NOUVEAU : Index pour les cadeaux
 
 // Virtuals
 OrderSchema.virtual('itemsCount').get(function(this: IOrder) {
@@ -399,56 +434,123 @@ OrderSchema.methods.calculateTotal = function(this: IOrder): number {
 OrderSchema.methods.updateStatus = async function(this: IOrder, newStatus: IOrder['status'], note?: string): Promise<IOrder> {
   this.status = newStatus;
   
+  // Mettre à jour les dates de tracking
+  const now = new Date();
+  switch (newStatus) {
+    case 'payée':
+      if (!this.confirmedAt) this.confirmedAt = now;
+      break;
+    case 'en_creation':
+      if (!this.preparedAt) this.preparedAt = now;
+      break;
+    case 'prête':
+      if (!this.readyAt) this.readyAt = now;
+      break;
+    case 'livrée':
+      if (!this.deliveredAt) this.deliveredAt = now;
+      break;
+    case 'annulée':
+      if (!this.cancelledAt) this.cancelledAt = now;
+      break;
+  }
+  
   // Ajouter à la timeline
   this.timeline.push({
     status: newStatus,
-    date: new Date(),
-    note: note || `Statut changé vers ${newStatus}`
+    date: now,
+    note
   });
   
-  // Mettre à jour les dates de tracking
-  switch (newStatus) {
-    case 'en_creation':
-      this.confirmedAt = new Date();
-      break;
-    case 'prête':
-      this.preparedAt = new Date();
-      this.readyAt = new Date();
-      break;
-    case 'livrée':
-      this.deliveredAt = new Date();
-      break;
-    case 'annulée':
-      this.cancelledAt = new Date();
-      break;
-  }
+  return this.save();
+};
+
+OrderSchema.methods.updatePaymentStatus = async function(this: IOrder, newStatus: IOrder['paymentStatus']): Promise<IOrder> {
+  this.paymentStatus = newStatus;
   
-  return await this.save();
+  this.timeline.push({
+    status: this.status,
+    date: new Date(),
+    note: `Paiement: ${newStatus}`
+  });
+  
+  return this.save();
 };
 
 OrderSchema.methods.cancel = async function(this: IOrder, reason?: string): Promise<IOrder> {
-  if (!this.canBeCancelled) {
+  if (!this.canBeCancelled()) {
     throw new Error('Cette commande ne peut plus être annulée');
   }
   
-  return await this.updateStatus('annulée', reason || 'Commande annulée');
+  return this.updateStatus('annulée', reason || 'Commande annulée');
+};
+
+OrderSchema.methods.addTimelineEntry = async function(this: IOrder, status: IOrder['status'], note?: string): Promise<IOrder> {
+  this.timeline.push({
+    status,
+    date: new Date(),
+    note
+  });
+  
+  return this.save();
+};
+
+OrderSchema.methods.canBeRefunded = function(this: IOrder): boolean {
+  return this.paymentStatus === 'paid' && ['livrée', 'annulée'].includes(this.status);
 };
 
 // Méthodes statiques
 OrderSchema.statics.generateOrderNumber = async function(): Promise<string> {
-  const today = new Date();
-  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   
-  const count = await this.countDocuments({
-    createdAt: {
-      $gte: new Date(today.setHours(0, 0, 0, 0)),
-      $lt: new Date(today.setHours(23, 59, 59, 999))
-    }
-  });
+  // Trouver le prochain numéro séquentiel pour aujourd'hui
+  const todayPrefix = `BF-${year}${month}${day}`;
+  const todayOrders = await this.find({
+    orderNumber: { $regex: `^${todayPrefix}` }
+  }).sort({ orderNumber: -1 }).limit(1);
   
-  const orderNum = String(count + 1).padStart(4, '0');
-  return `BF-${dateStr}-${orderNum}`;
+  let sequence = 1;
+  if (todayOrders.length > 0) {
+    const lastOrderNumber = todayOrders[0].orderNumber;
+    const lastSequence = parseInt(lastOrderNumber.split('-')[2], 10);
+    sequence = lastSequence + 1;
+  }
+  
+  return `${todayPrefix}-${String(sequence).padStart(4, '0')}`;
 };
+
+// Middleware pre-save
+OrderSchema.pre('save', async function(this: IOrder, next) {
+  // Générer un numéro de commande si nouveau document
+  if (this.isNew && !this.orderNumber) {
+    this.orderNumber = await (this.constructor as IOrderModel).generateOrderNumber();
+  }
+  
+  // Recalculer le total si les items ont changé
+  if (this.isModified('items')) {
+    this.totalAmount = this.calculateTotal();
+  }
+  
+  // ✨ NOUVEAU : Validation cadeau - si isGift est true, giftInfo doit être présent
+  if (this.isGift && !this.giftInfo) {
+    return next(new Error('Gift information is required when isGift is true'));
+  }
+  
+  // ✨ NOUVEAU : Si ce n'est pas un cadeau, supprimer giftInfo
+  if (!this.isGift && this.giftInfo) {
+    this.giftInfo = undefined;
+  }
+  
+  next();
+});
+
+// Middleware post-save pour les notifications
+OrderSchema.post('save', function(this: IOrder) {
+  // Ici on pourrait ajouter des notifications par email, etc.
+  console.log(`✅ Order ${this.orderNumber} saved with status: ${this.status}`);
+});
 
 const Order = (mongoose.models.Order as IOrderModel) || 
   mongoose.model<IOrder, IOrderModel>('Order', OrderSchema);
