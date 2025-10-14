@@ -9,6 +9,13 @@ export interface BaseDocument extends Document {
   updatedAt: Date;
 }
 
+export interface PaginationParams {
+  page: number;
+  limit: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
 // Interface User pour MongoDB
 export interface IUser extends BaseDocument {
   name: string;
@@ -50,6 +57,7 @@ export interface IProductVariant {
   stock: number;
   order: number;
   description?: string;
+  isActive: boolean;
 }
 
 // Interface Product pour MongoDB
@@ -73,7 +81,7 @@ export interface IProduct extends BaseDocument {
   // ✨ NOUVEAU : Gestion flexible des prix avec variants
   pricingType: 'fixed' | 'variants' | 'custom_range';
   price?: number;                  // Prix fixe (si pricingType = 'fixed')
-  variants?: IProductVariant[];    // Variants avec leurs prix (si pricingType = 'variants')
+  variants: IProductVariant[];    // Variants avec leurs prix (si pricingType = 'variants')
   customPricing?: {               // Prix personnalisé (si pricingType = 'custom_range')
     minPrice: number;
     maxPrice: number;
