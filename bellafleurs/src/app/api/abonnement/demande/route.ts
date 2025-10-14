@@ -52,8 +52,7 @@ Action requise : Contacter ce prospect dans les 24h pour finaliser son abonnemen
     const emailSent = await sendEmail({
       to: adminEmail, // ADMIN_EMAIL (destinataire)
       subject: adminSubject,
-      text: adminContent,
-      from: 'Notification Abonnement' // EMAIL_ADMIN_USER (expéditeur)
+      html: adminContent,
     }, 'admin');
 
     if (!emailSent) {
@@ -91,8 +90,7 @@ L'équipe Bella Fleurs
       await sendEmail({
         to: email,
         subject: clientSubject,
-        text: clientContent,
-        from: fromEmail // Même expéditeur pour cohérence
+        html: clientContent,
       }, 'client');
     }
 
