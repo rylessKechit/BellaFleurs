@@ -1,7 +1,7 @@
 // src/components/admin/AdminLayout.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -26,45 +26,107 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-const navigation = [
-  {
-    name: 'Dashboard',
-    href: '/admin/dashboard',
-    icon: BarChart3,
-    current: false,
-  },
-  {
-    name: 'Produits',
-    href: '/admin/produits',
-    icon: Package,
-    current: false,
-    badge: '45'
-  },
-  {
-    name: 'Commandes',
-    href: '/admin/commandes',
-    icon: ShoppingCart,
-    current: false,
-    badge: '12'
-  },
-  {
-    name: 'Clients',
-    href: '/admin/clients',
-    icon: Users,
-    current: false,
-  },
-  {
-    name: 'Paramètres',
-    href: '/admin/parametres',
-    icon: Settings,
-    current: false,
-  }
-];
+interface NavigationCounts {
+  products: number;
+  orders: number;
+}
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [counts, setCounts] = useState<NavigationCounts>({
+    products: 0,
+    orders: 0
+  });
+  const [isLoadingCounts, setIsLoadingCounts] = useState(true);
   const pathname = usePathname();
   const { user, logout } = useAuth();
+
+  // Fonction pour récupérer les compteurs
+  const fetchCounts = async () => {
+    try {
+      setIsLoadingCounts(true);
+      
+      // Récupérer le nombre de produits
+      const productsResponse = await fetch('/api/admin/products?limit=1', {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      // Récupérer TOUTES les commandes pour filtrer côté client
+      const ordersResponse = await fetch('/api/admin/orders?limit=1000', {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      let productCount = 0;
+      let paidOrdersCount = 0;
+
+      if (productsResponse.ok) {
+        const productsData = await productsResponse.json();
+        productCount = productsData.data?.pagination?.totalCount || 0;
+      }
+
+      if (ordersResponse.ok) {
+        const ordersData = await ordersResponse.json();
+        const allOrders = ordersData.data?.orders || [];
+        // Filtrer côté client pour ne garder que les commandes payées
+        paidOrdersCount = allOrders.filter((order: any) => order.paymentStatus === 'paid').length;
+        console.log('Commandes payées:', paidOrdersCount);
+      }
+
+      setCounts({
+        products: productCount,
+        orders: paidOrdersCount
+      });
+
+    } catch (error) {
+      console.error('Erreur lors du chargement des compteurs:', error);
+      // En cas d'erreur, on garde les valeurs par défaut
+    } finally {
+      setIsLoadingCounts(false);
+    }
+  };
+
+  // Charger les compteurs au montage du composant
+  useEffect(() => {
+    fetchCounts();
+  }, []);
+
+  // Configuration de la navigation avec badges dynamiques
+  const navigation = [
+    {
+      name: 'Dashboard',
+      href: '/admin/dashboard',
+      icon: BarChart3,
+      current: false,
+    },
+    {
+      name: 'Produits',
+      href: '/admin/produits',
+      icon: Package,
+      current: false,
+      badge: counts.products.toString()
+    },
+    {
+      name: 'Commandes',
+      href: '/admin/commandes',
+      icon: ShoppingCart,
+      current: false,
+      badge: counts.orders > 0 ? counts.orders.toString() : undefined
+    },
+    {
+      name: 'Clients',
+      href: '/admin/clients',
+      icon: Users,
+      current: false,
+    },
+    {
+      name: 'Paramètres',
+      href: '/admin/parametres',
+      icon: Settings,
+      current: false,
+    }
+  ];
 
   // Mettre à jour l'état current des liens de navigation
   const navigationWithCurrent = navigation.map(item => ({
@@ -109,8 +171,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           <span>{item.name}</span>
                         </div>
                         {item.badge && (
-                          <Badge variant="secondary" className="ml-2 scale-75 sm:scale-100">
-                            {item.badge}
+                          <Badge 
+                            variant="secondary" 
+                            className={`ml-2 scale-75 sm:scale-100 ${isLoadingCounts ? 'animate-pulse' : ''}`}
+                          >
+                            {isLoadingCounts ? '...' : item.badge}
                           </Badge>
                         )}
                       </Link>
@@ -153,8 +218,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             <span>{item.name}</span>
                           </div>
                           {item.badge && (
-                            <Badge variant="secondary">
-                              {item.badge}
+                            <Badge 
+                              variant="secondary"
+                              className={isLoadingCounts ? 'animate-pulse' : ''}
+                            >
+                              {isLoadingCounts ? '...' : item.badge}
                             </Badge>
                           )}
                         </Link>
