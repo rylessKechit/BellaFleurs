@@ -25,6 +25,7 @@ export interface IDeliveryInfo {
   address?: IDeliveryAddress;
   date: Date;
   notes?: string;
+  timeSlot?: string;
 }
 
 export interface ICustomerInfo {
@@ -189,7 +190,12 @@ const DeliveryInfoSchema = new Schema({
     type: String,
     trim: true,
     maxlength: [500, 'Notes cannot exceed 500 characters']
-  }
+  },
+  timeSlot: {
+    type: String,
+    enum: ['9h-13h', '14h-19h'],
+    required: false
+  },
 }, { _id: false });
 
 const CustomerInfoSchema = new Schema({

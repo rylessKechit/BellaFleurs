@@ -22,6 +22,7 @@ interface DeliveryInfo {
   type: 'delivery' | 'pickup';
   address?: DeliveryAddress;
   date: string;
+  timeSlot: string;
   notes?: string;
 }
 

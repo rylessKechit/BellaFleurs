@@ -54,6 +54,7 @@ interface Order {
       zipCode: string;
     };
     date: string;
+    timeSlot: string;
     notes?: string;
   };
   customerInfo: {

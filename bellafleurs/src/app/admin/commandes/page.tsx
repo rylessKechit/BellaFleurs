@@ -76,12 +76,19 @@ interface Order {
       zipCode: string;
     };
     date: string;
+    timeSlot?: string;  // ✅ AJOUTER
     notes?: string;
   };
   customerInfo: {
     name: string;
     email: string;
     phone: string;
+  };
+  isGift?: boolean;      // ✅ AJOUTER
+  giftInfo?: {           // ✅ AJOUTER
+    recipientName: string;
+    senderName: string;
+    message?: string;
   };
   adminNotes?: string;
   timeline: {
@@ -114,6 +121,7 @@ export default function AdminOrdersPage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log(data.data.orders)
         setOrders(data.data.orders || []);
       } else {
         throw new Error('Erreur lors du chargement des commandes');
@@ -124,6 +132,14 @@ export default function AdminOrdersPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const formatTimeSlot = (timeSlot: string) => {
+    const timeSlots = {
+      '9h-13h': '9h - 13h (matin)',
+      '14h-19h': '14h - 19h (après-midi)'
+    };
+    return timeSlots[timeSlot as keyof typeof timeSlots] || timeSlot;
   };
 
   const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus, note?: string) => {
@@ -622,6 +638,15 @@ export default function AdminOrdersPage() {
                         <Calendar className="w-4 h-4 text-gray-500" />
                         <span>Date: {formatDate(selectedOrder.deliveryInfo.date)}</span>
                       </div>
+                      
+                      {/* ✅ AJOUTER l'affichage du créneau horaire */}
+                      {selectedOrder.deliveryInfo.timeSlot && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Clock className="w-4 h-4 text-gray-500" />
+                          <span>Créneau: {formatTimeSlot(selectedOrder.deliveryInfo.timeSlot)}</span>
+                        </div>
+                      )}
+                      
                       <div className="flex items-center gap-2 text-sm">
                         <Truck className="w-4 h-4 text-gray-500" />
                         <span>Type: {selectedOrder.deliveryInfo.type === 'delivery' ? 'Livraison' : 'Retrait'}</span>
@@ -643,6 +668,39 @@ export default function AdminOrdersPage() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* ✅ AJOUTER APRÈS la Card de livraison - Section cadeau */}
+                {selectedOrder.isGift && selectedOrder.giftInfo && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                        🎁 Informations cadeau
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-gray-500">Destinataire:</span>
+                          <span className="font-medium">{selectedOrder.giftInfo.recipientName}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-gray-500">Expéditeur:</span>
+                          <span className="font-medium">{selectedOrder.giftInfo.senderName}</span>
+                        </div>
+                        
+                        {selectedOrder.giftInfo.message && (
+                          <div className="text-sm">
+                            <span className="text-gray-500 block mb-2">💌 Message:</span>
+                            <div className="bg-pink-50 p-3 rounded border italic text-pink-800 border-pink-200">
+                              "{selectedOrder.giftInfo.message}"
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
           </DialogContent>

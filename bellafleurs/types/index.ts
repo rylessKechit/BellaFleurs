@@ -161,6 +161,7 @@ export interface IOrder extends BaseDocument {
       country: string;
     };
     date: Date;
+    timeSlot: string;
     notes?: string;
   };
   customerInfo: {
@@ -287,6 +288,7 @@ export interface DeliveryInfo {
   };
   date: string;
   notes?: string;
+  timeSlot: string;
 }
 
 export interface CustomerInfo {

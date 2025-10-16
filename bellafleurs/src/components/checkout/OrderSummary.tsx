@@ -23,6 +23,7 @@ interface DeliveryInfo {
   type: 'delivery' | 'pickup';
   date: string;
   notes?: string;
+  timeSlot: string;
 }
 
 interface OrderSummaryProps {

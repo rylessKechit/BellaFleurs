@@ -77,8 +77,11 @@ export async function POST(req: NextRequest) {
         type: orderData.deliveryInfo.type,
         address: orderData.deliveryInfo.address,
         date: orderData.deliveryInfo.date,
+        timeSlot: orderData.deliveryInfo.timeSlot, // ✅ AJOUTER
         notes: orderData.deliveryInfo.notes
       },
+      isGift: orderData.deliveryInfo.isGift || false,           // ✅ AJOUTER
+      giftInfo: orderData.deliveryInfo.giftInfo || undefined, // ✅ AJOUTER
       paymentMethod: orderData.paymentMethod,
       totalAmount: orderData.totalAmount,
       status: 'payée', // Utiliser directement 'payée' au lieu de 'pending_payment'
