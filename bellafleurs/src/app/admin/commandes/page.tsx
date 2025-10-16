@@ -221,7 +221,8 @@ export default function AdminOrdersPage() {
     payée: orders.filter(o => o.status === 'payée').length,
     en_creation: orders.filter(o => o.status === 'en_creation').length,
     prête: orders.filter(o => o.status === 'prête').length,
-    en_livraison: orders.filter(o => o.status === 'en_livraison').length
+    en_livraison: orders.filter(o => o.status === 'en_livraison').length,
+    livrée: orders.filter(o => o.status === 'livrée').length
   };
 
   const getStatusBadge = (status: OrderStatus) => {
@@ -300,6 +301,12 @@ export default function AdminOrdersPage() {
             <CardContent className="p-3 sm:p-4 text-center">
               <p className="text-lg sm:text-2xl font-bold text-purple-600">{stats.en_livraison}</p>
               <p className="text-xs sm:text-sm text-gray-600">En livraison</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-pink-600">{stats.livrée}</p>
+              <p className="text-xs sm:text-sm text-gray-600">Livrée</p>
             </CardContent>
           </Card>
         </div>
