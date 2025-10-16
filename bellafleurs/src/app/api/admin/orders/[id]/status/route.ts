@@ -35,7 +35,6 @@ export async function PATCH(
     await connectDB();
 
     const body = await req.json();
-    console.log('📝 Données reçues:', body); // Debug
     
     const validationResult = statusUpdateSchema.safeParse(body);
     if (!validationResult.success) {
@@ -65,7 +64,6 @@ export async function PATCH(
     }
 
     const currentStatus = currentOrder.status;
-    console.log(`📊 Changement de statut: ${currentStatus} → ${newStatus}`); // Debug
 
     // Workflow plus flexible - permettre plus de transitions
     const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
@@ -123,9 +121,7 @@ export async function PATCH(
     // Envoyer email de notification au client (sauf pour "payée" initiale)
     if (newStatus !== 'payée' && newStatus !== currentStatus) {
       try {
-        console.log('📧 Envoi email de notification...');
         const emailSent = await sendOrderStatusEmail(updatedOrder, newStatus, note);
-        console.log(`📧 Email envoyé: ${emailSent}`);
         
         // Mettre à jour le flag d'envoi d'email
         await Order.findByIdAndUpdate(params.id, {
@@ -137,8 +133,6 @@ export async function PATCH(
         // Ne pas faire échouer la mise à jour du statut pour autant
       }
     }
-
-    console.log(`✅ Statut commande ${updatedOrder.orderNumber} changé: ${currentStatus} → ${newStatus}`);
 
     return NextResponse.json({
       success: true,

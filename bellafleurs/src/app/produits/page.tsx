@@ -101,10 +101,7 @@ export default function ProductsPage() {
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     
-    console.log('🔍 Initialisation depuis URL:', { category, search });
-    
     if (category && CATEGORIES.includes(category)) {
-      console.log('✅ Catégorie URL valide:', category);
       setSelectedCategory(category);
     }
     if (search) {
@@ -118,7 +115,6 @@ export default function ProductsPage() {
   // Charger les produits SEULEMENT après initialisation
   useEffect(() => {
     if (isInitialized) {
-      console.log('🚀 fetchProducts après initialisation');
       fetchProducts();
     }
   }, [currentPage, selectedCategory, sortBy, isInitialized]);
@@ -126,13 +122,6 @@ export default function ProductsPage() {
     const fetchProducts = async () => {
       try {
         setIsLoading(true);
-        
-        console.log('🔍 fetchProducts appelé avec:', {
-          currentPage,
-          selectedCategory,
-          sortBy,
-          searchTerm
-        });
         
         const params = new URLSearchParams({
           page: currentPage.toString(),
@@ -142,9 +131,6 @@ export default function ProductsPage() {
 
         if (selectedCategory !== 'all') {
           params.append('category', selectedCategory);
-          console.log('✅ Catégorie ajoutée aux params:', selectedCategory);
-        } else {
-          console.log('⚠️ selectedCategory est "all", pas de filtre appliqué');
         }
 
         if (searchTerm.trim()) {
@@ -152,13 +138,11 @@ export default function ProductsPage() {
         }
 
         const apiUrl = `/api/products?${params.toString()}`;
-        console.log('🚀 URL API finale:', apiUrl);
 
         const response = await fetch(apiUrl);
         
         if (response.ok) {
           const data: ApiResponse = await response.json();
-          console.log('📦 Données reçues:', data);
           setProducts(data.data.products);
           setTotalPages(data.data.pagination?.totalPages || 1);
         } else {
@@ -251,13 +235,6 @@ export default function ProductsPage() {
 
     // Obtenir l'URL du produit
   const getProductUrl = () => {
-    // 🔍 VÉRIFICATION : Quel URL est généré ?
-    console.log('🔗 Génération URL pour produit:', {
-      id: product._id,
-      slug: product.slug,
-      hasSlug: !!product.slug
-    });
-    
     // Priorité au slug si disponible
     if (product.slug) {
       return `/produits/${product.slug}`;

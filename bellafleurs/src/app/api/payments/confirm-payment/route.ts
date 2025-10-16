@@ -122,14 +122,6 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Log pour le debug
-        console.log('✅ Paiement confirmé:', {
-          paymentIntentId,
-          orderId: order._id,
-          orderNumber: order.orderNumber,
-          amount: paymentIntent.amount
-        });
-
         return NextResponse.json({
           success: true,
           data: {

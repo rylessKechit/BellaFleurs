@@ -341,7 +341,6 @@ function ImageUpload({
       });
 
       const result = await response.json();
-      console.log('Upload result:', result);
 
       if (response.ok && result.success && result.data) {
         // TON FORMAT : { success: true, data: { urls: ["https://..."] } }

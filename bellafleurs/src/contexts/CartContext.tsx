@@ -45,7 +45,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
         
         setCartCountState(Math.max(0, totalItems));
-        console.log('🛒 Cart count updated from API:', totalItems);
         
       } else if (response.status === 404) {
         setCartCountState(0);
@@ -66,7 +65,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const incrementCartCount = useCallback((quantity: number = 1) => {
     setCartCountState(prev => {
       const newCount = Math.max(0, prev + quantity);
-      console.log('🛒 Cart count incremented (optimistic):', prev, '→', newCount);
       return newCount;
     });
   }, []);
@@ -75,7 +73,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const decrementCartCount = useCallback((quantity: number = 1) => {
     setCartCountState(prev => {
       const newCount = Math.max(0, prev - quantity);
-      console.log('🛒 Cart count decremented (optimistic):', prev, '→', newCount);
       return newCount;
     });
   }, []);
@@ -83,20 +80,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // ✅ Setter direct pour mise à jour manuelle
   const setCartCount = useCallback((count: number) => {
     setCartCountState(Math.max(0, count));
-    console.log('🛒 Cart count set manually:', count);
   }, []);
 
   // ✅ Setter spécifique pour les retours API
   const setCartCountFromAPI = useCallback((count: number) => {
     const finalCount = Math.max(0, count);
-    console.log('🛒 Setting cart count from API:', finalCount);
     setCartCountState(finalCount);
   }, []);
 
   // Vider le compteur
   const clearCartCount = useCallback(() => {
     setCartCountState(0);
-    console.log('🛒 Cart cleared');
   }, []);
 
   // Synchronisation périodique (moins fréquente)

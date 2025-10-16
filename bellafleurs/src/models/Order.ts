@@ -552,12 +552,6 @@ OrderSchema.pre('save', async function(this: IOrder, next) {
   next();
 });
 
-// Middleware post-save pour les notifications
-OrderSchema.post('save', function(this: IOrder) {
-  // Ici on pourrait ajouter des notifications par email, etc.
-  console.log(`✅ Order ${this.orderNumber} saved with status: ${this.status}`);
-});
-
 const Order = (mongoose.models.Order as IOrderModel) || 
   mongoose.model<IOrder, IOrderModel>('Order', OrderSchema);
 

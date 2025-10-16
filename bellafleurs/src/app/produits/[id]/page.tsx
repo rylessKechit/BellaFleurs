@@ -139,7 +139,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           }
           
           if (productData.hasVariants && productData.variants?.length > 0) {
-            console.log('🔍 Variants bruts reçus:', productData.variants);
             
             const enrichedVariants = productData.variants.map((variant: ProductVariant, index: number) => ({
               ...variant,
@@ -148,7 +147,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             }));
             
             productData.variants = enrichedVariants;
-            console.log('✅ Variants enrichis:', enrichedVariants);
             
             const firstActiveVariant = enrichedVariants.find((v: ProductVariant) => v.isActive === true);
             const fallbackVariant = enrichedVariants[0];
@@ -156,10 +154,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             
             if (selectedVar?.stableId) {
               setSelectedVariant(selectedVar.stableId);
-              console.log('✅ Variant sélectionné:', selectedVar.stableId, selectedVar.name);
             }
-          } else {
-            console.log('ℹ️ Produit simple, pas de variants');
           }
           
           setProduct(productData);
@@ -212,13 +207,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       variantIndex = selectedVariantData.index;
       variantName = selectedVariantData.name;
       variantId = selectedVariantData.stableId;
-      
-      console.log('🛒 Ajout au panier variant:', {
-        variantId,
-        variantName,
-        variantIndex,
-        price: priceToUse
-      });
     } else {
       priceToUse = product.price || 0;
     }
@@ -234,8 +222,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         variantIndex: variantIndex,
         customPrice: product.pricingType === 'custom_range' ? customPrice : undefined
       };
-      
-      console.log('🛒 Payload panier:', cartPayload);
 
       const response = await fetch('/api/cart', {
         method: 'POST',
@@ -251,7 +237,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         
         // ✅ NOUVEAU: Incrémenter le cartCount immédiatement
         incrementCartCount(quantity);
-        console.log('✅ Cart count incrémenté de:', quantity);
       } else {
         throw new Error(data.error?.message || 'Erreur lors de l\'ajout au panier');
       }

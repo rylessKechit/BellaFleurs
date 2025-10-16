@@ -335,14 +335,12 @@ export default function CheckoutPage() {
     
     // Vider le panier côté client
     try {
-      console.log('🛒 Vidage du panier côté client...');
       const clearResponse = await fetch('/api/cart/clear', {
         method: 'POST',
         credentials: 'include'
       });
       
       if (clearResponse.ok) {
-        console.log('✅ Panier vidé côté client');
       } else {
         console.warn('⚠️ Erreur vidage panier côté client');
       }

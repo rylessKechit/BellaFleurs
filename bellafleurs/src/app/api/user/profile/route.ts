@@ -62,8 +62,6 @@ export async function GET(request: NextRequest) {
       updatedAt: user.updatedAt
     };
 
-    console.log('✅ Profil utilisateur récupéré:', user.email);
-
     return NextResponse.json({
       success: true,
       data: userProfile
@@ -137,8 +135,6 @@ export async function PUT(request: NextRequest) {
         }
       }, { status: 404 });
     }
-
-    console.log('✅ Profil utilisateur mis à jour:', updatedUser.email);
 
     return NextResponse.json({
       success: true,

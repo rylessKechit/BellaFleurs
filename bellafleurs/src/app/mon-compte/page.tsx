@@ -76,8 +76,6 @@ export default function MonComptePage() {
       if (!isAuthenticated || !user || hasLoadedData.current || isLoadingRef.current) {
         return;
       }
-
-      console.log('🔄 Chargement des données utilisateur...');
       isLoadingRef.current = true;
       setIsLoading(true);
 
@@ -94,7 +92,6 @@ export default function MonComptePage() {
         }
 
         hasLoadedData.current = true;
-        console.log('✅ Données utilisateur chargées avec succès');
 
       } catch (error) {
         console.error('❌ Erreur lors du chargement:', error);
@@ -124,7 +121,6 @@ export default function MonComptePage() {
       if (response.ok) {
         const data = await response.json();
         setProfile(data.data);
-        console.log('✅ Profil chargé:', data.data.email);
         return data.data;
       } else {
         throw new Error('Erreur lors du chargement du profil');
@@ -148,7 +144,6 @@ export default function MonComptePage() {
         const data = await response.json();
         const orders = data.data.orders || [];
         setRecentOrders(orders);
-        console.log('✅ Commandes chargées:', orders.length);
         return orders;
       } else {
         console.warn('⚠️ Pas de commandes trouvées');
@@ -174,8 +169,6 @@ export default function MonComptePage() {
       totalSpent,
       avgOrderAmount
     });
-
-    console.log('📊 Stats calculées:', { totalOrders, totalSpent, avgOrderAmount });
   };
 
   // 💾 SAUVEGARDER LES MODIFICATIONS

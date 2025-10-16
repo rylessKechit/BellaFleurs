@@ -103,7 +103,6 @@ export default function AdminDashboard() {
         const statsData = await statsRes.json();
         if (statsData.success && statsData.data.stats) {
           setStats(statsData.data.stats);
-          console.log('📊 Vraies statistiques chargées:', statsData.data.stats);
         }
       } else {
         toast.error('Erreur lors du chargement des statistiques');

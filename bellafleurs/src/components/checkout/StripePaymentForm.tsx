@@ -109,8 +109,6 @@ function PaymentForm({
             totalAmount: amount
           };
 
-          console.log('🔄 Payload envoyé:', paymentPayload);
-
           // Créer Payment Intent
           const response = await fetch('/api/payments/create-payment-intent', {
             method: 'POST',
@@ -139,10 +137,6 @@ function PaymentForm({
             onError(confirmError.message || 'Erreur lors du paiement');
           } else {
             ev.complete('success');
-            
-            // DEBUGGING : Logs pour Apple Pay / Google Pay
-            console.log('✅ Paiement Apple/Google Pay confirmé:', paymentIntent.id);
-            console.log('🔍 Payment Intent Apple/Google Pay complet:', paymentIntent);
             
             onSuccess(paymentIntent);
           }
@@ -196,8 +190,6 @@ function PaymentForm({
         totalAmount: amount
       };
 
-      console.log('🔄 Payload envoyé pour carte:', paymentPayload);
-
       // Créer Payment Intent
       const response = await fetch('/api/payments/create-payment-intent', {
         method: 'POST',
@@ -214,8 +206,6 @@ function PaymentForm({
 
       const result = await response.json();
       const { client_secret } = result.data.paymentIntent;
-
-      console.log('✅ Payment Intent créé avec succès');
 
       // Confirmer le paiement avec la carte
       const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
@@ -236,11 +226,6 @@ function PaymentForm({
         console.error('❌ Erreur confirmation:', confirmError);
         onError(confirmError.message || 'Erreur lors du paiement');
       } else {
-        console.log('✅ Paiement confirmé:', paymentIntent.id);
-        
-        // DEBUGGING : Vérifier le Payment Intent ID récupéré
-        console.log('🔍 Payment Intent complet:', paymentIntent);
-        console.log('🔍 Payment Intent ID à envoyer:', paymentIntent.id);
         
         onSuccess(paymentIntent);
       }

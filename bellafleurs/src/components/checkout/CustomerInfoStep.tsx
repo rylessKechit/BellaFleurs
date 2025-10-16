@@ -33,7 +33,6 @@ export default function CustomerInfoStep({
   // Pré-remplir automatiquement les champs avec les données utilisateur
   useEffect(() => {
     if (isAuthenticated && user && !isLoading) {
-      console.log('🔄 Pré-remplissage des données utilisateur:', user);
       
       // Extraire prénom et nom du champ "name" complet
       const fullName = user.name || '';
@@ -48,7 +47,6 @@ export default function CustomerInfoStep({
                            !customerInfo.phone;
 
       if (shouldPrefill) {
-        console.log('✅ Pré-remplissage effectué');
         setCustomerInfo({
           firstName: firstName,
           lastName: lastName,
@@ -72,8 +70,6 @@ export default function CustomerInfoStep({
           if (response.ok) {
             const data = await response.json();
             const userProfile = data.data;
-            
-            console.log('📋 Profil utilisateur récupéré:', userProfile);
 
             // Extraire prénom et nom
             const fullName = userProfile.name || '';

@@ -94,7 +94,6 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!validatedFields.success) {
-            console.log('❌ Validation failed:', validatedFields.error.flatten().fieldErrors);
             return null;
           }
 
@@ -107,7 +106,6 @@ export const authOptions: NextAuthOptions = {
           const user = await User.findOne({ email }).select('+password') as AuthUser | null;
           
           if (!user) {
-            console.log('❌ User not found:', email);
             return null;
           }
 
@@ -115,11 +113,8 @@ export const authOptions: NextAuthOptions = {
           const isPasswordValid = await user.comparePassword(password);
           
           if (!isPasswordValid) {
-            console.log('❌ Invalid password for:', email);
             return null;
           }
-
-          console.log('✅ User authenticated:', user.email);
           
           // Conversion sécurisée de l'ID
           const userId = user._id instanceof mongoose.Types.ObjectId 
@@ -203,7 +198,6 @@ export const authOptions: NextAuthOptions = {
               image: (profile as any).picture,
               emailVerified: new Date(),
             });
-            console.log('✅ New Google user created:', profile.email);
           }
           
           return true;
@@ -214,20 +208,6 @@ export const authOptions: NextAuthOptions = {
       }
 
       return true;
-    },
-  },
-
-  // Événements
-  events: {
-    async signIn({ user, account, isNewUser }) {
-      console.log(`🔐 User signed in: ${user.email} via ${account?.provider}`);
-      if (isNewUser) {
-        console.log('🆕 New user registration');
-      }
-    },
-    
-    async signOut() {
-      console.log('🔓 User signed out');
     },
   },
 

@@ -32,6 +32,7 @@ const createOrderSchema = z.object({
       complement: z.string().optional()
     }).optional(),
     date: z.date().or(z.string()),
+    timeSlot: z.enum(['9h-13h', '14h-19h']),
     notes: z.string().optional()
   }),
   totalAmount: z.number().positive(),
@@ -49,6 +50,8 @@ export async function POST(req: NextRequest) {
 
     // Valider les données
     const body = await req.json();
+
+    console.log('ORDERRRRRR :', body);
     
     // 🔧 CORRECTION : Convertir deliveryInfo.date string -> Date AVANT validation
     if (body.deliveryInfo?.date && typeof body.deliveryInfo.date === 'string') {
@@ -71,6 +74,8 @@ export async function POST(req: NextRequest) {
 
     const orderData = validationResult.data;
 
+    console.log('Order Data après validation:', orderData);
+
     // Vérifier si une commande avec ce Payment Intent existe déjà
     if (orderData.stripePaymentIntentId) {
       const existingOrder = await Order.findOne({ 
@@ -78,7 +83,6 @@ export async function POST(req: NextRequest) {
       });
       
       if (existingOrder) {
-        console.log('⚠️ Commande déjà existante via Payment Intent:', existingOrder.orderNumber);
         return NextResponse.json({
           success: true,
           data: { order: existingOrder },
@@ -107,14 +111,11 @@ export async function POST(req: NextRequest) {
     });
 
     await newOrder.save();
-    
-    console.log('✅ Commande créée côté client:', newOrder.orderNumber);
 
     // Vider le panier si l'utilisateur est connecté
     if (session?.user?.id) {
       try {
         await Cart.deleteOne({ user: session.user.id });
-        console.log('🛒 Panier vidé');
       } catch (error) {
         console.warn('⚠️ Erreur vidage panier:', error);
       }

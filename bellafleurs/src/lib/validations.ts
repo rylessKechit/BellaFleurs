@@ -145,6 +145,7 @@ export const createOrderSchema = z.object({
       complement: z.string().optional()
     }).optional(),
     date: z.date(),
+    timeSlot: z.enum(['9h-13h', '14h-19h']),
     notes: z.string().max(500, 'Notes trop longues').optional()
   }).refine((data) => {
     // Adresse requise pour livraison
@@ -272,9 +273,7 @@ export function validateProductData(data: unknown): {
   errors?: z.ZodError;
 } {
   try {
-    console.log('🔍 Validation des données produit:', data);
     const result = createProductSchema.parse(data);
-    console.log('✅ Validation réussie:', result);
     return { success: true, data: result };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -309,9 +308,7 @@ export function validateOrderData(data: unknown): {
   errors?: z.ZodError;
 } {
   try {
-    console.log('🔍 Validation des données commande:', data);
     const result = createOrderSchema.parse(data);
-    console.log('✅ Validation commande réussie');
     return { success: true, data: result };
   } catch (error) {
     if (error instanceof z.ZodError) {

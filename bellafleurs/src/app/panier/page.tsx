@@ -93,8 +93,6 @@ export default function CartPage() {
     
     if (newQuantity < 1 || newQuantity > 50) return;
     
-    console.log('🔄 Frontend: Updating quantity', { productId, newQuantity, variantId });
-    
     setUpdatingItems(prev => new Set(prev).add(itemKey));
     
     try {
@@ -112,22 +110,13 @@ export default function CartPage() {
       if (response.ok) {
         const data = await response.json();
         
-        console.log('📦 Frontend UPDATE: Response data:', {
-          success: data.success,
-          cartItemsCount: data.data?.cartItemsCount,
-          itemsLength: data.data?.cart?.items?.length,
-          message: data.message
-        });
-        
         setCart(data.data.cart);
         
         // ✅ CORRECTION : Vérifier et utiliser cartItemsCount de l'API
         if (data.data?.cartItemsCount !== undefined) {
-          console.log('🔄 Frontend UPDATE: Updating cart count to:', data.data.cartItemsCount);
           setCartCountFromAPI(data.data.cartItemsCount);
         } else if (data.data?.cart) {
           // ✅ FALLBACK : Calculer depuis le cart si cartItemsCount manque
-          console.log('🔄 Frontend UPDATE: Using fallback cart count:', data.data.cart.totalItems);
           setCartCountFromAPI(data.data.cart.totalItems || 0);
         }
       } else {
@@ -150,42 +139,23 @@ export default function CartPage() {
     const productId = getProductId(productItem);
     const itemKey = variantId ? `${productId}_${variantId}` : productId;
     
-    console.log('🗑️ Frontend: Removing item', { 
-      productItem, 
-      extractedProductId: productId, 
-      variantId, 
-      itemKey 
-    });
-    
     setUpdatingItems(prev => new Set(prev).add(itemKey));
     
     try {
       const params = new URLSearchParams({ productId }); // ✅ MAINTENANT C'EST UN STRING
       if (variantId) params.append('variantId', variantId);
       
-      console.log('🌐 Frontend: Making DELETE request to:', `/api/cart?${params}`);
-      
       const response = await fetch(`/api/cart?${params}`, {
         method: 'DELETE',
         credentials: 'include'
       });
 
-      console.log('📡 Frontend: Response status:', response.status);
-
       if (response.ok) {
         const data = await response.json();
-        
-        console.log('📦 Frontend: Response data:', {
-          success: data.success,
-          cartItemsCount: data.data?.cartItemsCount,
-          itemsLength: data.data?.cart?.items?.length,
-          message: data.message
-        });
         
         setCart(data.data.cart);
         
         if (data.data.cartItemsCount !== undefined) {
-          console.log('🔄 Frontend: Updating cart count to:', data.data.cartItemsCount);
           setCartCountFromAPI(data.data.cartItemsCount);
         }
         

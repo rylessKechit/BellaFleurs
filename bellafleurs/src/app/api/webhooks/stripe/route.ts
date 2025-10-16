@@ -15,12 +15,6 @@ export async function POST(req: NextRequest) {
     const headersList = headers();
     const signature = headersList.get('stripe-signature');
 
-    // PRODUCTION : Logs de debug
-    console.log('🔔 Webhook reçu en production');
-    console.log('📋 Headers disponibles:', Object.fromEntries(headersList.entries()));
-    console.log('🔑 Webhook secret configuré:', webhookSecret ? 'OUI' : 'NON');
-    console.log('✍️ Signature présente:', signature ? 'OUI' : 'NON');
-
     if (!signature) {
       console.error('❌ Signature Stripe manquante');
       console.error('📋 Headers reçus:', Object.fromEntries(headersList.entries()));
@@ -36,7 +30,6 @@ export async function POST(req: NextRequest) {
 
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-      console.log('✅ Signature webhook validée');
     } catch (error: any) {
       console.error('❌ Erreur de signature webhook:', {
         message: error.message,
@@ -50,7 +43,6 @@ export async function POST(req: NextRequest) {
     }
 
     await connectDB();
-    console.log(`🔔 Webhook reçu: ${event.type}`);
 
     try {
       if (event.type === 'payment_intent.succeeded') {
@@ -76,8 +68,6 @@ export async function POST(req: NextRequest) {
 
 async function handlePaymentIntentSucceeded(paymentIntent: any) {
   try {
-    console.log('✅ Paiement réussi, mise à jour de la commande...', paymentIntent.id);
-
     const metadata = paymentIntent.metadata;
     
     // Récupérer l'ID de commande depuis les métadonnées
@@ -98,7 +88,6 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 
     // CHANGEMENT : On enlève le return qui empêchait l'envoi des emails
     if (existingOrder.paymentStatus === 'paid') {
-      console.log('⚠️ Commande déjà payée, mais on continue pour les emails:', existingOrder.orderNumber);
       // Pas de return ici !
     }
 
@@ -131,13 +120,10 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
       return;
     }
 
-    console.log('✅ Commande mise à jour:', updatedOrder.orderNumber);
-
     // Vider le panier si l'utilisateur est connecté
     if (metadata.user_id && metadata.user_id !== 'guest') {
       try {
         await Cart.deleteOne({ user: metadata.user_id });
-        console.log('🛒 Panier vidé pour l\'utilisateur:', metadata.user_id);
       } catch (error) {
         console.warn('⚠️ Erreur lors du vidage du panier:', error);
       }
@@ -145,41 +131,24 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 
     // ENVOI DES EMAILS
     try {
-      console.log('📧 Début envoi des emails...');
-
       // 1. Email de confirmation au client
-      console.log('📧 Envoi email de confirmation...');
       const confirmationSent = await sendOrderConfirmation(updatedOrder);
       if (confirmationSent) {
-        console.log('✅ Email de confirmation envoyé au client');
       } else {
         console.error('❌ Échec envoi email de confirmation');
       }
 
       // 2. Notification à l'admin
-      console.log('📧 Envoi notification admin...');
       const adminNotificationSent = await sendNewOrderNotification(updatedOrder);
       if (adminNotificationSent) {
-        console.log('✅ Notification admin envoyée');
       } else {
         console.error('❌ Échec notification admin');
       }
-
-      console.log('📊 Résultat envoi emails:', {
-        confirmation: confirmationSent,
-        adminNotification: adminNotificationSent
-      });
 
     } catch (emailError) {
       console.error('❌ Erreur envoi emails:', emailError);
       // Ne pas faire échouer le webhook pour autant
     }
-
-    console.log('🎉 Traitement webhook terminé avec succès:', {
-      orderNumber: updatedOrder.orderNumber,
-      paymentIntentId: paymentIntent.id,
-      status: updatedOrder.status
-    });
 
   } catch (error: any) {
     console.error('❌ Erreur handlePaymentIntentSucceeded:', error);

@@ -121,7 +121,6 @@ export default function AdminOrdersPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log(data.data.orders)
         setOrders(data.data.orders || []);
       } else {
         throw new Error('Erreur lors du chargement des commandes');

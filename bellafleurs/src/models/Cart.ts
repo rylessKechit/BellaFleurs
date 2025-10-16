@@ -292,9 +292,6 @@ CartSchema.methods.removeItem = async function(
   variantId?: string
 ): Promise<ICart> {
   
-  console.log('🗑️ removeItem called with:', { productId, variantId });
-  console.log('📋 Current items before removal:', this.items.length);
-  
   // Log tous les items actuels pour debug
   this.items.forEach((item, index) => {
     let itemProductId = 'INVALID';
@@ -305,19 +302,10 @@ CartSchema.methods.removeItem = async function(
         itemProductId = item.product;
       }
     }
-    
-    console.log(`📦 Item ${index}:`, {
-      product: itemProductId,
-      variantId: item.variantId,
-      name: item.name,
-      quantity: item.quantity
-    });
   });
   
   const getItemKey = (pId: string, vId?: string) => vId ? `${pId}-${vId}` : pId;
   const targetItemKey = getItemKey(productId, variantId);
-  
-  console.log('🎯 Target key to remove:', targetItemKey);
   
   // ✅ CALCUL : Nombre d'items avant suppression
   const itemsCountBefore = this.items.length;
@@ -345,27 +333,12 @@ CartSchema.methods.removeItem = async function(
     const existingItemKey = getItemKey(itemProductId, item.variantId);
     const shouldKeep = existingItemKey !== targetItemKey;
     
-    console.log(`🔍 Item ${index} check:`, {
-      itemKey: existingItemKey,
-      targetKey: targetItemKey,
-      shouldKeep: shouldKeep,
-      productId: itemProductId,
-      variantId: item.variantId
-    });
-    
     return shouldKeep;
   });
   
   // ✅ VÉRIFICATION : Confirmer la suppression
   const itemsCountAfter = this.items.length;
   const itemsRemoved = itemsCountBefore - itemsCountAfter;
-  
-  console.log('📊 Removal summary:', {
-    itemsCountBefore,
-    itemsCountAfter,
-    itemsRemoved,
-    success: itemsRemoved > 0
-  });
   
   if (itemsRemoved === 0) {
     console.warn('⚠️ No items were removed - item not found!');
@@ -379,19 +352,11 @@ CartSchema.methods.removeItem = async function(
           itemProductId = item.product;
         }
       }
-      console.log(`📦 Remaining item ${index}:`, {
-        product: itemProductId,
-        variantId: item.variantId,
-        name: item.name
-      });
     });
-  } else {
-    console.log('✅ Successfully removed', itemsRemoved, 'item(s)');
   }
   
   // ✅ SAUVEGARDE et retour
   const savedCart = await this.save();
-  console.log('💾 Cart saved with', savedCart.items.length, 'items, totalItems:', savedCart.totalItems);
   
   return savedCart;
 };
@@ -494,8 +459,6 @@ CartSchema.statics.findOrCreateCart = async function(
         totalItems: 0,
         totalAmount: 0
       });
-      
-      console.log('✅ New cart created:', cart._id);
     } catch (error) {
       console.error('❌ Error creating cart:', error);
       throw error;
@@ -510,7 +473,6 @@ CartSchema.statics.cleanExpiredCarts = async function(this: ICartModel) {
     expiresAt: { $lt: new Date() }
   });
   
-  console.log(`🧹 Cleaned ${result.deletedCount} expired carts`);
   return result;
 };
 

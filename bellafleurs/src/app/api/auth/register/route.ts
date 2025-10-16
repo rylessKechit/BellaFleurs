@@ -53,8 +53,6 @@ export async function POST(request: NextRequest) {
       role: 'client', // Par défaut, nouveau utilisateur = client
     });
 
-    console.log('✅ New user registered:', newUser.email);
-
     // Retourner les données de l'utilisateur (sans le mot de passe)
     const userResponse = {
       _id: String(newUser._id),

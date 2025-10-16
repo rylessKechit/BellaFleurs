@@ -52,7 +52,6 @@ export async function sendEmail(options: EmailOptions, account: EmailAccount = '
     };
 
     const result = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent successfully via ${account} account:`, result.messageId);
     return true;
   } catch (error) {
     console.error(`❌ Error sending email via ${account} account:`, error);

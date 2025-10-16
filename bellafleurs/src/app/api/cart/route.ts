@@ -69,15 +69,6 @@ export async function POST(request: NextRequest) {
       customPrice 
     } = await request.json();
 
-    console.log('🛒 POST Cart - Données reçues:', {
-      productId,
-      quantity,
-      variantId,
-      variantName,
-      variantIndex,
-      customPrice
-    });
-
     // Validation des données de base
     if (!productId || !quantity || quantity < 1 || quantity > 50) {
       return NextResponse.json({
@@ -127,15 +118,12 @@ export async function POST(request: NextRequest) {
     if (product.hasVariants && product.variants?.length > 0) {
       let variant = null;
       
-      console.log('🔍 Recherche variant dans:', product.variants);
-      
       // Recherche flexible par plusieurs méthodes
       if (variantId) {
         // Méthode 1: Par _id MongoDB
         variant = product.variants.find((v: any) => 
           v._id && v._id.toString() === variantId
         );
-        console.log('🔍 Recherche par _id:', variant ? 'TROUVÉ' : 'NON TROUVÉ');
         
         // Méthode 2: Par stableId généré
         if (!variant) {
@@ -143,7 +131,6 @@ export async function POST(request: NextRequest) {
             const stableId = v._id?.toString() || `variant_${index}_${v.name?.replace(/\s+/g, '_').toLowerCase()}`;
             return stableId === variantId;
           });
-          console.log('🔍 Recherche par stableId:', variant ? 'TROUVÉ' : 'NON TROUVÉ');
         }
         
         // Méthode 3: Par nom
@@ -151,20 +138,17 @@ export async function POST(request: NextRequest) {
           variant = product.variants.find((v: any) => 
             v.name === variantName
           );
-          console.log('🔍 Recherche par nom:', variant ? 'TROUVÉ' : 'NON TROUVÉ');
         }
         
         // Méthode 4: Par index
         if (!variant && typeof variantIndex === 'number' && variantIndex >= 0) {
           variant = product.variants[variantIndex];
-          console.log('🔍 Recherche par index:', variant ? 'TROUVÉ' : 'NON TROUVÉ');
         }
       }
       
       // Méthode 5: Par nom seul
       if (!variant && variantName) {
         variant = product.variants.find((v: any) => v.name === variantName);
-        console.log('🔍 Recherche par nom seul:', variant ? 'TROUVÉ' : 'NON TROUVÉ');
       }
       
       if (!variant) {
@@ -204,13 +188,6 @@ export async function POST(request: NextRequest) {
       finalVariantId = variant._id?.toString() || 
                      `${variantName}_${variant.price}` || 
                      variantId;
-      
-      console.log('✅ Variant trouvé:', {
-        method: variant._id ? 'MongoDB ID' : 'Fallback',
-        name: finalVariantName,
-        price: finalPrice,
-        id: finalVariantId
-      });
     } else if (customPrice) {
       finalPrice = customPrice;
     }
@@ -227,7 +204,6 @@ export async function POST(request: NextRequest) {
           totalAmount: 0
         });
         await cart.save();
-        console.log('✅ Nouveau panier utilisateur créé:', cart._id);
       }
     } else {
       cart = await Cart.findBySession(sessionId);
@@ -239,7 +215,6 @@ export async function POST(request: NextRequest) {
           totalAmount: 0
         });
         await cart.save();
-        console.log('✅ Nouveau panier session créé:', cart._id);
       }
     }
 
@@ -251,14 +226,6 @@ export async function POST(request: NextRequest) {
       finalVariantName,
       finalPrice
     );
-
-    console.log('✅ Item ajouté au panier:', {
-      productId,
-      quantity,
-      variantId: finalVariantId,
-      variantName: finalVariantName,
-      price: finalPrice
-    });
 
     // ✅ Préparer la réponse avec cartItemsCount
     const response = NextResponse.json({
@@ -301,14 +268,6 @@ export async function PUT(request: NextRequest) {
     await connectDB();
 
     const { productId, quantity, variantId, variantName, variantIndex } = await request.json();
-
-    console.log('🔄 PUT Cart - Données reçues:', {
-      productId,
-      quantity,
-      variantId,
-      variantName,
-      variantIndex
-    });
 
     if (!productId || quantity < 1) {
       return NextResponse.json({

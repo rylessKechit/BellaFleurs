@@ -61,7 +61,6 @@ export default function CheckoutSuccessPage() {
           setIsLoading(false);
         } else if (retryCount < 3) {
           // Retry jusqu'à 3 fois si la commande n'est pas encore créée
-          console.log(`Retry ${retryCount + 1}/3 pour trouver la commande...`);
           setRetryCount(prev => prev + 1);
         } else {
           console.warn('Commande non trouvée après 3 tentatives');

@@ -16,16 +16,12 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     const body = await req.json();
 
-    console.log('🔄 Création Payment Intent...');
-
     const orderData = body;
 
     // Correction : Convertir la date string en Date
     if (orderData.deliveryInfo?.date && typeof orderData.deliveryInfo.date === 'string') {
       orderData.deliveryInfo.date = new Date(orderData.deliveryInfo.date);
     }
-
-    console.log('Order Data reçue:', orderData);
 
     // Validation des données de base
     if (!orderData.items || !orderData.customerInfo || !orderData.deliveryInfo) {
@@ -96,7 +92,6 @@ export async function POST(req: NextRequest) {
     });
 
     const savedOrder = await newOrder.save();
-    console.log('✅ Commande créée avec statut payée:', savedOrder.orderNumber);
 
     // ÉTAPE 2 : Créer le Payment Intent avec l'ID de commande dans les métadonnées
     const metadata: Record<string, string> = {
@@ -114,6 +109,7 @@ export async function POST(req: NextRequest) {
       delivery_date: orderData.deliveryInfo.date instanceof Date 
         ? orderData.deliveryInfo.date.toISOString()
         : new Date(orderData.deliveryInfo.date).toISOString(),
+      delivery_time_slot: orderData.deliveryInfo.timeSlot || '',
       delivery_address: orderData.deliveryInfo.address 
         ? `${orderData.deliveryInfo.address.street}, ${orderData.deliveryInfo.address.city} ${orderData.deliveryInfo.address.zipCode}`.substring(0, 490)
         : '',
@@ -170,14 +166,6 @@ export async function POST(req: NextRequest) {
           note: `Payment Intent créé: ${paymentIntent.id}`
         }
       }
-    });
-
-    console.log('✅ Payment Intent créé et lié à la commande:', {
-      paymentIntentId: paymentIntent.id,
-      orderId: savedOrder._id,
-      orderNumber: savedOrder.orderNumber,
-      amount: amount,
-      hasVariants: hasVariants
     });
 
     return NextResponse.json({

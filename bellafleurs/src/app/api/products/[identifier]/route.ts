@@ -97,11 +97,7 @@ export async function GET(request: NextRequest) {
     // Extraire l'ID depuis l'URL directement
     const url = new URL(request.url);
     const pathParts = url.pathname.split('/');
-    const id = pathParts[pathParts.length - 1]; // Dernier segment de l'URL
-    
-    console.log('🔍 URL complète:', request.url);
-    console.log('🔍 Segments du path:', pathParts);
-    console.log('🔍 ID extrait:', id);
+    const id = pathParts[pathParts.length - 1];
     
     if (!id || id === 'undefined' || id === 'null' || id === 'products') {
       console.error('❌ ID manquant ou invalide:', id);
@@ -120,27 +116,19 @@ export async function GET(request: NextRequest) {
     // Vérifier si c'est un ObjectId valide (24 caractères hexadécimaux)
     const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
     
-    console.log('🔍 Type de recherche:', isValidObjectId ? 'ObjectId' : 'Slug');
-    console.log('🔍 Valeur à rechercher:', id);
-    
     if (isValidObjectId) {
       // Recherche par ID MongoDB
-      console.log('🔍 Recherche par ObjectId:', id);
       product = await Product.findById(id).lean();
     } else {
       // Recherche par slug
-      console.log('🔍 Recherche par slug:', id);
       product = await Product.findOne({ slug: id }).lean();
     }
-
-    console.log('🔍 Produit trouvé:', product ? 'OUI' : 'NON');
     
     if (!product) {
       console.error('❌ Produit introuvable avec ID/slug:', id);
       
       // DEBUG : Lister quelques produits pour vérifier
       const existingProducts = await Product.find({}, 'name slug _id').limit(5).lean();
-      console.log('🔍 Exemples de produits existants:', existingProducts);
       
       return NextResponse.json({
         success: false,
@@ -151,13 +139,8 @@ export async function GET(request: NextRequest) {
       }, { status: 404 });
     }
 
-    console.log('✅ Produit trouvé:', product.name);
-
     // Utiliser le formateur unifié
     const formattedProduct = formatProductResponse(product);
-
-    console.log('✅ Produit formaté avec pricingType:', formattedProduct.pricingType);
-    console.log('✅ Produit formaté avec customPricing:', formattedProduct.customPricing);
 
     return NextResponse.json({
       success: true,

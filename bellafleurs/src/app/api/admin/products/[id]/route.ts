@@ -196,14 +196,6 @@ export async function PUT(
       mongoUpdate.$unset = unsetFields;
     }
 
-    console.log('🔄 Mise à jour produit:', {
-      id,
-      hasVariants: updateData.hasVariants,
-      variantsCount: updateData.variants?.length,
-      hasPrice: 'price' in updateData,
-      unsetFields
-    });
-
     // 🔧 MISE À JOUR AVEC VALIDATION
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
@@ -227,8 +219,6 @@ export async function PUT(
 
     // Formater la réponse
     const formattedProduct = formatProductResponse(updatedProduct.toObject());
-
-    console.log('✅ Produit mis à jour avec succès:', updatedProduct._id);
 
     return NextResponse.json({
       success: true,
