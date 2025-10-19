@@ -8,6 +8,12 @@ export interface ISettings extends Document {
     reason: string;
     message: string;
   };
+  productOfWeek: {
+    isEnabled: boolean;
+    productId: string;
+    title: string;
+    description: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,12 +44,29 @@ const SettingsSchema = new Schema<ISettings>({
       type: String,
       default: 'Nous sommes actuellement fermés. Les commandes reprendront bientôt !'
     }
+  },
+  productOfWeek: {
+    isEnabled: {
+      type: Boolean,
+      default: false
+    },
+    productId: {
+      type: String,
+      default: '68db9182e2280ad09cabfa83'
+    },
+    title: {
+      type: String,
+      default: 'Produit de la semaine'
+    },
+    description: {
+      type: String,
+      default: 'Découvrez notre sélection exceptionnelle cette semaine !'
+    }
   }
 }, {
   timestamps: true
 });
 
-// S'assurer qu'il n'y a qu'un seul document settings
 SettingsSchema.index({}, { unique: true });
 
 export default mongoose.models.Settings || mongoose.model<ISettings>('Settings', SettingsSchema);

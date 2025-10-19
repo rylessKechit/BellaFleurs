@@ -12,7 +12,12 @@ const settingsSchema = z.object({
     endDate: z.string().optional(),
     reason: z.string().optional(),
     message: z.string().optional()
-  })
+  }).optional(),
+  productOfWeek: z.object({
+    isEnabled: z.boolean(),
+    title: z.string().optional(),
+    description: z.string().optional()
+  }).optional()
 });
 
 // GET - Récupérer les paramètres
@@ -27,12 +32,17 @@ export async function GET() {
     
     let settings = await Settings.findOne();
     if (!settings) {
-      // Créer des paramètres par défaut
       settings = await Settings.create({
         shopClosure: {
           isEnabled: false,
           reason: 'Congés',
           message: 'Nous sommes actuellement fermés. Les commandes reprendront bientôt !'
+        },
+        productOfWeek: {
+          isEnabled: false,
+          productId: '68db9182e2280ad09cabfa83',
+          title: 'Produit de la semaine',
+          description: 'Découvrez notre sélection exceptionnelle cette semaine !'
         }
       });
     }
@@ -72,38 +82,55 @@ export async function PUT(req: NextRequest) {
 
     await connectDB();
 
-    const { shopClosure } = validationResult.data;
+    const updates: any = {};
 
-    // Validation des dates si la fermeture est activée
-    if (shopClosure.isEnabled) {
-      if (!shopClosure.startDate || !shopClosure.endDate) {
-        return NextResponse.json({
-          success: false,
-          error: 'Les dates de début et fin sont requises'
-        }, { status: 400 });
+    // Mise à jour fermeture boutique
+    if (validationResult.data.shopClosure) {
+      const { shopClosure } = validationResult.data;
+      
+      if (shopClosure.isEnabled) {
+        if (!shopClosure.startDate || !shopClosure.endDate) {
+          return NextResponse.json({
+            success: false,
+            error: 'Les dates de début et fin sont requises pour la fermeture'
+          }, { status: 400 });
+        }
+
+        const startDate = new Date(shopClosure.startDate);
+        const endDate = new Date(shopClosure.endDate);
+
+        if (startDate >= endDate) {
+          return NextResponse.json({
+            success: false,
+            error: 'La date de fin doit être après la date de début'
+          }, { status: 400 });
+        }
       }
 
-      const startDate = new Date(shopClosure.startDate);
-      const endDate = new Date(shopClosure.endDate);
-
-      if (startDate >= endDate) {
-        return NextResponse.json({
-          success: false,
-          error: 'La date de fin doit être après la date de début'
-        }, { status: 400 });
-      }
-    }
-
-    // Mettre à jour ou créer
-    const settings = await Settings.findOneAndUpdate(
-      {},
-      { shopClosure: {
+      updates.shopClosure = {
         isEnabled: shopClosure.isEnabled,
         startDate: shopClosure.startDate ? new Date(shopClosure.startDate) : undefined,
         endDate: shopClosure.endDate ? new Date(shopClosure.endDate) : undefined,
         reason: shopClosure.reason || 'Congés',
         message: shopClosure.message || 'Nous sommes actuellement fermés. Les commandes reprendront bientôt !'
-      }},
+      };
+    }
+
+    // Mise à jour produit de la semaine
+    if (validationResult.data.productOfWeek) {
+      const { productOfWeek } = validationResult.data;
+
+      updates.productOfWeek = {
+        isEnabled: productOfWeek.isEnabled,
+        productId: '68db9182e2280ad09cabfa83', // UUID fixe
+        title: productOfWeek.title || 'Produit de la semaine',
+        description: productOfWeek.description || 'Découvrez notre sélection exceptionnelle cette semaine !'
+      };
+    }
+
+    const settings = await Settings.findOneAndUpdate(
+      {},
+      updates,
       { new: true, upsert: true }
     );
 

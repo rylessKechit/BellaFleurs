@@ -7,6 +7,7 @@ import GallerySection from '@/components/home/GallerySection';
 import EventsSection from '@/components/home/EventsSection';
 import ContactSection from '@/components/home/ContactSection';
 import Image from 'next/image';
+import ProductOfWeekPopup from '@/components/ProductOfWeekPopup';
 
 export default function Home() {
   return (
@@ -37,6 +38,7 @@ export default function Home() {
         </main>
         <Footer />
       </div>
+      <ProductOfWeekPopup />
     </div>
   );
 }
