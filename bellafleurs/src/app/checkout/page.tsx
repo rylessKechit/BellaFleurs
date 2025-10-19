@@ -12,9 +12,63 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ShoppingCart, Truck, CreditCard, User, MapPin, Calendar, AlertCircle, CheckCircle, Loader2, Gift } from 'lucide-react';
+import { ShoppingCart, Truck, CreditCard, User, MapPin, Calendar, AlertCircle, CheckCircle, Loader2, Gift, AlertTriangle, Clock } from 'lucide-react';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 import { usePostalCodeValidation } from '@/hooks/usePostalCodeValidation';
+
+// Hook pour vérifier le statut du shop
+function useShopStatus() {
+  const [status, setStatus] = useState({
+    isOpen: true,
+    isClosed: false,
+    reason: '',
+    message: '',
+    startDate: '',
+    endDate: '',
+    loading: true
+  });
+
+  useEffect(() => {
+    async function checkStatus() {
+      try {
+        const response = await fetch('/api/shop/status');
+        const result = await response.json();
+        
+        if (result.success) {
+          setStatus({
+            ...result.data,
+            loading: false
+          });
+        } else {
+          setStatus({
+            isOpen: true,
+            loading: false,
+            isClosed: false,
+            reason: '',
+            message: '',
+            startDate: '',
+            endDate: ''
+          });
+        }
+      } catch (error) {
+        console.error('Erreur vérification statut:', error);
+        setStatus({
+          isOpen: true,
+          loading: false,
+          isClosed: false,
+          reason: '',
+          message: '',
+          startDate: '',
+          endDate: ''
+        });
+      }
+    }
+
+    checkStatus();
+  }, []);
+
+  return status;
+}
 
 // Types
 interface CartItem {
@@ -97,6 +151,7 @@ interface TimeSlot {
 export default function CheckoutPage() {
   const router = useRouter();
   const { data: session } = useSession();
+  const shopStatus = useShopStatus();
 
   // États
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -474,10 +529,83 @@ export default function CheckoutPage() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  if (loading) {
+  // Si le shop est fermé, afficher le message de fermeture
+  if (!shopStatus.loading && !shopStatus.isOpen) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <div className="max-w-2xl mx-auto px-4">
+          <Card className="border-orange-200 bg-orange-50">
+            <CardContent className="p-8 text-center">
+              <div className="mb-6">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="w-8 h-8 text-orange-600" />
+                </div>
+                <h1 className="text-2xl font-bold text-orange-800 mb-2">
+                  Boutique temporairement fermée
+                </h1>
+                <p className="text-orange-700 text-lg">
+                  {shopStatus.message}
+                </p>
+              </div>
+
+              {shopStatus.reason && (
+                <div className="mb-6">
+                  <p className="text-orange-600">
+                    <strong>Raison :</strong> {shopStatus.reason}
+                  </p>
+                </div>
+              )}
+
+              {shopStatus.startDate && shopStatus.endDate && (
+                <div className="bg-white/50 rounded-lg p-4 mb-6">
+                  <div className="flex items-center justify-center text-orange-700 mb-2">
+                    <Clock className="w-4 h-4 mr-2" />
+                    <span className="font-medium">Période de fermeture</span>
+                  </div>
+                  <p className="text-sm text-orange-600">
+                    Du {new Date(shopStatus.startDate).toLocaleDateString('fr-FR')} 
+                    {' au '} 
+                    {new Date(shopStatus.endDate).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <p className="text-orange-700">
+                  Les commandes reprendront automatiquement après cette période.
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => window.location.href = '/produits'}
+                    className="border-orange-200 text-orange-700 hover:bg-orange-100"
+                  >
+                    Voir nos créations
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => window.location.href = '/contact'}
+                    className="border-orange-200 text-orange-700 hover:bg-orange-100"
+                  >
+                    Nous contacter
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading || shopStatus.loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">{shopStatus.loading ? 'Vérification...' : 'Chargement...'}</p>
+        </div>
       </div>
     );
   }
