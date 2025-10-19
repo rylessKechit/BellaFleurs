@@ -16,7 +16,7 @@ import { ShoppingCart, Truck, CreditCard, User, MapPin, Calendar, AlertCircle, C
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 import { usePostalCodeValidation } from '@/hooks/usePostalCodeValidation';
 
-// Hook pour vérifier le statut du shop
+// Hook pour vérifier le statut du shop ET récupérer les informations de fermeture
 function useShopStatus() {
   const [status, setStatus] = useState({
     isOpen: true,
@@ -25,7 +25,14 @@ function useShopStatus() {
     message: '',
     startDate: '',
     endDate: '',
-    loading: true
+    loading: true,
+    // Ajout des données de fermeture pour la validation des dates
+    shopClosure: {
+      isEnabled: false,
+      startDate: undefined as string | undefined,
+      endDate: undefined as string | undefined,
+      reason: undefined as string | undefined
+    }
   });
 
   useEffect(() => {
@@ -35,9 +42,21 @@ function useShopStatus() {
         const result = await response.json();
         
         if (result.success) {
+          const data = result.data;
+          
+          // Si on a des dates de fermeture, les paramètres de fermeture sont activés
+          const hasClosureDates = data.startDate && data.endDate;
+          
           setStatus({
-            ...result.data,
-            loading: false
+            ...data,
+            loading: false,
+            // Construire les données de fermeture pour la validation
+            shopClosure: {
+              isEnabled: hasClosureDates, // Activé si on a des dates
+              startDate: data.startDate,
+              endDate: data.endDate,
+              reason: data.reason
+            }
           });
         } else {
           setStatus({
@@ -47,7 +66,13 @@ function useShopStatus() {
             reason: '',
             message: '',
             startDate: '',
-            endDate: ''
+            endDate: '',
+            shopClosure: {
+              isEnabled: false,
+              startDate: undefined,
+              endDate: undefined,
+              reason: undefined
+            }
           });
         }
       } catch (error) {
@@ -59,7 +84,13 @@ function useShopStatus() {
           reason: '',
           message: '',
           startDate: '',
-          endDate: ''
+          endDate: '',
+          shopClosure: {
+            isEnabled: false,
+            startDate: undefined,
+            endDate: undefined,
+            reason: undefined
+          }
         });
       }
     }
@@ -69,6 +100,31 @@ function useShopStatus() {
 
   return status;
 }
+
+// Fonction pour vérifier si une date tombe pendant une fermeture
+const isDateDuringClosure = (
+  deliveryDate: string, 
+  closureSettings?: {
+    isEnabled: boolean;
+    startDate?: string;
+    endDate?: string;
+  }
+): boolean => {
+  if (!closureSettings?.isEnabled || !closureSettings.startDate || !closureSettings.endDate) {
+    return false;
+  }
+
+  const delivery = new Date(deliveryDate);
+  const closureStart = new Date(closureSettings.startDate);
+  const closureEnd = new Date(closureSettings.endDate);
+
+  // Normaliser les dates à minuit pour comparaison
+  delivery.setHours(0, 0, 0, 0);
+  closureStart.setHours(0, 0, 0, 0);
+  closureEnd.setHours(0, 0, 0, 0);
+
+  return delivery >= closureStart && delivery <= closureEnd;
+};
 
 // Types
 interface CartItem {
@@ -333,6 +389,19 @@ export default function CheckoutPage() {
       return;
     }
     
+    // VALIDATION FERMETURE PROGRAMMÉE
+    if (shopStatus.shopClosure && isDateDuringClosure(selectedDate, shopStatus.shopClosure)) {
+      const startDate = shopStatus.shopClosure.startDate;
+      const endDate = shopStatus.shopClosure.endDate;
+      const reason = shopStatus.shopClosure.reason || 'Fermeture programmée';
+      
+      setErrors(prev => ({
+        ...prev,
+        date: `Nous serons fermés du ${startDate ? new Date(startDate).toLocaleDateString('fr-FR') : '?'} au ${endDate ? new Date(endDate).toLocaleDateString('fr-FR') : '?'} - ${reason}. Choisissez une autre date.`
+      }));
+      return;
+    }
+    
     // Date valide
     setDeliveryInfo({...deliveryInfo, date: selectedDate});
     setErrors(prev => {
@@ -481,6 +550,12 @@ export default function CheckoutPage() {
         // Vérification stricte : la date doit être >= demain
         if (selectedDate < tomorrow) {
           newErrors.date = 'Livraison impossible aujourd\'hui. Veuillez sélectionner une date à partir de demain.';
+        }
+        
+        // VALIDATION FERMETURE PROGRAMMÉE
+        if (shopStatus.shopClosure && isDateDuringClosure(deliveryInfo.date, shopStatus.shopClosure)) {
+          const reason = shopStatus.shopClosure.reason || 'Fermeture programmée';
+          newErrors.date = `Nous serons fermés pendant cette période (${reason}). Choisissez une autre date.`;
         }
         
         // Vérification week-end (optionnel - supprime si tu livres le dimanche)
