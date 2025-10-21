@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { MapPin } from 'lucide-react';
 
 export default function HeroSection() {
   return (
@@ -13,9 +14,22 @@ export default function HeroSection() {
           
           {/* Container centré simple */}
           <div className="text-center max-w-4xl space-y-8">
+
+            <div className="inline-flex items-center px-6 py-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg mb-6">
+              <MapPin className="w-5 h-5 text-green-700 mr-2" />
+              <span className="text-green-800 font-semibold">Fleuriste à Brétigny-sur-Orge depuis 20 ans</span>
+            </div>
+            
+            {/* Titre H1 optimisé SEO */}
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight drop-shadow-2xl">
+              Bella Fleurs
+              <span className="block text-green-200 text-2xl sm:text-3xl lg:text-4xl mt-4">
+                Votre fleuriste à Brétigny-sur-Orge
+              </span>
+            </h1>
             
             {/* Phrase principale */}
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight drop-shadow-2xl">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-white leading-tight drop-shadow-2xl">
               Plus de 20 ans d'expérience, des fleurs françaises choisies avec soin, 
               livrées en 24 heures
             </h1>

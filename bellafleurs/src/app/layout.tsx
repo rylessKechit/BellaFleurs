@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import SessionProvider from '@/components/providers/SessionProvider';
 import { CartProvider } from '@/contexts/CartContext';
 import './globals.css';
+import StructuredData from '@/components/StructuredData';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -78,6 +79,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr" className={inter.variable}>
+      <head>
+        <StructuredData />
+      </head>
       <body className={`${inter.className} antialiased`} suppressHydrationWarning={true}>
         <SessionProvider>
           <CartProvider>
