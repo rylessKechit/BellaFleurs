@@ -246,11 +246,58 @@ export default function CheckoutPage() {
   });
 
   // Créneaux de livraison
-  const timeSlots: TimeSlot[] = [
-    { value: '9h-13h', label: '9h - 13h (matin)' },
-    { value: '14h-19h', label: '14h - 19h (après-midi)' }
-  ];
+  const getAvailableTimeSlots = () => {
+    const baseTimeSlots: TimeSlot[] = [
+      { value: '9h-13h', label: '9h - 13h (matin)' },
+      { value: '14h-19h', label: '14h - 19h (après-midi)' }
+    ];
+
+    // Si aucune date n'est sélectionnée, retourner tous les créneaux
+    if (!deliveryInfo.date) {
+      return baseTimeSlots;
+    }
+
+    // Calculer si la date sélectionnée est demain
+    const selectedDate = new Date(deliveryInfo.date);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const isTomorrow = selectedDate.getTime() === tomorrow.getTime();
+
+    // Si c'est demain, exclure le créneau matin
+    if (isTomorrow) {
+      return baseTimeSlots.filter(slot => slot.value !== '9h-13h');
+    }
+
+    // Pour toutes les autres dates, retourner tous les créneaux
+    return baseTimeSlots;
+  };
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+
+  useEffect(() => {
+    const availableSlots = getAvailableTimeSlots();
+    const isSelectedSlotAvailable = availableSlots.some(slot => slot.value === selectedTimeSlot);
+    
+    // Si le créneau sélectionné n'est plus disponible, le réinitialiser
+    if (selectedTimeSlot && !isSelectedSlotAvailable) {
+      setSelectedTimeSlot('');
+      // Optionnel : afficher un message informatif
+      setErrors(prev => ({
+        ...prev,
+        timeSlot: 'Le créneau matin n\'est pas disponible pour une livraison demain.'
+      }));
+    } else if (selectedTimeSlot && isSelectedSlotAvailable) {
+      // Effacer l'erreur si le créneau redevient valide
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.timeSlot;
+        return newErrors;
+      });
+    }
+  }, [deliveryInfo.date, selectedTimeSlot]);
 
   // Gestion ville - simplifié
   const [showCitySelect, setShowCitySelect] = useState(false);
@@ -1066,7 +1113,7 @@ export default function CheckoutPage() {
                           }`}
                         >
                           <option value="">Choisissez votre créneau</option>
-                          {timeSlots.map((slot) => (
+                          {getAvailableTimeSlots().map((slot) => (
                             <option key={slot.value} value={slot.value}>
                               {slot.label}
                             </option>
@@ -1076,7 +1123,16 @@ export default function CheckoutPage() {
                           <p className="text-red-600 text-sm mt-1">{errors.timeSlot}</p>
                         )}
                         <p className="text-xs text-gray-500 mt-1">
-                          Sélectionnez votre créneau préféré pour la livraison
+                          {deliveryInfo.date && (() => {
+                            const selectedDate = new Date(deliveryInfo.date);
+                            const tomorrow = new Date();
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            
+                            if (selectedDate.toDateString() === tomorrow.toDateString()) {
+                              return "Le créneau matin n'est pas disponible pour une livraison demain.";
+                            }
+                            return "Sélectionnez votre créneau préféré pour la livraison";
+                          })()}
                         </p>
                       </div>
                     </div>
