@@ -5,10 +5,17 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Shield, Eye, Lock, UserCheck, Settings, Mail } from 'lucide-react';
+import LegalPageSEO from '@/components/LegalPageSEO';
 
 export default function ConfidentialitePage() {
   return (
     <>
+      <LegalPageSEO 
+        pageType="privacy"
+        pageUrl="https://www.bellafleurs.fr/confidentialite"
+        pageTitle="Politique de confidentialité - Bella Fleurs"
+        pageDescription="Protection des données personnelles chez Bella Fleurs, fleuriste à Brétigny-sur-Orge"
+      />
       <Header />
       
       <main className="min-h-screen bg-gray-50 pt-16">

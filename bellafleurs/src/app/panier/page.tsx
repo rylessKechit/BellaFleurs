@@ -17,6 +17,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
+import CartProductSEO from '@/components/CartProductSEO';
 
 interface CartItem {
   _id?: string;
@@ -221,6 +222,7 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <CartProductSEO />
       <Header />
       
       <div className="container mx-auto px-4 py-8">
