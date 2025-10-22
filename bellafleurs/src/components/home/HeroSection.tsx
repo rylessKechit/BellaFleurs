@@ -17,7 +17,7 @@ export default function HeroSection() {
 
             <div className="inline-flex items-center px-6 py-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg mb-6">
               <MapPin className="w-5 h-5 text-green-700 mr-2" />
-              <span className="text-green-800 font-semibold">Fleuriste à Brétigny-sur-Orge depuis 20 ans</span>
+              <span className="text-green-800 font-semibold">Fleuriste à Brétigny-sur-Orge</span>
             </div>
             
             {/* Titre H1 optimisé SEO */}

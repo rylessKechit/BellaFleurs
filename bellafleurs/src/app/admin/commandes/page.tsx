@@ -282,7 +282,7 @@ export default function AdminOrdersPage() {
           <Card>
             <CardContent className="p-3 sm:p-4 text-center">
               <p className="text-lg sm:text-2xl font-bold text-blue-600">{stats.payée}</p>
-              <p className="text-xs sm:text-sm text-gray-600">Validées</p>
+              <p className="text-xs sm:text-sm text-gray-600">Nouvelles commandes</p>
             </CardContent>
           </Card>
           <Card>
