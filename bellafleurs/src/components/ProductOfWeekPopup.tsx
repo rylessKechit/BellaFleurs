@@ -48,7 +48,7 @@ export default function ProductOfWeekPopup() {
             // Attendre un peu avant d'afficher la popup
             setTimeout(() => {
               setIsOpen(true);
-            }, 1500); // 3 secondes après le chargement
+            }, 1500); // 1.5 secondes après le chargement
           }
         }
       } catch (error) {
@@ -83,56 +83,57 @@ export default function ProductOfWeekPopup() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-md sm:max-w-lg mx-4 p-0 overflow-hidden">
-        {/* Header avec badge et fermeture */}
-        <div className="relative bg-gradient-to-r from-green-500 to-green-600 text-white p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Star className="w-5 h-5 fill-current" />
-              <span className="font-semibold text-sm">{data.title}</span>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[350px] sm:max-w-md md:max-w-lg mx-auto p-0 overflow-hidden">
+        {/* Header avec badge et fermeture - RESPONSIVE OPTIMISÉ */}
+        <div className="relative bg-gradient-to-r from-green-500 to-green-600 text-white p-3 sm:p-4">
+          <div className="flex items-center justify-between pr-8">
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-current flex-shrink-0" />
+              <span className="font-semibold text-xs sm:text-sm leading-tight">{data.title}</span>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              className="text-white hover:bg-white/20 h-8 w-8 absolute top-2 right-2"
-            >
-              <X className="w-5 h-5 stroke-2" />
-            </Button>
           </div>
-          <p className="text-green-100 text-sm mt-1">{data.description}</p>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleClose}
+            className="text-white hover:bg-white/20 h-7 w-7 sm:h-8 sm:w-8 absolute top-2 right-2 flex-shrink-0"
+          >
+            <X className="w-4 h-4 sm:w-5 sm:h-5 stroke-2" />
+          </Button>
+          <p className="text-green-100 text-xs sm:text-sm mt-1 pr-8 leading-relaxed">{data.description}</p>
         </div>
 
-        {/* Contenu produit */}
-        <div className="p-6 space-y-4">
-          {/* Image produit */}
+        {/* Contenu produit - RESPONSIVE OPTIMISÉ */}
+        <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+          {/* Image produit - RESPONSIVE OPTIMISÉ */}
           <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
             <Image
               src={data.product.images[0] || '/images/placeholder.jpg'}
               alt={data.product.name}
               fill
               className="object-cover"
+              sizes="(max-width: 640px) 280px, 400px"
             />
-            <Badge className="absolute top-3 left-3 bg-green-500 text-white">
+            <Badge className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-green-500 text-white text-xs">
               Sélection
             </Badge>
           </div>
 
-          {/* Informations produit */}
+          {/* Informations produit - RESPONSIVE OPTIMISÉ */}
           <div className="space-y-2">
-            <div className="flex items-start justify-between">
-              <h3 className="font-semibold text-lg text-gray-900 leading-tight">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-semibold text-base sm:text-lg text-gray-900 leading-tight flex-1 min-w-0">
                 {data.product.name}
               </h3>
-              <div className="text-right">
-                <p className="font-bold text-green-600 text-lg">
+              <div className="text-right flex-shrink-0">
+                <p className="font-bold text-green-600 text-base sm:text-lg whitespace-nowrap">
                   {data.product.priceRangeFormatted}
                 </p>
               </div>
             </div>
             
             {data.product.description && (
-              <p className="text-gray-600 text-sm line-clamp-2">
+              <p className="text-gray-600 text-xs sm:text-sm line-clamp-2 leading-relaxed">
                 {data.product.description}
               </p>
             )}
@@ -144,24 +145,24 @@ export default function ProductOfWeekPopup() {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex space-x-3 pt-2">
+          {/* Actions - RESPONSIVE OPTIMISÉ */}
+          <div className="flex space-x-2 sm:space-x-3 pt-1 sm:pt-2">
             <Button 
               variant="outline" 
               onClick={() => {
                 window.location.href = getProductUrl();
                 handleClose();
               }}
-              className="flex-1"
+              className="flex-1 text-xs sm:text-sm h-9 sm:h-10"
             >
-              <Eye className="w-4 h-4 mr-2" />
-              Voir le produit
+              <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 flex-shrink-0" />
+              <span className="truncate">Voir le produit</span>
             </Button>
           </div>
 
-          {/* Note pour variants */}
+          {/* Note pour variants - RESPONSIVE OPTIMISÉ */}
           {data.product.hasVariants && (
-            <p className="text-xs text-gray-500 text-center">
+            <p className="text-xs text-gray-500 text-center leading-relaxed px-2">
               Ce produit a plusieurs options. Cliquez sur "Voir le produit" pour choisir.
             </p>
           )}
