@@ -46,28 +46,6 @@ export default function StructuredData() {
         "name": "Fleury-Mérogis"
       }
     ],
-    "hasOfferCatalog": {
-      "@type": "OfferCatalog",
-      "name": "Créations Florales",
-      "itemListElement": [
-        {
-          "@type": "Offer",
-          "itemOffered": {
-            "@type": "Product",
-            "name": "Bouquets sur mesure",
-            "description": "Bouquets personnalisés selon vos goûts et l'occasion"
-          }
-        },
-        {
-          "@type": "Offer", 
-          "itemOffered": {
-            "@type": "Product",
-            "name": "Compositions florales",
-            "description": "Compositions élégantes pour décoration et événements"
-          }
-        }
-      ]
-    },
     "founder": {
       "@type": "Person",
       "name": "Aurélie",
