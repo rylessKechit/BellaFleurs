@@ -23,9 +23,6 @@ export default function HeroSection() {
             {/* Titre H1 optimisé SEO */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight drop-shadow-2xl">
               Bella Fleurs
-              <span className="block text-green-200 text-2xl sm:text-3xl lg:text-4xl mt-4">
-                Votre fleuriste à Brétigny-sur-Orge
-              </span>
             </h1>
             
             {/* Phrase principale */}
