@@ -1,13 +1,36 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import React, { useState, useEffect } from 'react';
+import { Dialog } from '@/components/ui/dialog';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, X, ShoppingCart, Eye } from 'lucide-react';
+import { Star, X, Eye } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
+
+// DialogContent personnalisé sans la croix par défaut
+const CustomDialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPrimitive.Portal>
+    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Content>
+  </DialogPrimitive.Portal>
+));
+CustomDialogContent.displayName = DialogPrimitive.Content.displayName;
 
 interface ProductOfWeekData {
   isEnabled: boolean;
@@ -83,7 +106,7 @@ export default function ProductOfWeekPopup() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-[350px] sm:max-w-md md:max-w-lg mx-auto p-0 overflow-hidden">
+      <CustomDialogContent className="w-[calc(100vw-2rem)] max-w-[350px] sm:max-w-md md:max-w-lg mx-auto p-0 overflow-hidden">
         {/* Header avec badge et fermeture - RESPONSIVE OPTIMISÉ */}
         <div className="relative bg-gradient-to-r from-green-500 to-green-600 text-white p-3 sm:p-4">
           <div className="flex items-center justify-between pr-8">
@@ -167,7 +190,7 @@ export default function ProductOfWeekPopup() {
             </p>
           )}
         </div>
-      </DialogContent>
+      </CustomDialogContent>
     </Dialog>
   );
 }
