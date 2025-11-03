@@ -14,7 +14,9 @@ import {
   Save,
   MoreHorizontal,
   Move,
-  Package
+  Package,
+  Power,
+  PowerOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +37,8 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { 
   Select, 
@@ -908,6 +911,7 @@ export default function AdminProducts() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isToggling, setIsToggling] = useState<string[]>([]);
   const { incrementCartCount } = useCart();
 
   useEffect(() => {
@@ -937,6 +941,45 @@ export default function AdminProducts() {
       toast.error('Erreur lors du chargement des produits');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleToggleProduct = async (product: Product) => {
+    try {
+      setIsToggling(prev => [...prev, product._id]);
+      
+      const response = await fetch(`/api/admin/products/${product._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          isActive: !product.isActive
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Mettre à jour le produit dans la liste
+        setProducts(prev => prev.map(p => 
+          p._id === product._id 
+            ? { ...p, isActive: !p.isActive }
+            : p
+        ));
+        
+        toast.success(
+          `Produit ${!product.isActive ? 'activé' : 'désactivé'} avec succès`
+        );
+      } else {
+        toast.error(result.error?.message || 'Erreur lors de la modification');
+      }
+    } catch (error) {
+      console.error('Toggle product error:', error);
+      toast.error('Erreur lors de la modification du produit');
+    } finally {
+      setIsToggling(prev => prev.filter(id => id !== product._id));
     }
   };
 
@@ -1128,7 +1171,31 @@ export default function AdminProducts() {
                           <Edit className="w-4 h-4 mr-2" />
                           Modifier
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDeleteProduct(product)}>
+                        
+                        {/* ✅ NOUVEAU : Bouton Activer/Désactiver */}
+                        <DropdownMenuItem 
+                          onClick={() => handleToggleProduct(product)}
+                          disabled={isToggling.includes(product._id)}
+                        >
+                          {product.isActive ? (
+                            <>
+                              <PowerOff className="w-4 h-4 mr-2" />
+                              {isToggling.includes(product._id) ? 'Désactivation...' : 'Désactiver'}
+                            </>
+                          ) : (
+                            <>
+                              <Power className="w-4 h-4 mr-2" />
+                              {isToggling.includes(product._id) ? 'Activation...' : 'Activer'}
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuSeparator />
+                        
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteProduct(product)}
+                          className="text-red-600"
+                        >
                           <Trash2 className="w-4 h-4 mr-2" />
                           Supprimer
                         </DropdownMenuItem>

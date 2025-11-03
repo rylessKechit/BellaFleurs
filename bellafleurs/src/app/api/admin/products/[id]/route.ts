@@ -47,7 +47,7 @@ export async function GET(
     }
 
     // 🔧 CORRECTION : Utiliser le formateur unifié
-    const formattedProduct = formatProductResponse(product.toObject());
+    const formattedProduct = formatProductResponse(product as any);
 
     return NextResponse.json({
       success: true,
@@ -218,7 +218,7 @@ export async function PUT(
     }
 
     // Formater la réponse
-    const formattedProduct = formatProductResponse(updatedProduct.toObject());
+    const formattedProduct = formatProductResponse(updatedProduct as any);
 
     return NextResponse.json({
       success: true,
