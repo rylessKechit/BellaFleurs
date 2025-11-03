@@ -587,7 +587,7 @@ L'équipe Bella Fleurs
       content: `
 Bonjour ${order.customerInfo.name},
 
-Excellente nouvelle ! Votre commande ${order.orderNumber} est maintenant prête et vous attend.
+Excellente nouvelle ! Votre commande ${order.orderNumber} est maintenant prête.
 
 ${order.isGift ? `🎁 Votre cadeau a été préparé avec soin et est accompagné d'une belle carte.` : ''}
 
