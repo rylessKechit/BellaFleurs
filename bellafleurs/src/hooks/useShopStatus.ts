@@ -1,4 +1,4 @@
-// src/hooks/useShopStatus.ts - VERSION CORRIGÉE
+// src/hooks/useShopStatus.ts - VERSION CORRIGÉE (sans erreur TypeScript)
 import { useState, useEffect, useCallback } from 'react';
 
 interface ShopStatus {
@@ -74,6 +74,9 @@ export function useShopStatus(autoRefresh: boolean = true) {
         clearInterval(interval);
       };
     }
+    
+    // ✅ CORRECTION: Retourner une fonction vide si autoRefresh est false
+    return () => {};
   }, [checkStatus, autoRefresh]);
 
   // Méthode pour forcer le refresh
