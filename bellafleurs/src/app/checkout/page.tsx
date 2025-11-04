@@ -245,7 +245,7 @@ export default function CheckoutPage() {
     message: '' // ✨ SEULE MODIFICATION: Ajout message
   });
 
-  // Créneaux de livraison
+  // Créneaux de livraison avec logique heure 20h
   const getAvailableTimeSlots = () => {
     const baseTimeSlots: TimeSlot[] = [
       { value: '9h-13h', label: '9h - 13h (matin)' },
@@ -257,7 +257,7 @@ export default function CheckoutPage() {
       return baseTimeSlots;
     }
 
-    // Calculer si la date sélectionnée est demain
+    // Calculer les dates
     const selectedDate = new Date(deliveryInfo.date);
     selectedDate.setHours(0, 0, 0, 0);
     
@@ -265,16 +265,37 @@ export default function CheckoutPage() {
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
     
+    const dayAfterTomorrow = new Date();
+    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+    dayAfterTomorrow.setHours(0, 0, 0, 0);
+    
     const isTomorrow = selectedDate.getTime() === tomorrow.getTime();
+    const isDayAfterTomorrow = selectedDate.getTime() === dayAfterTomorrow.getTime();
+    
+    // Vérifier l'heure actuelle (20h = seuil)
+    const currentHour = new Date().getHours();
+    const isAfter8PM = currentHour >= 20;
 
-    // Si c'est demain, exclure le créneau matin
+    // NOUVELLE LOGIQUE
     if (isTomorrow) {
-      return baseTimeSlots.filter(slot => slot.value !== '9h-13h');
+      if (isAfter8PM) {
+        // Après 20h : J+1 complètement bloqué
+        return [];
+      } else {
+        // Avant 20h : J+1 matin + après-midi disponibles
+        return baseTimeSlots;
+      }
     }
 
-    // Pour toutes les autres dates, retourner tous les créneaux
+    if (isDayAfterTomorrow && isAfter8PM) {
+      // Après 20h : J+2 devient le premier jour disponible
+      return baseTimeSlots;
+    }
+
+    // Pour toutes les autres dates (J+2+ normalement, J+3+ si après 20h)
     return baseTimeSlots;
   };
+
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
 
   useEffect(() => {
@@ -417,22 +438,33 @@ export default function CheckoutPage() {
       return;
     }
     
-    // VALIDATION TEMPS RÉEL : Vérifier que la date n'est pas aujourd'hui
+    // VALIDATION TEMPS RÉEL avec logique 20h
     const selected = new Date(selectedDate);
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
-    
+
     const selectedMidnight = new Date(selected);
     selectedMidnight.setHours(0, 0, 0, 0);
-    
+
+    // Vérifier l'heure actuelle
+    const currentHour = new Date().getHours();
+    const isAfter8PM = currentHour >= 20;
+
     if (selectedMidnight < tomorrow) {
-      // EMPÊCHER la sélection et afficher un message
       setErrors(prev => ({
         ...prev,
         date: 'Livraison impossible aujourd\'hui. Sélectionnez une date à partir de demain.'
       }));
-      // Ne pas mettre à jour la date
+      return;
+    }
+
+    // NOUVELLE VALIDATION : Si après 20h, J+1 interdit
+    if (isAfter8PM && selectedMidnight.getTime() === tomorrow.getTime()) {
+      setErrors(prev => ({
+        ...prev,
+        date: 'Après 20h, livraison impossible demain. Sélectionnez une date à partir d\'après-demain.'
+      }));
       return;
     }
     
@@ -1127,11 +1159,17 @@ export default function CheckoutPage() {
                             const selectedDate = new Date(deliveryInfo.date);
                             const tomorrow = new Date();
                             tomorrow.setDate(tomorrow.getDate() + 1);
+                            const currentHour = new Date().getHours();
+                            const isAfter8PM = currentHour >= 20;
                             
                             if (selectedDate.toDateString() === tomorrow.toDateString()) {
-                              return "Le créneau matin n'est pas disponible pour une livraison demain.";
+                              if (isAfter8PM) {
+                                return "Après 20h, aucun créneau disponible pour demain.";
+                              } else {
+                                return "Avant 20h, tous les créneaux sont disponibles pour demain.";
+                              }
                             }
-                            return "Sélectionnez votre créneau préféré pour la livraison";
+                            return "Tous les créneaux sont disponibles.";
                           })()}
                         </p>
                       </div>
