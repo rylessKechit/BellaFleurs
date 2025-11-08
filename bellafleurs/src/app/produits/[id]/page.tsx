@@ -1,4 +1,4 @@
-// src/app/produits/[id]/page.tsx - Version complète finale
+// src/app/produits/[id]/page.tsx - Version complète avec système d'avis
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -26,6 +26,8 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
+import ReviewsList from '@/components/reviews/ReviewsList';
+import ReviewForm from '@/components/reviews/ReviewForm';
 
 // Composant PriceSelector pour prix personnalisable
 interface PriceSelectorProps {
@@ -105,7 +107,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const router = useRouter();
   const { incrementCartCount } = useCart();
   
-  // États
+  // États existants
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [dataReady, setDataReady] = useState(false);
@@ -114,6 +116,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // ✅ NOUVEAUX ÉTATS pour le système d'avis
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewsKey, setReviewsKey] = useState(0); // Pour forcer le refresh des avis
 
   // ✅ Fonction helper pour créer un ID stable pour les variants
   const getVariantId = (variant: ProductVariant, index: number): string => {
@@ -134,8 +140,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         if (response.ok && data.success) {
           const productData = data.data;
 
-          if (!productData.averageRating) productData.averageRating = 4.5;
-          if (!productData.reviewsCount) productData.reviewsCount = 1;
+          if (!productData.averageRating) productData.averageRating = 0;
+          if (!productData.reviewsCount) productData.reviewsCount = 0;
           
           if (!productData.hasVariants) {
             productData.variants = [];
@@ -249,6 +255,31 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     } finally {
       setIsAddingToCart(false);
     }
+  };
+
+  // ✅ NOUVELLES FONCTIONS pour le système d'avis
+  const handleReviewAdded = () => {
+    // Forcer le rechargement des avis
+    setReviewsKey(prev => prev + 1);
+    
+    // Optionnel: Recharger les données du produit pour mettre à jour les stats
+    const fetchUpdatedProduct = async () => {
+      try {
+        const response = await fetch(`/api/products/${params.id}`);
+        const data = await response.json();
+        if (data.success) {
+          setProduct(prev => prev ? {
+            ...prev,
+            averageRating: data.data.averageRating || prev.averageRating,
+            reviewsCount: data.data.reviewsCount || prev.reviewsCount
+          } : null);
+        }
+      } catch (error) {
+        console.error('Error refreshing product data:', error);
+      }
+    };
+    
+    fetchUpdatedProduct();
   };
 
   // Gestion des quantités
@@ -494,15 +525,15 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               )}
             </div>
 
-            {/* Rating */}
-            {product.averageRating && product.reviewsCount ? (
+            {/* ✅ NOUVEAU : Affichage des avis avec ratings */}
+            {(product.averageRating && product.averageRating > 0) || (product.reviewsCount && product.reviewsCount > 0) ? (
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex items-center">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
                       className={`w-4 h-4 ${
-                        i < Math.floor(product.averageRating!)
+                        i < Math.floor(product.averageRating || 0)
                           ? 'text-yellow-400 fill-current'
                           : 'text-gray-300'
                       }`}
@@ -510,10 +541,20 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                   ))}
                 </div>
                 <span className="text-sm text-gray-600">
-                  {product.averageRating.toFixed(1)} ({product.reviewsCount} avis)
+                  {product.averageRating ? product.averageRating.toFixed(1) : '0.0'} ({product.reviewsCount || 0} avis)
                 </span>
               </div>
-            ) : null}
+            ) : (
+              <div className="text-sm text-gray-500 mb-4">
+                Aucun avis pour le moment - 
+                <button 
+                  onClick={() => setShowReviewForm(true)}
+                  className="text-primary-600 hover:underline ml-1"
+                >
+                  Soyez le premier !
+                </button>
+              </div>
+            )}
 
             {/* Tags */}
             {product.tags && product.tags.length > 0 && (
@@ -694,8 +735,48 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               </CardContent>
             </Card>
           )}
+
+          {/* ✅ NOUVELLE SECTION : Avis clients */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <Star className="w-4 h-4 text-yellow-600" />
+                  </div>
+                  Avis clients
+                  {product.reviewsCount && product.reviewsCount > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {product.reviewsCount}
+                    </Badge>
+                  )}
+                </h2>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowReviewForm(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Laisser un avis
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ReviewsList key={reviewsKey} productId={product._id} />
+            </CardContent>
+          </Card>
         </div>
       </main>
+
+      {/* ✅ NOUVEAU : Modal du formulaire d'avis */}
+      {showReviewForm && (
+        <ReviewForm
+          productId={product._id}
+          productName={product.name}
+          onClose={() => setShowReviewForm(false)}
+          onReviewAdded={handleReviewAdded}
+        />
+      )}
 
       <Footer />
     </div>

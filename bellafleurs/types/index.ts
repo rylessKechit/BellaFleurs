@@ -363,3 +363,93 @@ export interface ISiteSettings extends BaseDocument {
   fullAddress?: string;
   isMaintenanceMode?: boolean;
 }
+
+// Interface pour les avis côté client (API responses)
+export interface ReviewResponse {
+  _id: string;
+  product: string;
+  user?: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  isVerified: boolean;
+  isPublished: boolean;
+  adminResponse?: string;
+  createdAt: string; // String pour les réponses API (format ISO)
+  updatedAt: string;
+  
+  // Virtuals
+  ratingLabel?: string;
+  isPositive?: boolean;
+}
+
+// Interface pour les statistiques de notation
+export interface RatingStats {
+  averageRating: number;
+  reviewsCount: number;
+  ratingDistribution: {
+    rating: number;
+    count: number;
+    percentage: number;
+  }[];
+}
+
+// Interface pour les filtres de reviews
+export interface ReviewFilters {
+  productId: string;
+  rating?: number;
+  isVerified?: boolean;
+  sortBy?: 'createdAt' | 'rating' | 'helpful';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}
+
+// Interface pour la création d'un avis
+export interface CreateReviewData {
+  productId: string;
+  rating: number;
+  comment: string;
+  customerName: string;
+}
+
+// Interface pour la réponse API des avis
+export interface ReviewsApiResponse {
+  success: boolean;
+  data: {
+    reviews: ReviewResponse[];
+    ratingDistribution: {
+      rating: number;
+      count: number;
+      percentage: number;
+    }[];
+    totalReviews: number;
+  };
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+// Props pour les composants
+export interface ReviewsListProps {
+  productId: string;
+}
+
+export interface ReviewFormProps {
+  productId: string;
+  productName: string;
+  onClose: () => void;
+  onReviewAdded: () => void;
+}
+
+// Interface pour la distribution des notes
+export interface RatingDistribution {
+  rating: number;
+  count: number;
+  percentage: number;
+}
