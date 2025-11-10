@@ -14,7 +14,7 @@ import {
   Star,
   Truck,
   Shield,
-  RotateCcw,
+  Sparkles,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -636,8 +636,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 <span>Garantie fraîcheur</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <RotateCcw className="w-4 h-4 text-primary-600" />
-                <span>Retour possible</span>
+                <Sparkles className="w-4 h-4 text-primary-600" />
+                <span>Création unique</span>
               </div>
             </div>
           </div>
