@@ -41,7 +41,7 @@ export const productSchema = z.object({
   variants: z.array(productVariantSchema).default([]),
   category: z.enum([
     'Bouquets',
-    'Fleurs de saisons', 
+    'Nöel', 
     'Compositions piquées',
     'Roses',
     'Orchidées',
@@ -77,7 +77,7 @@ export const updateProductSchema = z.object({
   variants: z.array(productVariantSchema).default([]).optional(),
   category: z.enum([
     'Bouquets',
-    'Fleurs de saisons', 
+    'Nöel', 
     'Compositions piquées',
     'Roses',
     'Orchidées',

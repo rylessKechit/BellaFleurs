@@ -222,3 +222,250 @@ body {
     @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
 }
+
+/* ================================
+   🎄 CHRISTMAS ANIMATIONS - Extension pour Bella Fleurs
+   Ces styles s'ajoutent aux animations existantes sans les modifier
+   ================================ */
+
+/* Variables de Noël (s'ajoutent aux variables existantes) */
+:root {
+  /* Couleurs de Noël - n'affectent pas les couleurs primary existantes */
+  --christmas-red: #dc2626;
+  --christmas-green: #16a34a;
+  --christmas-gold: #fbbf24;
+  --christmas-snow: #f8fafc;
+  --christmas-dark-green: #14532d;
+}
+
+/* Animation pour les emojis de Noël qui tombent */
+@keyframes christmasFall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg) scale(1);
+    opacity: 0.9;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) rotate(180deg) scale(1.1);
+  }
+  90% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(110vh) rotate(360deg) scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* Animation de scintillement pour les étoiles */
+@keyframes christmasSparkle {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.8;
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(1.2) rotate(90deg);
+    opacity: 1;
+    filter: brightness(1.3);
+  }
+  50% {
+    transform: scale(0.9) rotate(180deg);
+    opacity: 0.9;
+    filter: brightness(1.1);
+  }
+  75% {
+    transform: scale(1.1) rotate(270deg);
+    opacity: 1;
+    filter: brightness(1.2);
+  }
+}
+
+/* Animation de balancement pour les cloches */
+@keyframes christmasSwing {
+  0%, 100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+/* Classes d'animation pour les emojis de Noël */
+.animate-christmas-fall {
+  animation: christmasFall linear infinite;
+  will-change: transform, opacity;
+}
+
+.animate-christmas-sparkle {
+  animation: christmasSparkle 2s ease-in-out infinite;
+}
+
+.animate-christmas-swing {
+  animation: christmasSwing 2s ease-in-out infinite;
+}
+
+/* Animation de neige qui tombe doucement */
+@keyframes gentleSnowFall {
+  0% {
+    transform: translateY(-10vh) translateX(0px) rotate(0deg);
+    opacity: 0.8;
+  }
+  25% {
+    transform: translateY(25vh) translateX(-10px) rotate(90deg);
+  }
+  50% {
+    transform: translateY(50vh) translateX(5px) rotate(180deg);
+  }
+  75% {
+    transform: translateY(75vh) translateX(-5px) rotate(270deg);
+  }
+  100% {
+    transform: translateY(110vh) translateX(0px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-gentle-snow {
+  animation: gentleSnowFall linear infinite;
+}
+
+/* Classes utilitaires pour le thème de Noël */
+.christmas-bg-red {
+  background-color: var(--christmas-red);
+}
+
+.christmas-bg-green {
+  background-color: var(--christmas-green);
+}
+
+.christmas-bg-gold {
+  background-color: var(--christmas-gold);
+}
+
+.christmas-text-red {
+  color: var(--christmas-red);
+}
+
+.christmas-text-green {
+  color: var(--christmas-green);
+}
+
+.christmas-text-gold {
+  color: var(--christmas-gold);
+}
+
+/* Gradient de Noël pour les bannières */
+.christmas-gradient {
+  background: linear-gradient(135deg, var(--christmas-red) 0%, var(--christmas-green) 50%, var(--christmas-gold) 100%);
+}
+
+.christmas-gradient-soft {
+  background: linear-gradient(135deg, #fef2f2 0%, #f0fdf4 50%, #fffbeb 100%);
+}
+
+/* Effet de brillance pour les éléments festifs */
+.christmas-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.christmas-shine::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shine 3s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+  50% {
+    left: 100%;
+  }
+  100% {
+    left: -100%;
+  }
+}
+
+/* Classes pour les badges de Noël */
+.christmas-badge {
+  background: var(--christmas-gradient);
+  color: white;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
+
+/* Animation pour les boutons de Noël */
+.christmas-button {
+  background: linear-gradient(135deg, var(--christmas-red) 0%, var(--christmas-green) 100%);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.christmas-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+}
+
+.christmas-button::after {
+  content: '🎄';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.christmas-button:hover::after {
+  opacity: 1;
+}
+
+/* ================================
+   Responsive pour mobile
+   ================================ */
+@media (max-width: 768px) {
+  .animate-christmas-fall {
+    animation-duration: 6s; /* Plus lent sur mobile pour moins de distraction */
+  }
+  
+  .christmas-badge {
+    font-size: 0.625rem;
+    padding: 0.125rem 0.375rem;
+  }
+}
+
+/* ================================
+   Préférence pour les animations réduites
+   ================================ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-christmas-fall,
+  .animate-christmas-sparkle,
+  .animate-christmas-swing,
+  .animate-gentle-snow {
+    animation: none;
+  }
+  
+  .christmas-shine::before {
+    animation: none;
+  }
+}

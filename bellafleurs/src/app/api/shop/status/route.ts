@@ -46,14 +46,6 @@ export async function GET(request: NextRequest) {
     // Vérifier si nous sommes dans la période de fermeture
     const isClosed = today >= closureStart && today <= closureEnd;
 
-    console.log('🔍 Shop status check:', {
-      today: today.toISOString(),
-      closureStart: closureStart.toISOString(),
-      closureEnd: closureEnd.toISOString(),
-      isClosed,
-      isEnabled: settings.shopClosure.isEnabled
-    });
-
     return NextResponse.json({
       success: true,
       data: {

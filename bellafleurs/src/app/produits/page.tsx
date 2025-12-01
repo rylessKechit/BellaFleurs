@@ -68,7 +68,7 @@ interface ApiResponse {
 }
 
 const CATEGORIES = [
-  'Fleurs de saisons',
+  'Nöel',
   'Incontournable',
   'Bouquets',
   'Roses',

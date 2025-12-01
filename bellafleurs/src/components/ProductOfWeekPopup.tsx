@@ -65,35 +65,17 @@ export default function ProductOfWeekPopup() {
 
     const fetchProductOfWeek = async () => {
       try {
-        console.log('🔍 [ProductOfWeek] Fetching data...', {
-          environment: process.env.NODE_ENV,
-          mounted
-        });
-
         const response = await fetch('/api/product-of-week');
         const result = await response.json();
-        
-        console.log('🔍 [ProductOfWeek] API Response:', {
-          success: result.success,
-          isEnabled: result.data?.isEnabled,
-          hasProduct: !!result.data?.product,
-          debug: result.data?.debug
-        });
 
         setDebugInfo(result.data?.debug || null);
         
         if (result.success && result.data.isEnabled && result.data.product) {
           setData(result.data);
           
-          // ✅ SOLUTION SIMPLE : Afficher à chaque visite de la page d'accueil
-          console.log('🚀 [ProductOfWeek] Product found, showing modal...');
-          
           setTimeout(() => {
-            console.log('🚀 [ProductOfWeek] Opening modal...');
             setIsOpen(true);
           }, 1500); // Délai de 1.5 secondes pour laisser la page se charger
-        } else {
-          console.log('❌ [ProductOfWeek] Conditions not met for showing modal');
         }
       } catch (error) {
         console.error('❌ [ProductOfWeek] Fetch error:', error);
@@ -107,7 +89,6 @@ export default function ProductOfWeekPopup() {
   }, [mounted]);
 
   const handleClose = () => {
-    console.log('🔒 [ProductOfWeek] Closing modal...');
     setIsOpen(false);
   };
 
@@ -200,7 +181,6 @@ export default function ProductOfWeekPopup() {
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  console.log('🔗 [ProductOfWeek] Navigating to product page...');
                   window.location.href = getProductUrl();
                   handleClose();
                 }}

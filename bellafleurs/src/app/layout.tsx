@@ -5,6 +5,7 @@ import SessionProvider from '@/components/providers/SessionProvider';
 import { CartProvider } from '@/contexts/CartContext';
 import './globals.css';
 import StructuredData from '@/components/StructuredData';
+import ChristmasDecoration from '@/components/christmas/ChristmasDecoration';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -88,6 +89,7 @@ export default function RootLayout({
             {/* Contenu principal */}
             <div className="relative z-10 min-h-screen flex flex-col">
               {children}
+              <ChristmasDecoration density="light" />
             </div>
             
             {/* Notifications toast */}

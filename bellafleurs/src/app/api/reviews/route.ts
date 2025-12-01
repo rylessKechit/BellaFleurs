@@ -249,8 +249,6 @@ export async function POST(request: NextRequest) {
     // Populate les données utilisateur pour la réponse
     await review.populate('user', 'name');
 
-    console.log(`✅ New review created for product ${productId}: ${rating} stars by ${customerName}`);
-
     return NextResponse.json({
       success: true,
       data: { review },

@@ -10,9 +10,9 @@ export default function GallerySection() {
   // 7 catégories de services avec mapping vers les catégories API
   const items = [
     { 
-      name: 'Fleurs de saisons', 
-      image: '/images/fleurs-saisons.webp',
-      category: 'Fleurs de saisons'
+      name: 'Nöel', 
+      image: '/images/noel.webp',
+      category: 'Nöel'
     },
     { 
       name: 'Incontournable', 

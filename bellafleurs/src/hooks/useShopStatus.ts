@@ -60,7 +60,6 @@ export function useShopStatus(autoRefresh: boolean = true) {
     if (autoRefresh) {
       // Écouter les événements de revalidation
       const handleRevalidate = () => {
-        console.log('🔄 Revalidation du statut shop demandée');
         checkStatus();
       };
 
@@ -89,6 +88,5 @@ export function useShopStatus(autoRefresh: boolean = true) {
 
 // Fonction utilitaire pour déclencher une revalidation globale
 export function revalidateShopStatus() {
-  console.log('🔄 Déclenchement revalidation globale du statut shop');
   statusEvents.dispatchEvent(new Event('revalidate'));
 }

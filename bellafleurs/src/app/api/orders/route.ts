@@ -50,8 +50,6 @@ export async function POST(req: NextRequest) {
 
     // Valider les données
     const body = await req.json();
-
-    console.log('ORDERRRRRR :', body);
     
     // 🔧 CORRECTION : Convertir deliveryInfo.date string -> Date AVANT validation
     if (body.deliveryInfo?.date && typeof body.deliveryInfo.date === 'string') {
@@ -73,8 +71,6 @@ export async function POST(req: NextRequest) {
     }
 
     const orderData = validationResult.data;
-
-    console.log('Order Data après validation:', orderData);
 
     // Vérifier si une commande avec ce Payment Intent existe déjà
     if (orderData.stripePaymentIntentId) {

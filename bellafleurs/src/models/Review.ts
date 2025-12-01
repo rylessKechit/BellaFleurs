@@ -220,8 +220,6 @@ ReviewSchema.post('save', async function(doc: IReview) {
         averageRating: stats.averageRating,
         reviewsCount: stats.reviewsCount
       });
-      
-      console.log(`✅ Updated product ${doc.product} rating: ${stats.averageRating} (${stats.reviewsCount} reviews)`);
     }
   } catch (error) {
     console.error('❌ Error updating product rating after review save:', error);
@@ -241,8 +239,6 @@ ReviewSchema.post('deleteOne', { document: true, query: false }, async function(
         averageRating: stats.averageRating,
         reviewsCount: stats.reviewsCount
       });
-      
-      console.log(`✅ Updated product ${doc.product} rating after deletion: ${stats.averageRating} (${stats.reviewsCount} reviews)`);
     }
   } catch (error) {
     console.error('❌ Error updating product rating after review deletion:', error);

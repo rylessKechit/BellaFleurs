@@ -70,8 +70,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         const ordersData = await ordersResponse.json();
         const allOrders = ordersData.data?.orders || [];
         // Filtrer côté client pour ne garder que les commandes payées
-        paidOrdersCount = allOrders.filter((order: any) => order.paymentStatus === 'paid').length;
-        console.log('Commandes payées:', paidOrdersCount);
+        paidOrdersCount = allOrders.filter((order: any) => order.paymentStatus === 'paid').len
       }
 
       setCounts({
