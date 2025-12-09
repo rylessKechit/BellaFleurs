@@ -13,6 +13,7 @@ export interface ICartItem {
   quantity: number;
   image: string;
   addedAt: Date;
+  freeDelivery: boolean;
   // NOUVEAU : Support variants
   variantId?: string;
   variantName?: string;
@@ -38,6 +39,7 @@ export interface ICart extends Document, ICartMethods {
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
+  freeDelivery: boolean;
   
   // Virtuals
   isEmpty?: boolean;
@@ -273,6 +275,7 @@ CartSchema.methods.addItem = async function(
       quantity,
       image: product.images?.[0] || '/images/placeholder-product.jpg',
       addedAt: new Date(),
+      freeDelivery: product.freeDelivery,
       variantId,
       variantName,
       customPrice: variantPrice

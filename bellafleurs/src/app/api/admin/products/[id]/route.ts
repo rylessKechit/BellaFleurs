@@ -119,16 +119,13 @@ export async function PUT(
     if (careInstructions !== undefined) updateData.careInstructions = careInstructions?.trim() || '';
     if (composition !== undefined) updateData.composition = composition?.trim() || '';
     if (motsClesSEO !== undefined) updateData.motsClesSEO = Array.isArray(motsClesSEO) ? motsClesSEO.map((mot: string) => mot.trim()) : [];
-    if (freeDelivery !== undefined) updateData.freeDelivery = freeDelivery;
 
-    // 🔧 GESTION INTELLIGENTE DES VARIANTS ET PRIX
+    // Gestion des variants (code existant...)
     if (hasVariants !== undefined) {
       updateData.hasVariants = hasVariants;
 
       if (hasVariants) {
-        // Produit AVEC variants
         if (variants && Array.isArray(variants)) {
-          // Traitement des variants
           const processedVariants = variants.map((variant: any, index: number) => ({
             name: variant.name.trim(),
             price: variant.price,
@@ -138,7 +135,6 @@ export async function PUT(
             order: variant.order || index
           }));
 
-          // Validation : au moins 1 variant
           if (processedVariants.length === 0) {
             return NextResponse.json({
               success: false,
@@ -151,12 +147,8 @@ export async function PUT(
 
           updateData.variants = processedVariants.sort((a: any, b: any) => a.order - b.order);
         }
-
-        // 🔧 SUPPRIMER le champ price pour les produits avec variants
         unsetFields.price = 1;
-
       } else {
-        // Produit SANS variants
         if (price === undefined || price <= 0) {
           return NextResponse.json({
             success: false,
@@ -166,13 +158,10 @@ export async function PUT(
             }
           }, { status: 400 });
         }
-
         updateData.price = price;
-        // 🔧 SUPPRIMER les variants pour les produits sans variants
         updateData.variants = [];
       }
     } else {
-      // Si hasVariants n'est pas spécifié, mettre à jour seulement ce qui est fourni
       if (price !== undefined) updateData.price = price;
       if (variants !== undefined) {
         const processedVariants = variants.map((variant: any, index: number) => ({
@@ -205,7 +194,7 @@ export async function PUT(
       { 
         new: true, 
         runValidators: true,
-        context: 'query' // Important pour les validations conditionnelles
+        context: 'query'
       }
     ).lean();
 
@@ -231,7 +220,6 @@ export async function PUT(
   } catch (error: unknown) {
     console.error('❌ Admin product PUT error:', error);
     
-    // Gestion des erreurs de validation Mongoose
     if (error && typeof error === 'object' && 'name' in error && error.name === 'ValidationError') {
       const validationError = error as any;
       const validationErrors = Object.values(validationError.errors).map((err: any) => err.message);
@@ -247,7 +235,6 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    // Erreur de duplication
     if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
       return NextResponse.json({
         success: false,

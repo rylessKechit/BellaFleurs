@@ -1,5 +1,6 @@
 // src/lib/utils/formatProductResponse.ts
 // Utilitaire pour formater les réponses produit de manière cohérente
+// 🔧 CORRECTION : Ajout du support freeDelivery
 
 interface DBProduct {
   _id: string;
@@ -11,6 +12,7 @@ interface DBProduct {
   images: string[];
   category: string;
   isActive: boolean;
+  freeDelivery?: boolean; // ← AJOUT : Support freeDelivery
   tags: string[];
   slug?: string;
   averageRating?: number;
@@ -37,6 +39,7 @@ interface FormattedProduct {
   images: string[];
   category: string;
   isActive: boolean;
+  freeDelivery: boolean; // ← AJOUT : Support freeDelivery
   tags: string[];
   slug?: string;
   averageRating: number;
@@ -108,6 +111,7 @@ export function formatProductResponse(product: DBProduct): FormattedProduct {
     images: product.images,
     category: product.category,
     isActive: product.isActive,
+    freeDelivery: product.freeDelivery || false, // ← AJOUT : Inclusion freeDelivery
     tags: product.tags || [],
     slug: product.slug,
     averageRating: product.averageRating || 0,

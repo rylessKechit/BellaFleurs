@@ -164,6 +164,10 @@ const ProductSchema = new Schema({
     type: String,
     trim: true,
     maxlength: [1000, 'Composition cannot exceed 1000 characters']
+  },
+  freeDelivery: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,
