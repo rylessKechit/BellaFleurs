@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { ShoppingCart, Truck, CreditCard, User, MapPin, Calendar, AlertCircle, CheckCircle, Loader2, Gift, AlertTriangle, Clock } from 'lucide-react';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 import { usePostalCodeValidation } from '@/hooks/usePostalCodeValidation';
+import { IProduct } from '@/types/index';
 
 // Hook pour vérifier le statut du shop ET récupérer les informations de fermeture
 function useShopStatus() {
@@ -129,7 +130,7 @@ const isDateDuringClosure = (
 // Types
 interface CartItem {
   _id?: string;
-  product: string | { _id: string }; // ✅ Ajouter le champ product
+  product: IProduct; // ✅ Ajouter le champ product
   name: string;
   price: number;
   quantity: number;
@@ -138,6 +139,7 @@ interface CartItem {
   variantId?: string;
   variantName?: string;
   customPrice?: number;
+  freeDelivery?: boolean;
 }
 
 interface CustomerInfo {
@@ -363,9 +365,10 @@ export default function CheckoutPage() {
 
         if (response.ok) {
           const data = await response.json();
-          // ✅ CORRECTION : Utiliser data.data.cart.items
           if (data.success && data.data?.cart?.items) {
             setCartItems(data.data.cart.items);
+            // ✅ LIGNE DE DEBUG - Ajoute temporairement
+            console.log('🛒 Items du panier:', data.data.cart.items);
           }
         }
       } catch (error) {
@@ -393,7 +396,8 @@ export default function CheckoutPage() {
 
   // Calculs
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const deliveryFee = subtotal >= 50 ? 0 : 5;
+  const hasFreeDeliveryItem = cartItems.some(item => item.product.freeDelivery);
+  const deliveryFee = (hasFreeDeliveryItem || subtotal >= 50) ? 0 : 5;
   const total = subtotal + deliveryFee;
 
   // ✅ VALIDATION avant paiement
@@ -1252,6 +1256,11 @@ export default function CheckoutPage() {
                         {item.variantName && (
                           <p className="text-xs text-gray-500">{item.variantName}</p>
                         )}
+                        {item.freeDelivery && (
+                          <p className="text-xs text-green-600 font-medium">
+                            🚚 Livraison gratuite
+                          </p>
+                        )}
                         <p className="text-xs text-gray-500">
                           Quantité: {item.quantity}
                         </p>
@@ -1277,7 +1286,10 @@ export default function CheckoutPage() {
                   </div>
                   {deliveryFee === 0 && (
                     <p className="text-xs text-green-600">
-                      Livraison gratuite dès 50€
+                      {hasFreeDeliveryItem 
+                        ? 'Produit éligible dans votre panier' 
+                        : 'Livraison gratuite dès 50€'
+                      }
                     </p>
                   )}
                 </div>

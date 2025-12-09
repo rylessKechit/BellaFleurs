@@ -17,10 +17,11 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
+import { IProduct } from '@/types/index';
 
 interface CartItem {
   _id?: string;
-  product: string | { _id: string }; // ✅ CORRECTION : Peut être string ou objet
+  product: IProduct; // ✅ CORRECTION : Peut être string ou objet
   name: string;
   price: number;
   quantity: number;
@@ -200,7 +201,7 @@ export default function CartPage() {
   };
 
   // ✅ MODIFICATION : Calcul des frais avec prise en compte de freeDelivery
-  const hasFreeDeliveryItem = cart?.items.some(item => item.freeDelivery) || false;
+  const hasFreeDeliveryItem = cart?.items.some(item => item.product?.freeDelivery)
   const deliveryFee = (hasFreeDeliveryItem || (cart && cart.totalAmount >= 50)) ? 0 : 5.00;
   const finalTotal = cart ? cart.totalAmount + deliveryFee : 0;
   const isUpdating = updatingItems.size > 0;
