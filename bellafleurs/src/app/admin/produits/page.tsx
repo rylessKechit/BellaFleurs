@@ -93,6 +93,7 @@ interface Product {
   tags: string[];
   entretien?: string;
   motsClesSEO?: string[];
+  freeDelivery?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -108,6 +109,7 @@ interface ProductForm {
     minPrice: number;
     maxPrice: number;
   };
+  freeDelivery: boolean;
   category: string;
   tags: string[];
   isActive: boolean;
@@ -124,6 +126,7 @@ const initialForm: ProductForm = {
   pricingType: 'fixed',
   category: 'Bouquets',
   tags: [],
+  freeDelivery: false,
   isActive: true,
   entretien: '',
   motsClesSEO: []
@@ -456,7 +459,8 @@ function ProductForm({
       tags: product.tags || [],
       isActive: product.isActive,
       entretien: product.entretien || '',
-      motsClesSEO: product.motsClesSEO || []
+      motsClesSEO: product.motsClesSEO || [],
+      freeDelivery: product.freeDelivery || false
     } : initialForm
   );
   
@@ -795,6 +799,47 @@ function ProductForm({
         </Card>
       )}
 
+      {/* Paramètres produit */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Paramètres du produit</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Statut actif */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="isActive"
+                checked={form.isActive}
+                onCheckedChange={(checked) => setForm({ ...form, isActive: checked })}
+              />
+              <Label htmlFor="isActive">Produit actif</Label>
+            </div>
+
+            {/* NOUVEAU : Livraison gratuite */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="freeDelivery"
+                checked={form.freeDelivery || false}
+                onCheckedChange={(checked) => setForm({ ...form, freeDelivery: checked })}
+              />
+              <Label htmlFor="freeDelivery" className="flex items-center">
+                🚚 Livraison gratuite
+              </Label>
+            </div>
+          </div>
+
+          {/* Message explicatif */}
+          {form.freeDelivery && (
+            <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+              <p className="text-sm text-green-800">
+                ✅ Ce produit bénéficie de la livraison gratuite, même si le panier est inférieur à 50€
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Images */}
       <Card>
         <CardHeader>
@@ -889,6 +934,15 @@ function ProductForm({
           </div>
         </CardContent>
       </Card>
+
+      {/* Message explicatif */}
+      {form.freeDelivery && (
+        <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+          <p className="text-sm text-green-800">
+            ✅ Ce produit bénéficie de la livraison gratuite, même si le panier est inférieur à 50€
+          </p>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex justify-end space-x-4 pt-4">
@@ -990,6 +1044,9 @@ export default function AdminProducts() {
         images
       };
 
+      console.log('📦 Data envoyée au backend:', productData); // ← AJOUTE CETTE LIGNE
+      console.log('🚚 FreeDelivery value:', formData.freeDelivery); // ← AJOUTE CETTE LIGNE
+
       const url = editingProduct 
         ? `/api/admin/products/${editingProduct._id}` 
         : '/api/admin/products';
@@ -1004,11 +1061,10 @@ export default function AdminProducts() {
         credentials: 'include',
         body: JSON.stringify(productData),
       });
-
       const result = await response.json();
-
+      
       if (result.success) {
-        toast.success(editingProduct ? 'Produit mis à jour avec succès' : 'Produit créé avec succès');
+        toast.success(`Produit ${editingProduct ? 'mis à jour' : 'créé'} avec succès`);
         setShowForm(false);
         setEditingProduct(null);
         fetchProducts();
@@ -1019,7 +1075,7 @@ export default function AdminProducts() {
       console.error('Save product error:', error);
       toast.error('Erreur lors de la sauvegarde du produit');
     }
-  };
+  }
 
   const handleDeleteProduct = async (product: Product) => {
     if (!confirm(`Êtes-vous sûr de vouloir supprimer "${product.name}" ?`)) {

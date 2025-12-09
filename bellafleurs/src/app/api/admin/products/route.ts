@@ -27,6 +27,7 @@ function formatProductResponse(product: any): any {
     category: product.category,
     images: product.images || [],
     isActive: product.isActive,
+    freeDelivery: product.freeDelivery || false,
     tags: product.tags || [],
     slug: product.slug,
     entretien: product.entretien,
@@ -150,7 +151,8 @@ export async function POST(request: NextRequest) {
       composition,
       motsClesSEO,
       pricingType = 'fixed',
-      customPricing
+      customPricing,
+      freeDelivery = false
     } = await request.json();
 
     // Validation des champs requis
@@ -271,7 +273,8 @@ export async function POST(request: NextRequest) {
       composition: composition?.trim() || '',
       motsClesSEO: processedMotsClesSEO,
       averageRating: 0,
-      reviewsCount: 0
+      reviewsCount: 0,
+      freeDelivery
     };
 
     // Logique conditionnelle selon le type de prix

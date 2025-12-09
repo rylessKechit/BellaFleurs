@@ -29,6 +29,7 @@ interface CartItem {
   variantId?: string;
   variantName?: string;
   customPrice?: number;
+  freeDelivery?: boolean; // ← AJOUT POUR LIVRAISON GRATUITE
 }
 
 interface Cart {
@@ -198,7 +199,9 @@ export default function CartPage() {
     }
   };
 
-  const deliveryFee = cart && cart.totalAmount >= 50 ? 0 : 5.00;
+  // ✅ MODIFICATION : Calcul des frais avec prise en compte de freeDelivery
+  const hasFreeDeliveryItem = cart?.items.some(item => item.freeDelivery) || false;
+  const deliveryFee = (hasFreeDeliveryItem || (cart && cart.totalAmount >= 50)) ? 0 : 5.00;
   const finalTotal = cart ? cart.totalAmount + deliveryFee : 0;
   const isUpdating = updatingItems.size > 0;
 
@@ -285,6 +288,14 @@ export default function CartPage() {
                                     Taille: {item.variantName}
                                   </p>
                                 )}
+                                {/* ✅ AJOUT : Badge livraison gratuite */}
+                                {item.freeDelivery && (
+                                  <div className="mt-2">
+                                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                      🚚 Livraison gratuite
+                                    </Badge>
+                                  </div>
+                                )}
                                 <p className="text-lg font-semibold text-primary-600 mt-2">
                                   {item.price.toFixed(2)} € <span className="text-sm text-gray-500">/ unité</span>
                                 </p>
@@ -368,7 +379,20 @@ export default function CartPage() {
                       </span>
                     </div>
                     
-                    {cart.totalAmount < 50 && (
+                    {/* ✅ MODIFICATION : Message pour livraison gratuite */}
+                    {deliveryFee === 0 ? (
+                      hasFreeDeliveryItem ? (
+                        <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg">
+                          <Truck className="w-4 h-4 inline mr-2" />
+                          Livraison gratuite grâce à un produit éligible dans votre panier
+                        </div>
+                      ) : (
+                        <div className="text-sm text-green-600 bg-green-50 p-3 rounded-lg">
+                          <Truck className="w-4 h-4 inline mr-2" />
+                          Livraison gratuite (commande ≥ 50€)
+                        </div>
+                      )
+                    ) : (
                       <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
                         <Truck className="w-4 h-4 inline mr-2" />
                         Livraison gratuite dès 50€ d'achat

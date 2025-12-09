@@ -1,7 +1,7 @@
 // src/components/checkout/DeliveryStep.tsx
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Truck, MapPin, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,19 +31,30 @@ interface DeliveryStepProps {
   setDeliveryInfo: (info: DeliveryInfo) => void;
   errors: Record<string, string>;
   subtotal: number;
+  cartItems?: Array<{ freeDelivery?: boolean }>; // ← AJOUT PROP POUR LES ITEMS
 }
 
 const DeliveryStep: React.FC<DeliveryStepProps> = ({
   deliveryInfo,
   setDeliveryInfo,
   errors,
-  subtotal
+  subtotal,
+  cartItems = [] // ← AJOUT PROP AVEC VALEUR PAR DÉFAUT
 }) => {
   const { isAuthenticated, user } = useAuth();
   
-  // Calcul des frais de livraison
-  const deliveryFee = subtotal >= 50 ? 0 : 10;
-  const isFreeDelivery = subtotal >= 50;
+  // ✅ MODIFICATION : Calcul des frais avec prise en compte de freeDelivery
+  const { deliveryFee, isFreeDelivery, freeDeliveryReason } = useMemo(() => {
+    const hasFreeDeliveryItem = cartItems.some(item => item.freeDelivery);
+    const isFreeByAmount = subtotal >= 50;
+    const isFree = hasFreeDeliveryItem || isFreeByAmount;
+    
+    return {
+      deliveryFee: isFree ? 0 : 10,
+      isFreeDelivery: isFree,
+      freeDeliveryReason: hasFreeDeliveryItem ? 'product' : (isFreeByAmount ? 'amount' : null)
+    };
+  }, [cartItems, subtotal]);
 
   // Date minimale : 2 jours dans le futur
   const minDate = new Date();
@@ -106,9 +117,15 @@ const DeliveryStep: React.FC<DeliveryStepProps> = ({
                 </p>
                 <div className="text-sm text-green-700">
                   {isFreeDelivery ? (
-                    <span className="font-medium">
-                      ✨ Livraison gratuite (commande &gt; 50€)
-                    </span>
+                    freeDeliveryReason === 'product' ? (
+                      <span className="font-medium">
+                        ✨ Livraison gratuite grâce à un produit éligible
+                      </span>
+                    ) : (
+                      <span className="font-medium">
+                        ✨ Livraison gratuite (commande &gt; 50€)
+                      </span>
+                    )
                   ) : (
                     <>
                       <span>Frais de livraison : {deliveryFee}€</span>

@@ -29,6 +29,10 @@ const ProductVariantSchema = new Schema({
     type: Boolean,
     default: true
   },
+  freeDelivery: {
+    type: Boolean,
+    default: false
+  },
   order: {
     type: Number,
     default: 0,

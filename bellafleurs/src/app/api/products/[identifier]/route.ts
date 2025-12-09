@@ -21,6 +21,7 @@ interface FormattedProduct {
   category: string;
   images: string[];
   isActive: boolean;
+  freeDelivery: boolean;
   tags: string[];
   slug?: string;
   entretien?: string;
@@ -50,6 +51,7 @@ function formatProductResponse(product: any): FormattedProduct {
     category: product.category,
     images: product.images || [],
     isActive: product.isActive,
+    freeDelivery: product.freeDelivery || false,
     tags: product.tags || [],
     slug: product.slug,
     entretien: product.entretien,

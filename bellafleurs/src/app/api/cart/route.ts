@@ -38,6 +38,20 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // ✅ AJOUT : Peupler avec les données des produits pour récupérer freeDelivery
+    await cart.populate({
+      path: 'items.product',
+      select: 'freeDelivery'
+    });
+
+    // ✅ AJOUT : Enrichir les items avec freeDelivery
+    if (cart.items) {
+      cart.items = cart.items.map((item: any) => ({
+        ...item.toObject(),
+        freeDelivery: item.product?.freeDelivery || false
+      }));
+    }
+
     return NextResponse.json({
       success: true,
       data: { cart }
@@ -227,6 +241,20 @@ export async function POST(request: NextRequest) {
       finalPrice
     );
 
+    // ✅ AJOUT : Peupler avec freeDelivery après ajout
+    await cart.populate({
+      path: 'items.product',
+      select: 'freeDelivery'
+    });
+
+    // ✅ AJOUT : Enrichir les items avec freeDelivery
+    if (cart.items) {
+      cart.items = cart.items.map((item: any) => ({
+        ...item.toObject(),
+        freeDelivery: item.product?.freeDelivery || false
+      }));
+    }
+
     // ✅ Préparer la réponse avec cartItemsCount
     const response = NextResponse.json({
       success: true,
@@ -331,6 +359,20 @@ export async function PUT(request: NextRequest) {
     // Mettre à jour la quantité
     await cart.updateQuantity(productId, quantity, finalVariantId);
 
+    // ✅ AJOUT : Peupler avec freeDelivery après mise à jour
+    await cart.populate({
+      path: 'items.product',
+      select: 'freeDelivery'
+    });
+
+    // ✅ AJOUT : Enrichir les items avec freeDelivery
+    if (cart.items) {
+      cart.items = cart.items.map((item: any) => ({
+        ...item.toObject(),
+        freeDelivery: item.product?.freeDelivery || false
+      }));
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -405,6 +447,20 @@ export async function DELETE(request: NextRequest) {
 
     // Supprimer l'item
     await cart.removeItem(productId, variantId);
+
+    // ✅ AJOUT : Peupler avec freeDelivery après suppression
+    await cart.populate({
+      path: 'items.product',
+      select: 'freeDelivery'
+    });
+
+    // ✅ AJOUT : Enrichir les items avec freeDelivery
+    if (cart.items) {
+      cart.items = cart.items.map((item: any) => ({
+        ...item.toObject(),
+        freeDelivery: item.product?.freeDelivery || false
+      }));
+    }
 
     return NextResponse.json({
       success: true,

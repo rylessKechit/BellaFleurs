@@ -22,6 +22,7 @@ interface FormattedProduct {
   tags: string[];
   slug?: string;
   entretien?: string;
+  freeDelivery: boolean;
   careInstructions?: string;
   composition?: string;
   motsClesSEO: string[];
@@ -48,6 +49,7 @@ function formatProduct(product: any): FormattedProduct {
     category: product.category,
     images: product.images || [],
     isActive: product.isActive,
+    freeDelivery: product.freeDelivery || false,
     tags: product.tags || [],
     slug: product.slug,
     entretien: product.entretien,

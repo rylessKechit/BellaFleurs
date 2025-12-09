@@ -86,6 +86,8 @@ export interface IProduct extends BaseDocument {
     minPrice: number;
     maxPrice: number;
   };
+
+  freeDelivery: boolean;
   
   // SEO et référencement
   metaTitle?: string;

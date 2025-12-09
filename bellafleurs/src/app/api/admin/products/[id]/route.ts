@@ -100,7 +100,8 @@ export async function PUT(
       entretien,
       careInstructions,
       composition,
-      motsClesSEO
+      motsClesSEO,
+      freeDelivery
     } = body;
 
     // 🔧 CORRECTION PRINCIPALE : Gestion intelligente des variants et du prix
@@ -118,6 +119,7 @@ export async function PUT(
     if (careInstructions !== undefined) updateData.careInstructions = careInstructions?.trim() || '';
     if (composition !== undefined) updateData.composition = composition?.trim() || '';
     if (motsClesSEO !== undefined) updateData.motsClesSEO = Array.isArray(motsClesSEO) ? motsClesSEO.map((mot: string) => mot.trim()) : [];
+    if (freeDelivery !== undefined) updateData.freeDelivery = freeDelivery;
 
     // 🔧 GESTION INTELLIGENTE DES VARIANTS ET PRIX
     if (hasVariants !== undefined) {
