@@ -41,8 +41,10 @@ export async function GET(request: NextRequest) {
     // ✅ AJOUT : Peupler avec les données des produits pour récupérer freeDelivery
     await cart.populate({
       path: 'items.product',
-      select: 'freeDelivery'
+      select: 'freeDelivery category'
     });
+
+    console.log('✅ Cart fetched:', cart);
 
     // ✅ AJOUT : Enrichir les items avec freeDelivery
     if (cart.items) {
@@ -244,7 +246,7 @@ export async function POST(request: NextRequest) {
     // ✅ AJOUT : Peupler avec freeDelivery après ajout
     await cart.populate({
       path: 'items.product',
-      select: 'freeDelivery'
+      select: 'freeDelivery category'
     });
 
     // ✅ AJOUT : Enrichir les items avec freeDelivery
@@ -254,6 +256,8 @@ export async function POST(request: NextRequest) {
         freeDelivery: item.product?.freeDelivery || false
       }));
     }
+
+    console.log('✅ Cart after addition:', cart);
 
     // ✅ Préparer la réponse avec cartItemsCount
     const response = NextResponse.json({

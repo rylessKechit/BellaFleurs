@@ -16,8 +16,17 @@ import { ShoppingCart, Truck, CreditCard, User, MapPin, Calendar, AlertCircle, C
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
 import { usePostalCodeValidation } from '@/hooks/usePostalCodeValidation';
 import { IProduct } from '@/types/index';
+import { useDeuil } from '../../hooks/useDeuil';
+import DeuilForm from '../../components/DeuilForm';
+import { 
+  DeuilInfo, 
+  validateDeuilForm, 
+  hasDeuilValidationErrors,
+  formatDeuilDataForOrder,
+  DeuilValidationErrors 
+} from '../../utils/deuilValidation';
 
-// Hook pour vérifier le statut du shop ET récupérer les informations de fermeture
+
 function useShopStatus() {
   const [status, setStatus] = useState({
     isOpen: true,
@@ -136,6 +145,7 @@ interface CartItem {
   quantity: number;
   image: string;
   addedAt: Date;
+  isActive: boolean;
   variantId?: string;
   variantName?: string;
   customPrice?: number;
@@ -211,6 +221,15 @@ export default function CheckoutPage() {
   const { data: session } = useSession();
   const shopStatus = useShopStatus();
 
+  const [deuilInfo, setDeuilInfo] = useState<DeuilInfo>({
+    isDeuil: false,
+    defuntName: '',
+    condolenceMessage: '',
+    senderName: ''
+  });
+
+  const [deuilErrors, setDeuilErrors] = useState<DeuilValidationErrors>({});
+
   // États
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -248,7 +267,26 @@ export default function CheckoutPage() {
   });
 
   // Créneaux de livraison avec logique heure 20h
+    // Créneaux de livraison avec logique spéciale pour deuil
   const getAvailableTimeSlots = () => {
+    // ✅ NOUVEAU : Créneaux spéciaux pour arrangements funéraires
+    if (hasDeuil) {
+      return [
+        { value: '9h', label: '9h' },
+        { value: '10h', label: '10h' },
+        { value: '11h', label: '11h' },
+        { value: '12h', label: '12h' },
+        { value: '13h', label: '13h' },
+        { value: '14h', label: '14h' },
+        { value: '15h', label: '15h' },
+        { value: '16h', label: '16h' },
+        { value: '17h', label: '17h' },
+        { value: '18h', label: '18h' },
+        { value: '19h', label: '19h' }
+      ];
+    }
+
+    // ✅ Créneaux normaux pour produits classiques
     const baseTimeSlots: TimeSlot[] = [
       { value: '9h-13h', label: '9h - 13h (matin)' },
       { value: '14h-19h', label: '14h - 19h (après-midi)' }
@@ -394,44 +432,115 @@ export default function CheckoutPage() {
     }
   }, [session]);
 
+
+
   // Calculs
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const hasFreeDeliveryItem = cartItems.some(item => item.product.freeDelivery);
   const deliveryFee = (hasFreeDeliveryItem || subtotal >= 50) ? 0 : 5;
   const total = subtotal + deliveryFee;
 
+  const { hasDeuil, isDeuilOnly, hasMixedCategories } = useDeuil(cartItems);
+
+  useEffect(() => {
+  if (hasDeuil && !deuilInfo.isDeuil) {
+    setDeuilInfo(prev => ({
+      ...prev,
+      isDeuil: true,
+      senderName: `${customerInfo.firstName} ${customerInfo.lastName}`.trim()
+    }));
+  }
+}, [hasDeuil, customerInfo.firstName, customerInfo.lastName]);
+
   // ✅ VALIDATION avant paiement
-  const validateForm = () => {
+    // Fonction de validation globale incluant deuil
+  const validateAllForms = (): boolean => {
+    let hasErrors = false;
     const newErrors: Record<string, string> = {};
-    
-    // Vérifications client
-    if (!customerInfo.firstName.trim()) newErrors.firstName = 'Prénom requis';
-    if (!customerInfo.lastName.trim()) newErrors.lastName = 'Nom requis';
-    if (!customerInfo.email.trim()) newErrors.email = 'Email requis';
-    if (!customerInfo.phone.trim()) newErrors.phone = 'Téléphone requis';
-    
-    // Vérifications adresse
-    if (!deliveryInfo.address.street.trim()) newErrors.street = 'Adresse requise';
-    if (!deliveryInfo.address.zipCode.trim()) newErrors.zipCode = 'Code postal requis';
-    if (!deliveryInfo.address.city.trim()) newErrors.city = 'Ville requise';
-    
-    // Vérifications livraison
-    if (!deliveryInfo.date) newErrors.date = 'Date de livraison requise';
-    if (!selectedTimeSlot) newErrors.timeSlot = 'Créneau requis';
-    
-    // Vérification zone de livraison
-    if (!validationState.isDeliverable) {
-      newErrors.zipCode = 'Cette zone n\'est pas couverte par nos livraisons';
+
+    // === VALIDATION INFORMATIONS CLIENT ===
+    if (!customerInfo.firstName.trim()) {
+      newErrors.firstName = 'Le prénom est obligatoire';
+      hasErrors = true;
     }
     
-    // Validation cadeau
-    if (giftInfo.isGift) {
-      if (!giftInfo.recipientFirstName.trim()) newErrors.recipientFirstName = 'Prénom du destinataire requis';
-      if (!giftInfo.recipientLastName.trim()) newErrors.recipientLastName = 'Nom du destinataire requis';
+    if (!customerInfo.lastName.trim()) {
+      newErrors.lastName = 'Le nom est obligatoire';
+      hasErrors = true;
     }
     
+    if (!customerInfo.email.trim()) {
+      newErrors.email = 'L\'email est obligatoire';
+      hasErrors = true;
+    } else if (!/\S+@\S+\.\S+/.test(customerInfo.email)) {
+      newErrors.email = 'Format d\'email invalide';
+      hasErrors = true;
+    }
+    
+    if (!customerInfo.phone.trim()) {
+      newErrors.phone = 'Le téléphone est obligatoire';
+      hasErrors = true;
+    }
+
+    // === VALIDATION LIVRAISON ===
+    if (!deliveryInfo.address.street.trim()) {
+      newErrors.street = 'L\'adresse est obligatoire';
+      hasErrors = true;
+    }
+    
+    if (!deliveryInfo.address.zipCode.trim()) {
+      newErrors.zipCode = 'Le code postal est obligatoire';
+      hasErrors = true;
+    }
+    
+    if (!deliveryInfo.address.city.trim()) {
+      newErrors.city = 'La ville est obligatoire';
+      hasErrors = true;
+    }
+    
+    if (!deliveryInfo.date) {
+      newErrors.date = 'La date de livraison est obligatoire';
+      hasErrors = true;
+    }
+    
+    if (!selectedTimeSlot) {
+      newErrors.timeSlot = 'Veuillez sélectionner un créneau horaire';
+      hasErrors = true;
+    }
+
+    // === VALIDATION CADEAU CLASSIQUE ===
+    if (giftInfo.isGift && !hasDeuil) {
+      if (!giftInfo.recipientFirstName.trim()) {
+        newErrors.recipientFirstName = 'Le prénom du destinataire est obligatoire';
+        hasErrors = true;
+      }
+      
+      if (!giftInfo.recipientLastName.trim()) {
+        newErrors.recipientLastName = 'Le nom du destinataire est obligatoire';
+        hasErrors = true;
+      }
+    }
+
+    // === VALIDATION SPÉCIFIQUE DEUIL ===
+    if (hasDeuil && deuilInfo.isDeuil) {
+      const deuilValidationErrors = validateDeuilForm(deuilInfo);
+      setDeuilErrors(deuilValidationErrors);
+      
+      if (hasDeuilValidationErrors(deuilValidationErrors)) {
+        hasErrors = true;
+        toast.error('Veuillez compléter les informations pour l\'arrangement funéraire');
+      }
+    }
+
+    // Appliquer les erreurs générales
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    
+    // Afficher message d'erreur global si nécessaire
+    if (hasErrors && !hasDeuil) {
+      toast.error('Veuillez corriger les erreurs dans le formulaire');
+    }
+
+    return !hasErrors;
   };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -496,11 +605,15 @@ export default function CheckoutPage() {
 
   // Données pour le paiement
   const orderDataForPayment = useMemo(() => {
-    if (cartItems.length === 0) return null;
+  if (cartItems.length === 0) return null;
+  
+  // Préparer les données de deuil si applicable
+  const deuilData = hasDeuil && deuilInfo.isDeuil 
+      ? formatDeuilDataForOrder(deuilInfo) 
+      : null;
     
     return {
       items: cartItems.map(item => ({
-        // ✅ SOLUTION: Gérer les deux cas de structure
         product: typeof item.product === 'string' 
           ? item.product 
           : (item.product as any)?._id || item._id,
@@ -524,17 +637,27 @@ export default function CheckoutPage() {
         date: new Date(deliveryInfo.date),
         timeSlot: selectedTimeSlot,
         notes: deliveryInfo.notes || undefined,
-        isGift: giftInfo.isGift,
+        
+        // MODIFICATION : Gérer à la fois cadeaux et deuil
+        isGift: giftInfo.isGift || (deuilData?.isGift || false),
         giftInfo: giftInfo.isGift ? {
-          recipientName: `${giftInfo.recipientFirstName} ${giftInfo.recipientLastName}`.trim(),
-          senderName: `${customerInfo.firstName} ${customerInfo.lastName}`.trim(),
-          message: giftInfo.message // ✨ SEULE MODIFICATION: Ajout message
-        } : undefined
+        recipientName: `${giftInfo.recipientFirstName} ${giftInfo.recipientLastName}`.trim(),
+        senderName: `${customerInfo.firstName} ${customerInfo.lastName}`.trim(),
+        message: giftInfo.message
+      } : deuilData ? {
+        recipientName: `${deuilData.defuntName}`,
+        senderName: deuilData.senderName, // ✅ ASSURE-TOI QUE C'EST BIEN LÀ
+        message: deuilData.message,
+        // Champs spécifiques au deuil
+        isDeuil: true,
+        defuntName: deuilData.defuntName,
+        condolenceMessage: deuilData.condolenceMessage
+      } : undefined
       },
       paymentMethod: 'card',
       totalAmount: total
     };
-  }, [cartItems, customerInfo, deliveryInfo, selectedTimeSlot, giftInfo, total]);
+  }, [cartItems, customerInfo, deliveryInfo, selectedTimeSlot, giftInfo, deuilInfo, hasDeuil, total]);
 
   // Gérer le succès du paiement
   const handlePaymentSuccess = async (paymentIntent: any) => {
@@ -908,104 +1031,131 @@ export default function CheckoutPage() {
               <div className="space-y-6">
                 
                 {/* Option Cadeau */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Gift className="w-5 h-5 mr-2" />
-                      C'est un cadeau ?
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="isGift"
-                          checked={giftInfo.isGift}
-                          onChange={(e) => setGiftInfo(prev => ({ 
-                            ...prev, 
-                            isGift: e.target.checked,
-                            recipientFirstName: e.target.checked ? prev.recipientFirstName : '',
-                            recipientLastName: e.target.checked ? prev.recipientLastName : '',
-                            message: e.target.checked ? prev.message : '' // ✨ SEULE MODIFICATION: Reset message
-                          }))}
-                          className="rounded border-gray-300"
-                        />
-                        <Label htmlFor="isGift" className="text-sm">
-                          Cette commande est un cadeau pour quelqu'un d'autre
-                        </Label>
-                      </div>
-                      
-                      {giftInfo.isGift && (
-                        <div className="bg-pink-50 p-4 rounded-lg border border-pink-200 space-y-4">
-                          <p className="text-sm text-pink-800 font-medium">
-                            Informations du destinataire
-                          </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                              <Label htmlFor="recipientFirstName">Prénom du destinataire *</Label>
-                              <Input
-                                id="recipientFirstName"
-                                value={giftInfo.recipientFirstName}
-                                onChange={(e) => setGiftInfo(prev => ({
-                                  ...prev,
-                                  recipientFirstName: e.target.value
-                                }))}
-                                className={errors.recipientFirstName ? 'border-red-300 bg-red-50' : ''}
-                                placeholder="Prénom"
-                              />
-                              {errors.recipientFirstName && (
-                                <p className="text-red-600 text-sm mt-1">{errors.recipientFirstName}</p>
-                              )}
-                            </div>
-                            <div>
-                              <Label htmlFor="recipientLastName">Nom du destinataire *</Label>
-                              <Input
-                                id="recipientLastName"
-                                value={giftInfo.recipientLastName}
-                                onChange={(e) => setGiftInfo(prev => ({
-                                  ...prev,
-                                  recipientLastName: e.target.value
-                                }))}
-                                className={errors.recipientLastName ? 'border-red-300 bg-red-50' : ''}
-                                placeholder="Nom"
-                              />
-                              {errors.recipientLastName && (
-                                <p className="text-red-600 text-sm mt-1">{errors.recipientLastName}</p>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* ✨ SEULE MODIFICATION: Ajout du champ message */}
-                          <div>
-                            <Label htmlFor="giftMessage">Message personnalisé (optionnel)</Label>
-                            <Textarea
-                              id="giftMessage"
-                              value={giftInfo.message}
-                              onChange={(e) => setGiftInfo(prev => ({
-                                ...prev,
-                                message: e.target.value
-                              }))}
-                              placeholder="Votre message personnalisé pour accompagner ce cadeau..."
-                              maxLength={300}
-                              rows={3}
-                              className="mt-1 resize-none"
-                            />
-                            <div className="flex justify-between items-center mt-1">
-                              <p className="text-xs text-gray-500">
-                                Ce message apparaîtra sur la carte accompagnant votre cadeau
-                              </p>
-                              <span className="text-xs text-gray-400">
-                                {giftInfo.message.length}/300
-                              </span>
-                            </div>
-                          </div>
-                          {/* ✨ FIN MODIFICATION */}
+                {hasDeuil && (
+                  <DeuilForm
+                    deuilInfo={deuilInfo}
+                    setDeuilInfo={setDeuilInfo}
+                    customerName={`${customerInfo.firstName} ${customerInfo.lastName}`.trim()}
+                    errors={deuilErrors}
+                    isVisible={hasDeuil}
+                  />
+                )}
+
+                {/* 🔄 SECTION CADEAU MODIFIÉE - S'affiche SEULEMENT si pas de produits deuil */}
+                {!hasDeuil && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center">
+                        <Gift className="w-5 h-5 mr-2" />
+                        C'est un cadeau ?
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="isGift"
+                            checked={giftInfo.isGift}
+                            onChange={(e) => setGiftInfo(prev => ({ 
+                              ...prev, 
+                              isGift: e.target.checked,
+                              recipientFirstName: e.target.checked ? prev.recipientFirstName : '',
+                              recipientLastName: e.target.checked ? prev.recipientLastName : '',
+                              message: e.target.checked ? prev.message : ''
+                            }))}
+                            className="rounded border-gray-300"
+                          />
+                          <Label htmlFor="isGift" className="text-sm">
+                            Cette commande est un cadeau pour quelqu'un d'autre
+                          </Label>
                         </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                        
+                        {giftInfo.isGift && (
+                          <div className="bg-pink-50 p-4 rounded-lg border border-pink-200 space-y-4">
+                            <p className="text-sm text-pink-800 font-medium">
+                              Informations du destinataire
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <Label htmlFor="recipientFirstName">Prénom du destinataire *</Label>
+                                <Input
+                                  id="recipientFirstName"
+                                  value={giftInfo.recipientFirstName}
+                                  onChange={(e) => setGiftInfo(prev => ({
+                                    ...prev,
+                                    recipientFirstName: e.target.value
+                                  }))}
+                                  className={errors.recipientFirstName ? 'border-red-300 bg-red-50' : ''}
+                                  placeholder="Prénom"
+                                />
+                                {errors.recipientFirstName && (
+                                  <p className="text-red-600 text-sm mt-1">{errors.recipientFirstName}</p>
+                                )}
+                              </div>
+                              <div>
+                                <Label htmlFor="recipientLastName">Nom du destinataire *</Label>
+                                <Input
+                                  id="recipientLastName"
+                                  value={giftInfo.recipientLastName}
+                                  onChange={(e) => setGiftInfo(prev => ({
+                                    ...prev,
+                                    recipientLastName: e.target.value
+                                  }))}
+                                  className={errors.recipientLastName ? 'border-red-300 bg-red-50' : ''}
+                                  placeholder="Nom"
+                                />
+                                {errors.recipientLastName && (
+                                  <p className="text-red-600 text-sm mt-1">{errors.recipientLastName}</p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Champ message cadeau */}
+                            <div>
+                              <Label htmlFor="giftMessage">Message personnalisé (optionnel)</Label>
+                              <Textarea
+                                id="giftMessage"
+                                value={giftInfo.message}
+                                onChange={(e) => setGiftInfo(prev => ({
+                                  ...prev,
+                                  message: e.target.value
+                                }))}
+                                placeholder="Votre message personnalisé pour accompagner ce cadeau..."
+                                maxLength={300}
+                                rows={3}
+                                className="mt-1 resize-none"
+                              />
+                              <div className="flex justify-between items-center mt-1">
+                                <p className="text-xs text-gray-500">
+                                  Ce message apparaîtra sur la carte accompagnant votre cadeau
+                                </p>
+                                <span className="text-xs text-gray-400">
+                                  {giftInfo.message.length}/300
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* 🆕 AVERTISSEMENT PANIER MIXTE - Nouveau */}
+                {hasMixedCategories && (
+                  <Card className="border-orange-200 bg-orange-50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center text-orange-800">
+                        <AlertCircle className="w-5 h-5 mr-2" />
+                        <p className="text-sm">
+                          Votre panier contient des arrangements funéraires et d'autres produits. 
+                          Les informations de deuil s'appliqueront aux arrangements funéraires uniquement.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Informations de livraison */}
                 <Card>

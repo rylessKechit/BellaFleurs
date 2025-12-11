@@ -193,7 +193,7 @@ const DeliveryInfoSchema = new Schema({
   },
   timeSlot: {
     type: String,
-    enum: ['9h-13h', '14h-19h'],
+    enum: ['9h-13h', '14h-19h', '9h', '10h', '11h', '12h', '13h', '14h', '15h', '16h', '17h', '18h', '19h'],
     required: false
   },
 }, { _id: false });

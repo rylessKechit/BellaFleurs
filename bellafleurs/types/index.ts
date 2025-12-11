@@ -66,7 +66,7 @@ export interface IProduct extends BaseDocument {
   description: string;
   images: string[];
   category: string;
-  subcategory?: string;
+  subcategory: string;
   tags: string[];
   isActive: boolean;
 
