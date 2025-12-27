@@ -65,7 +65,7 @@ function ChristmasHeaderNotice() {
             
             <div className="text-center">
               <span className="font-semibold text-base">
-                <span className="text-yellow-50">Notre selection pour Nöel</span>
+                <span className="text-yellow-50">Notre selection pour Fête nouvel an</span>
                 <span className="mx-2">•</span>
                 <span className="text-green-50">Livraison gratuite</span>
               </span>
@@ -75,7 +75,7 @@ function ChristmasHeaderNotice() {
             </div>
             
             <a 
-              href="/produits?category=Nöel"
+              href="/produits?category=Fête nouvel an"
               className="
                 px-4 py-2 
                 bg-white bg-opacity-15 hover:bg-opacity-25 
@@ -98,7 +98,7 @@ function ChristmasHeaderNotice() {
             
             <div className="flex-1 text-center">
               <div className="font-semibold text-sm">
-                <span className="text-yellow-50">Notre sélection Nöel</span>
+                <span className="text-yellow-50">Notre sélection Fête nouvel an</span>
               </div>
               <div className="text-xs text-green-50 opacity-90">
                 Livraison gratuite

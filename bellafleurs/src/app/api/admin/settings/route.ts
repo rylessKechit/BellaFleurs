@@ -100,10 +100,10 @@ export async function PUT(req: NextRequest) {
         const startDate = new Date(shopClosure.startDate);
         const endDate = new Date(shopClosure.endDate);
 
-        if (startDate >= endDate) {
+        if (startDate > endDate) {
           return NextResponse.json({
             success: false,
-            error: 'La date de fin doit être après la date de début'
+            error: 'La date de fin ne peut pas être antérieure à la date de début'
           }, { status: 400 });
         }
       }

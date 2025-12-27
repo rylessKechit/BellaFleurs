@@ -54,7 +54,7 @@ import { toast } from 'sonner';
 // Catégories fixes
 const CATEGORIES = [
   'Bouquets',
-  'Nöel',
+  'Fête nouvel an',
   'Compositions piquées', 
   'Roses',
   'Orchidées',

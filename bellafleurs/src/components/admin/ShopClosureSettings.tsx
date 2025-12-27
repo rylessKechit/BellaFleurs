@@ -102,8 +102,8 @@ export default function ShopClosureSettings() {
         const start = new Date(data.startDate);
         const end = new Date(data.endDate);
         
-        if (start >= end) {
-          toast.error('La date de fin doit être après la date de début');
+        if (start > end) {
+          toast.error('La date de fin ne peut pas être antérieure à la date de début');
           return;
         }
       }

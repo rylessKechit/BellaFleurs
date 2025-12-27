@@ -171,7 +171,7 @@ export default function Footer() {
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link href="/produits?category=Fleurs%20de%20saisons" className="text-gray-600 hover:text-primary-600 transition-colors">
-                    Nöel
+                    Fête nouvel an
                   </Link>
                 </li>
                 <li>
