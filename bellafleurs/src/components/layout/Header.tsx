@@ -17,8 +17,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useCart } from '@/contexts/CartContext';
 
-// 🎄 Bannière de Noël avec bouton fermeture unique
-function ChristmasHeaderNotice() {
+// 🎉 Bannière Bonne Année avec bouton fermeture unique
+function NewYearHeaderNotice() {
   const [isVisible, setIsVisible] = useState(true);
 
   if (!isVisible) return null;
@@ -30,30 +30,30 @@ function ChristmasHeaderNotice() {
       px-4 py-3 text-center
       shadow-md relative overflow-hidden
     ">
-      {/* Plus de flocons et emojis de Noël */}
+      {/* Confettis et emojis Bonne Année */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Flocons plus nombreux et plus gros */}
-        <div className="absolute top-0.5 left-8 text-white opacity-60 text-lg animate-pulse">❄</div>
-        <div className="absolute top-2 left-16 text-white opacity-50 text-base animate-pulse" style={{ animationDelay: '0.5s' }}>❄</div>
-        <div className="absolute top-1 left-24 text-white opacity-70 text-lg animate-pulse" style={{ animationDelay: '1s' }}>❄</div>
-        <div className="absolute top-2.5 left-32 text-white opacity-40 text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>❄</div>
-        <div className="absolute top-0.5 left-40 text-white opacity-60 text-base animate-pulse" style={{ animationDelay: '2s' }}>❄</div>
+        {/* Confettis colorés */}
+        <div className="absolute top-0.5 left-8 text-white opacity-60 text-lg animate-pulse">🎊</div>
+        <div className="absolute top-2 left-16 text-white opacity-50 text-base animate-pulse" style={{ animationDelay: '0.5s' }}>🎊</div>
+        <div className="absolute top-1 left-24 text-white opacity-70 text-lg animate-pulse" style={{ animationDelay: '1s' }}>🎉</div>
+        <div className="absolute top-2.5 left-32 text-white opacity-40 text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>🎊</div>
+        <div className="absolute top-0.5 left-40 text-white opacity-60 text-base animate-pulse" style={{ animationDelay: '2s' }}>🎉</div>
         
-        <div className="absolute top-1 right-8 text-white opacity-60 text-lg animate-pulse" style={{ animationDelay: '0.3s' }}>❄</div>
-        <div className="absolute top-2 right-16 text-white opacity-50 text-base animate-pulse" style={{ animationDelay: '0.8s' }}>❄</div>
-        <div className="absolute top-0.5 right-24 text-white opacity-70 text-lg animate-pulse" style={{ animationDelay: '1.3s' }}>❄</div>
-        <div className="absolute top-2.5 right-32 text-white opacity-40 text-sm animate-pulse" style={{ animationDelay: '1.8s' }}>❄</div>
-        <div className="absolute top-1 right-40 text-white opacity-60 text-base animate-pulse" style={{ animationDelay: '2.3s' }}>❄</div>
+        <div className="absolute top-1 right-8 text-white opacity-60 text-lg animate-pulse" style={{ animationDelay: '0.3s' }}>🎊</div>
+        <div className="absolute top-2 right-16 text-white opacity-50 text-base animate-pulse" style={{ animationDelay: '0.8s' }}>🎉</div>
+        <div className="absolute top-0.5 right-24 text-white opacity-70 text-lg animate-pulse" style={{ animationDelay: '1.3s' }}>🎊</div>
+        <div className="absolute top-2.5 right-32 text-white opacity-40 text-sm animate-pulse" style={{ animationDelay: '1.8s' }}>🎉</div>
+        <div className="absolute top-1 right-40 text-white opacity-60 text-base animate-pulse" style={{ animationDelay: '2.3s' }}>🎊</div>
         
-        {/* Flocons centraux */}
-        <div className="absolute top-0.5 left-1/3 text-white opacity-50 text-base animate-pulse" style={{ animationDelay: '2.5s' }}>❄</div>
-        <div className="absolute top-2 left-2/3 text-white opacity-60 text-lg animate-pulse" style={{ animationDelay: '3s' }}>❄</div>
+        {/* Confettis centraux */}
+        <div className="absolute top-0.5 left-1/3 text-white opacity-50 text-base animate-pulse" style={{ animationDelay: '2.5s' }}>🎉</div>
+        <div className="absolute top-2 left-2/3 text-white opacity-60 text-lg animate-pulse" style={{ animationDelay: '3s' }}>🎊</div>
         
-        {/* Emojis de Noël supplémentaires */}
-        <div className="absolute top-1 left-6 text-yellow-200 opacity-70 text-sm animate-pulse" style={{ animationDelay: '3.5s' }}>⭐</div>
-        <div className="absolute top-2.5 right-6 text-yellow-200 opacity-70 text-sm animate-pulse" style={{ animationDelay: '4s' }}>⭐</div>
-        <div className="absolute top-1.5 left-1/4 text-red-200 opacity-60 text-xs animate-pulse" style={{ animationDelay: '4.5s' }}>🎀</div>
-        <div className="absolute top-1.5 right-1/4 text-red-200 opacity-60 text-xs animate-pulse" style={{ animationDelay: '5s' }}>🎀</div>
+        {/* Emojis Bonne Année supplémentaires */}
+        <div className="absolute top-1 left-6 text-yellow-200 opacity-70 text-sm animate-pulse" style={{ animationDelay: '3.5s' }}>✨</div>
+        <div className="absolute top-2.5 right-6 text-yellow-200 opacity-70 text-sm animate-pulse" style={{ animationDelay: '4s' }}>✨</div>
+        <div className="absolute top-1.5 left-1/4 text-red-200 opacity-60 text-xs animate-pulse" style={{ animationDelay: '4.5s' }}>🥂</div>
+        <div className="absolute top-1.5 right-1/4 text-red-200 opacity-60 text-xs animate-pulse" style={{ animationDelay: '5s' }}>🥂</div>
       </div>
 
       {/* Contenu centré comme le header */}
@@ -61,21 +61,21 @@ function ChristmasHeaderNotice() {
         <div className="max-w-7xl mx-auto relative">
           {/* Version desktop */}
           <div className="hidden sm:flex items-center justify-center space-x-4">
-            <span className="text-yellow-100 text-base">🎄</span>
+            <span className="text-yellow-100 text-base">🎊</span>
             
             <div className="text-center">
               <span className="font-semibold text-base">
-                <span className="text-yellow-50">Notre selection pour Fête nouvel an</span>
+                <span className="text-yellow-50">Bonne Année 2026 !</span>
                 <span className="mx-2">•</span>
-                <span className="text-green-50">Livraison gratuite</span>
+                <span className="text-green-50">Nouvelle année, nouvelles créations</span>
               </span>
               <div className="text-sm text-green-50 opacity-90">
-                jusqu'au 31 décembre
+                Découvrez nos bouquets du renouveau
               </div>
             </div>
             
             <a 
-              href="/produits?category=Fête nouvel an"
+              href="/produits?category=Fête%20nouvel%20an"
               className="
                 px-4 py-2 
                 bg-white bg-opacity-15 hover:bg-opacity-25 
@@ -86,22 +86,22 @@ function ChristmasHeaderNotice() {
                 text-sm
               "
             >
-              🎁 Découvrir
+              🎉 Découvrir
             </a>
             
-            <span className="text-yellow-100 text-base">🔔</span>
+            <span className="text-yellow-100 text-base">🎉</span>
           </div>
 
           {/* Version mobile */}
           <div className="sm:hidden flex items-center justify-between">
-            <span className="text-yellow-100 text-sm">🎄</span>
+            <span className="text-yellow-100 text-sm">🎊</span>
             
             <div className="flex-1 text-center">
               <div className="font-semibold text-sm">
-                <span className="text-yellow-50">Notre sélection Fête nouvel an</span>
+                <span className="text-yellow-50">Bonne Année 2026 !</span>
               </div>
               <div className="text-xs text-green-50 opacity-90">
-                Livraison gratuite
+                Nouvelles créations
               </div>
             </div>
             
@@ -114,8 +114,17 @@ function ChristmasHeaderNotice() {
                 text-xs
               "
             >
-              🎁
+              🎉
             </a>
+
+            {/* Bouton fermer */}
+            <button
+              onClick={() => setIsVisible(false)}
+              className="ml-2 text-white hover:text-yellow-200 transition-colors p-1"
+              aria-label="Fermer la bannière"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -343,8 +352,8 @@ export default function Header() {
   return (
     <>
       <div className="fixed top-0 w-full z-50">
-        {/* 🎄 Bannière de Noël avec bouton unique */}
-        <ChristmasHeaderNotice />
+        {/* 🎉 Bannière Bonne Année avec bouton unique */}
+        <NewYearHeaderNotice />
 
         {/* Bannière de fermeture si nécessaire */}
         {!shopStatus.loading && shopStatus.isClosed && (

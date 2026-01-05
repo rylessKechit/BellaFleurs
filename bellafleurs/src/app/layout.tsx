@@ -65,7 +65,7 @@ export default function RootLayout({
             {/* Contenu principal */}
             <div className="relative z-10 min-h-screen flex flex-col">
               {children}
-              <ChristmasDecoration density="light" />
+              {/* <ChristmasDecoration density="light" /> */}
             </div>
             
             {/* Notifications toast */}
