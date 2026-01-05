@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://bella-fleurs.fr/sitemap.xml
+
+# Pages importantes pour le SEO local
+Allow: /zone-livraison
+Allow: /produits
+Allow: /a-propos
+Allow: /savoir-faire
+
+# Bloquer pages admin et API
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
+
+# Bloquer fichiers système
+Disallow: /*.json
+Disallow: /_next/
+Disallow: /manifest.json
+
+# Permettre indexation images
+Allow: /images/
+
+# Crawl-delay pour éviter surcharge
+Crawl-delay: 1

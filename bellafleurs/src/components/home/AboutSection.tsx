@@ -33,6 +33,12 @@ export default function AboutSection() {
                 <p className="text-base sm:text-lg md:text-xl text-green-800 leading-relaxed mt-3 sm:mt-4">
                   Aujourd'hui, nous avons posé nos valises à Brétigny-sur-Orge. Me voilà prête pour vivre une nouvelle aventure avec mon site internet www.bellafleurs.fr . Cela fait 20 ans que les fleurs, les compositions et les bouquets font partie de ma vie. Avec www.bellafleurs.fr, mon savoir-faire et ma passion, je vous propose des créations florales originales et de saison pour accompagner vos plus beaux instants de vie et créer des souvenirs inoubliables.
                 </p>
+                <p className="text-base sm:text-lg md:text-xl text-green-800 leading-relaxed mt-3 sm:mt-4">
+                  Installée à Brétigny-sur-Orge (91220), notre boutique dessert également 
+                  Sainte-Geneviève-des-Bois, Arpajon, Fleury-Mérogis et toute l'Essonne. 
+                  Commandez en ligne sur www.bellafleurs.fr et bénéficiez de notre service de 
+                  livraison express 24h pour vos bouquets et compositions florales.
+                </p>
               </div>
             </div>
 

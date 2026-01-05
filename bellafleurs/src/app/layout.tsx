@@ -15,62 +15,38 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Bella Fleurs - Créations Florales d\'Exception',
-    template: '%s | Bella Fleurs'
+    default: 'Bella Fleurs - Fleuriste Brétigny-sur-Orge | Livraison 24h Essonne',
+    template: '%s | Bella Fleurs - Fleuriste Brétigny-sur-Orge'
   },
-  description: 'Découvrez Bella Fleurs, votre boutique de fleurs en région parisienne. Bouquets sur mesure, compositions florales et créations uniques pour tous vos événements.',
+  description: 'Fleuriste passionnée à Brétigny-sur-Orge depuis 20 ans. Bouquets sur mesure, compositions florales, livraison 24h en Essonne. Commande en ligne.',
   keywords: [
-    'fleuriste',
-    'bouquet',
-    'fleurs',
-    'mariage',
-    'composition florale',
-    'région parisienne',
-    'livraison fleurs',
+    'fleuriste brétigny sur orge',
+    'fleuriste brétigny',
+    'fleuriste bretigny',
+    'fleuriste brétigny-sur-orge',
+    'fleuriste bretigny sur orge',
+    'bouquet brétigny sur orge', 
+    'livraison fleurs brétigny',
+    'composition florale brétigny',
+    'fleurs brétigny sur orge',
+    'artisan fleuriste essonne',
+    'livraison fleurs 91',
     'bella fleurs'
   ],
-  authors: [{ name: 'Bella Fleurs' }],
-  creator: 'Bella Fleurs',
-  publisher: 'Bella Fleurs',
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
-    url: 'https://bellafleurs.fr',
-    title: 'Bella Fleurs - Créations Florales d\'Exception',
-    description: 'Découvrez nos créations florales uniques et bouquets sur mesure en région parisienne.',
+    url: 'https://bella-fleurs.fr',
+    title: 'Bella Fleurs - Fleuriste Brétigny-sur-Orge depuis 20 ans',
+    description: 'Artisan fleuriste à Brétigny-sur-Orge. Bouquets sur mesure, compositions florales, livraison 24h Essonne.',
     siteName: 'Bella Fleurs',
-    images: [
-      {
-        url: '/images/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'Bella Fleurs - Créations Florales',
-      },
-    ],
   },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Bella Fleurs - Créations Florales d\'Exception',
-    description: 'Découvrez nos créations florales uniques et bouquets sur mesure.',
-    images: ['/images/og-image.jpg'],
-  },
-  manifest: '/manifest.json',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
+  other: {
+    'geo.region': 'FR-91',
+    'geo.placename': 'Brétigny-sur-Orge',
+    'geo.position': '48.608684;2.302011',
+    'ICBM': '48.608684, 2.302011'
+  }
 };
 
 export default function RootLayout({

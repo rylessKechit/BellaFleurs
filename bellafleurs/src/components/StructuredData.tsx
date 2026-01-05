@@ -3,12 +3,17 @@
 export default function StructuredData() {
   const localBusinessData = {
     "@context": "https://schema.org",
-    "@type": "FloristShop",
+    "@type": ["FloristShop", "LocalBusiness"],
     "name": "Bella Fleurs",
-    "description": "Fleuriste artisan à Brétigny-sur-Orge depuis 20 ans, spécialisée en bouquets sur mesure et compositions florales. Livraison 24h en Essonne.",
+    "alternateName": [
+      "Bella Fleurs Brétigny",
+      "Fleuriste Bella Fleurs",
+      "Fleuriste Brétigny-sur-Orge"
+    ],
+    "description": "Fleuriste artisan à Brétigny-sur-Orge depuis 20 ans, spécialisée en bouquets sur mesure, compositions florales et livraison express en Essonne. Fleuriste Brétigny, fleuriste Bretigny sur orge.",
     "address": {
       "@type": "PostalAddress",
-      "streetAddress": "Brétigny-sur-Orge",
+      "streetAddress": "",
       "addressLocality": "Brétigny-sur-Orge", 
       "postalCode": "91220",
       "addressRegion": "Essonne",
@@ -22,16 +27,30 @@ export default function StructuredData() {
     "telephone": "07 80 66 27 32",
     "email": "contact@bellafleurs.fr",
     "url": "https://bella-fleurs.fr",
+    "sameAs": [
+      "https://www.facebook.com/bellafleurs",
+      "https://www.instagram.com/bellafleurs"
+    ],
     "openingHours": [
-      "Mo-Fr 09:00-18:00",
-      "Sa 09:00-17:00"
+      "Mo-Sa 09:00-19:00"
+    ],
+    "openingHoursSpecification": [
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        "opens": "09:00",
+        "closes": "19:00"
+      }
     ],
     "priceRange": "€€",
     "paymentAccepted": ["Cash", "Credit Card", "Online Payment"],
+    "currenciesAccepted": "EUR",
     "areaServed": [
       {
         "@type": "City",
-        "name": "Brétigny-sur-Orge"
+        "name": "Brétigny-sur-Orge",
+        "addressRegion": "Essonne",
+        "addressCountry": "FR"
       },
       {
         "@type": "City", 
@@ -44,28 +63,92 @@ export default function StructuredData() {
       {
         "@type": "City",
         "name": "Fleury-Mérogis"
+      },
+      {
+        "@type": "City",
+        "name": "Longjumeau"
+      },
+      {
+        "@type": "City",
+        "name": "Montlhéry"
       }
     ],
     "founder": {
       "@type": "Person",
       "name": "Aurélie",
-      "jobTitle": "Fleuriste Artisan"
+      "jobTitle": "Fleuriste Artisan",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "Bella Fleurs"
+      }
+    },
+    "makesOffer": [
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Product",
+          "name": "Bouquets sur mesure",
+          "category": "Fleurs"
+        }
+      },
+      {
+        "@type": "Offer", 
+        "itemOffered": {
+          "@type": "Product",
+          "name": "Compositions florales",
+          "category": "Fleurs"
+        }
+      },
+      {
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Service",
+          "name": "Livraison de fleurs 24h",
+          "areaServed": "Essonne"
+        }
+      }
+    ],
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Catalogue Bella Fleurs",
+      "itemListElement": [
+        {
+          "@type": "OfferCatalog",
+          "name": "Bouquets",
+          "numberOfItems": 20
+        },
+        {
+          "@type": "OfferCatalog", 
+          "name": "Compositions piquées",
+          "numberOfItems": 15
+        },
+        {
+          "@type": "OfferCatalog",
+          "name": "Roses",
+          "numberOfItems": 10
+        }
+      ]
     }
   };
 
-  const organizationData = {
+  // Ajouter BreadcrumbList pour la navigation
+  const breadcrumbData = {
     "@context": "https://schema.org",
-    "@type": "Organization", 
-    "name": "Bella Fleurs",
-    "url": "https://bella-fleurs.fr",
-    "logo": "https://bella-fleurs.fr/images/logo-bella-fleurs.png",
-    "contactPoint": {
-      "@type": "ContactPoint",
-      "telephone": "07 80 66 27 32",
-      "contactType": "customer service",
-      "areaServed": "FR",
-      "availableLanguage": "French"
-    }
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Accueil",
+        "item": "https://bella-fleurs.fr"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Fleuriste Brétigny-sur-Orge",
+        "item": "https://bella-fleurs.fr"
+      }
+    ]
   };
 
   return (
@@ -75,8 +158,8 @@ export default function StructuredData() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessData) }}
       />
       <script
-        type="application/ld+json" 
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationData) }}
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
       />
     </>
   );
