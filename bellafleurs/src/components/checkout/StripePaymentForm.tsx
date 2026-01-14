@@ -208,6 +208,8 @@ function PaymentForm({
       const { client_secret } = result.data.paymentIntent;
 
       // Confirmer le paiement avec la carte
+      console.log('💳 Confirmation du paiement avec client_secret:', client_secret);
+
       const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
         client_secret,
         {
@@ -226,7 +228,9 @@ function PaymentForm({
         console.error('❌ Erreur confirmation:', confirmError);
         onError(confirmError.message || 'Erreur lors du paiement');
       } else {
-        
+        console.log('✅ Paiement confirmé:', paymentIntent);
+        console.log('📧 Le webhook devrait maintenant être déclenché par Stripe...');
+
         onSuccess(paymentIntent);
       }
     } catch (error: any) {

@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ShoppingCart, Truck, CreditCard, User, MapPin, Calendar, AlertCircle, CheckCircle, Loader2, Gift, AlertTriangle, Clock } from 'lucide-react';
 import StripePaymentForm from '@/components/checkout/StripePaymentForm';
+import CorporateCheckout from '@/components/checkout/CorporateCheckout';
 import { usePostalCodeValidation } from '@/hooks/usePostalCodeValidation';
 import { IProduct } from '@/types/index';
 import { useDeuil } from '../../hooks/useDeuil';
@@ -220,6 +221,14 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const shopStatus = useShopStatus();
+
+  // ✨ NOUVELLE LOGIQUE B2B - 3 LIGNES AJOUTÉES
+  const isCorporateAccount = session?.user && (session.user as any).accountType === 'corporate';
+  
+  // Si c'est un compte corporate, utiliser le checkout B2B
+  if (isCorporateAccount) {
+    return <CorporateCheckout />;
+  }
 
   const [deuilInfo, setDeuilInfo] = useState<DeuilInfo>({
     isDeuil: false,

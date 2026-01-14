@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useCart } from '@/contexts/CartContext';
+import UserAvatarCorporate from './UserAvatarCorporate';
 
 // 🎉 Bannière Bonne Année avec bouton fermeture unique
 function NewYearHeaderNotice() {
@@ -227,126 +228,6 @@ export default function Header() {
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  // Fonction pour obtenir les initiales
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase())
-      .slice(0, 2)
-      .join('');
-  };
-
-  // Composant Avatar utilisateur - AVEC LOGIQUE ADMIN AJOUTÉE
-  const UserAvatar = ({ isMobile = false }: { isMobile?: boolean }) => {
-    if (!isAuthenticated || !user) {
-      return (
-        <Button
-          variant="ghost"
-          size={isMobile ? "sm" : "icon"}
-          asChild
-          className={isMobile ? "justify-start" : ""}
-        >
-          <Link href="/auth/signin" className="flex items-center">
-            <User className="w-5 h-5" />
-            {/* Masquer le texte sur très petits écrans (< 400px) pour éviter la superposition */}
-            {isMobile && <span className="ml-2 hidden xs:inline">Se connecter</span>}
-          </Link>
-        </Button>
-      );
-    }
-
-    const initials = getInitials(user.name);
-    const isAdmin = user.role === 'admin';
-
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className={`relative ${isMobile ? 'justify-start w-full h-10' : 'w-10 h-10'} rounded-full p-0`}
-          >
-            <div className={`${isMobile ? 'w-8 h-8 mr-2' : 'w-8 h-8'} ${isAdmin ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700'} rounded-full flex items-center justify-center text-sm font-medium`}>
-              {isAdmin ? <Settings className="w-4 h-4" /> : initials}
-            </div>
-            {/* Masquer le nom d'utilisateur sur très petits écrans */}
-            {isMobile && <span className="ml-1 hidden xs:inline">{user.name}</span>}
-          </Button>
-        </DropdownMenuTrigger>
-        
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{user.name}</p>
-              <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-              {isAdmin && <p className="text-xs leading-none text-green-600">Administrateur</p>}
-            </div>
-          </DropdownMenuLabel>
-          
-          <DropdownMenuSeparator />
-          
-          {/* MENU ADMIN */}
-          {isAdmin ? (
-            <>
-              <DropdownMenuItem asChild>
-                <Link href="/admin/dashboard" className="flex items-center">
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Dashboard Admin
-                </Link>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem asChild>
-                <Link href="/admin/produits" className="flex items-center">
-                  <Package className="mr-2 h-4 w-4" />
-                  Gestion Produits
-                </Link>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem asChild>
-                <Link href="/admin/commandes" className="flex items-center">
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  Gestion Commandes
-                </Link>
-              </DropdownMenuItem>
-              
-              <DropdownMenuSeparator />
-              
-              <DropdownMenuItem asChild>
-                <Link href="/" className="flex items-center">
-                  <User className="mr-2 h-4 w-4" />
-                  Voir le site client
-                </Link>
-              </DropdownMenuItem>
-            </>
-          ) : (
-            /* MENU CLIENT */
-            <>
-              <DropdownMenuItem asChild>
-                <Link href="/mon-compte" className="flex items-center">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Mon compte
-                </Link>
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem asChild>
-                <Link href="/mes-commandes" className="flex items-center">
-                  <Package className="mr-2 h-4 w-4" />
-                  Mes commandes
-                </Link>
-              </DropdownMenuItem>
-            </>
-          )}
-          
-          <DropdownMenuSeparator />
-          
-          <DropdownMenuItem onClick={logout} className="flex items-center text-red-600">
-            <LogOut className="mr-2 h-4 w-4" />
-            Se déconnecter
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  };
-
   const { cartCount } = useCart();
 
   return (
@@ -435,12 +316,12 @@ export default function Header() {
 
                 {/* Menu utilisateur - Desktop & Mobile */}
                 <div className="hidden sm:block">
-                  <UserAvatar />
+                  <UserAvatarCorporate />
                 </div>
 
                 {/* Menu utilisateur mobile - affiché seulement sur mobile */}
                 <div className="sm:hidden">
-                  <UserAvatar isMobile />
+                  <UserAvatarCorporate isMobile />
                 </div>
 
                 {/* Authentification desktop - affichée seulement si écran >= 1920px ET non connecté */}

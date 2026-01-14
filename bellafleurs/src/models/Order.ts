@@ -1,4 +1,4 @@
-// src/models/Order.ts - MISE À JOUR avec support message cadeau
+// src/models/Order.ts - MODIFICATION MINIMALE pour corporate (ne pas casser les commandes normales)
 import mongoose, { Schema, Model, Document } from 'mongoose';
 
 export interface IOrderItem {
@@ -32,6 +32,7 @@ export interface ICustomerInfo {
   name: string;
   email: string;
   phone: string;
+  company?: string; // ✅ NOUVEAU : pour corporate uniquement
 }
 
 // ✨ NOUVEAU : Interface pour les informations cadeau avec message
@@ -63,8 +64,8 @@ export interface IOrder extends Document, IOrderMethods {
   items: IOrderItem[];
   totalAmount: number;
   status: 'payée' | 'en_creation' | 'prête' | 'en_livraison' | 'livrée' | 'annulée';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded';
-  paymentMethod: 'card' | 'paypal';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded' | 'pending_monthly'; // ✅ AJOUT corporate
+  paymentMethod: 'card' | 'paypal' | 'corporate_monthly'; // ✅ AJOUT corporate
   
   stripePaymentIntentId?: string;
   stripeChargeId?: string;
@@ -74,6 +75,13 @@ export interface IOrder extends Document, IOrderMethods {
   
   deliveryInfo: IDeliveryInfo;
   customerInfo: ICustomerInfo;
+  
+  // ✅ NOUVEAU : Données corporate (optionnel)
+  corporateData?: {
+    companyName?: string;
+    monthlyLimit?: number;
+    paymentTerm?: string;
+  };
   
   // ✨ NOUVEAU : Support système cadeau avec message
   isGift?: boolean;
@@ -98,7 +106,7 @@ export interface IOrderModel extends Model<IOrder, {}, IOrderMethods> {
 
 export type IOrderDocument = IOrder & IOrderMethods;
 
-// Sous-schémas
+// Sous-schémas (INCHANGÉS)
 const OrderItemSchema = new Schema({
   product: {
     type: Schema.Types.ObjectId,
@@ -217,6 +225,30 @@ const CustomerInfoSchema = new Schema({
     required: [true, 'Customer phone is required'],
     trim: true,
     match: [/^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/, 'Invalid French phone number']
+  },
+  company: {
+    type: String, // ✅ NOUVEAU : pour corporate
+    required: false,
+    trim: true
+  }
+}, { _id: false });
+
+// ✅ NOUVEAU : Schéma corporate data (optionnel)
+const CorporateDataSchema = new Schema({
+  companyName: {
+    type: String,
+    required: false,
+    trim: true
+  },
+  monthlyLimit: {
+    type: Number,
+    required: false,
+    min: [0, 'Monthly limit cannot be negative']
+  },
+  paymentTerm: {
+    type: String,
+    required: false,
+    enum: ['immediate', 'monthly']
   }
 }, { _id: false });
 
@@ -260,7 +292,7 @@ const TimelineSchema = new Schema({
   }
 }, { _id: false });
 
-// Schéma principal Order - MISE À JOUR avec support cadeau et message
+// Schéma principal Order - AJOUTS MINIMAUX pour corporate
 const OrderSchema = new Schema({
   orderNumber: {
     type: String,
@@ -301,7 +333,7 @@ const OrderSchema = new Schema({
   paymentStatus: {
     type: String,
     enum: {
-      values: ['pending', 'paid', 'failed', 'refunded', 'partially_refunded'],
+      values: ['pending', 'paid', 'failed', 'refunded', 'partially_refunded', 'pending_monthly'], // ✅ AJOUT
       message: 'Invalid payment status'
     },
     default: 'pending',
@@ -310,13 +342,13 @@ const OrderSchema = new Schema({
   paymentMethod: {
     type: String,
     enum: {
-      values: ['card', 'paypal'],
+      values: ['card', 'paypal', 'corporate_monthly'], // ✅ AJOUT
       message: 'Invalid payment method'
     },
     required: [true, 'Payment method is required']
   },
   
-  // Stripe payment fields
+  // Stripe payment fields (INCHANGÉS)
   stripePaymentIntentId: {
     type: String,
     unique: true,
@@ -336,7 +368,13 @@ const OrderSchema = new Schema({
     required: [true, 'Customer information is required']
   },
   
-  // ✨ NOUVEAU : Champs cadeau avec message
+  // ✅ NOUVEAU : Données corporate (optionnel)
+  corporateData: {
+    type: CorporateDataSchema,
+    required: false
+  },
+  
+  // ✨ NOUVEAU : Champs cadeau avec message (INCHANGÉS)
   isGift: {
     type: Boolean,
     default: false
@@ -373,7 +411,7 @@ const OrderSchema = new Schema({
     }
   },
   
-  // Dates de tracking
+  // Dates de tracking (INCHANGÉES)
   confirmedAt: Date,
   preparedAt: Date,
   readyAt: Date,
@@ -385,7 +423,7 @@ const OrderSchema = new Schema({
   toObject: { virtuals: true }
 });
 
-// Index
+// Index (INCHANGÉS + 1 nouveau)
 OrderSchema.index({ user: 1, createdAt: -1 });
 OrderSchema.index({ 'customerInfo.email': 1, createdAt: -1 });
 OrderSchema.index({ orderNumber: 1 }, { unique: true });
@@ -394,9 +432,10 @@ OrderSchema.index({ paymentStatus: 1 });
 OrderSchema.index({ stripePaymentIntentId: 1 }, { unique: true, sparse: true });
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ estimatedDelivery: 1 });
-OrderSchema.index({ isGift: 1 }); // ✨ NOUVEAU : Index pour les cadeaux
+OrderSchema.index({ isGift: 1 });
+OrderSchema.index({ paymentMethod: 1 }); // ✅ NOUVEAU : pour corporate
 
-// Virtuals
+// Virtuals (INCHANGÉS)
 OrderSchema.virtual('itemsCount').get(function(this: IOrder) {
   return this.items ? this.items.reduce((total, item) => total + item.quantity, 0) : 0;
 });
@@ -432,7 +471,12 @@ OrderSchema.virtual('canBeCancelled').get(function(this: IOrder) {
   return ['payée', 'en_creation'].includes(this.status);
 });
 
-// Méthodes d'instance
+// ✅ NOUVEAU : Virtual pour corporate
+OrderSchema.virtual('isCorporate').get(function(this: IOrder) {
+  return this.paymentMethod === 'corporate_monthly';
+});
+
+// Méthodes d'instance (INCHANGÉES)
 OrderSchema.methods.calculateTotal = function(this: IOrder): number {
   return this.items.reduce((total, item) => total + (item.price * item.quantity), 0);
 };
@@ -504,7 +548,7 @@ OrderSchema.methods.canBeRefunded = function(this: IOrder): boolean {
   return this.paymentStatus === 'paid' && ['livrée', 'annulée'].includes(this.status);
 };
 
-// Méthodes statiques
+// Méthodes statiques (INCHANGÉES)
 OrderSchema.statics.generateOrderNumber = async function(): Promise<string> {
   const date = new Date();
   const year = date.getFullYear();
@@ -527,7 +571,7 @@ OrderSchema.statics.generateOrderNumber = async function(): Promise<string> {
   return `${todayPrefix}-${String(sequence).padStart(4, '0')}`;
 };
 
-// Middleware pre-save
+// Middleware pre-save (INCHANGÉ sauf ajout validation corporate)
 OrderSchema.pre('save', async function(this: IOrder, next) {
   // Générer un numéro de commande si nouveau document
   if (this.isNew && !this.orderNumber) {

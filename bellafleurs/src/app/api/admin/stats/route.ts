@@ -1,4 +1,4 @@
-// src/app/api/admin/stats/route.ts - Version complète avec vraies statistiques
+// src/app/api/admin/stats/route.ts - Version corrigée pour inclure commandes corporate
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,7 +9,7 @@ import Order from '@/models/Order';
 import Product from '@/models/Product';
 import User from '@/models/User';
 
-// GET /api/admin/stats - Statistiques admin avec vraies données
+// GET /api/admin/stats - Statistiques admin avec commandes corporate incluses
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
-    // Calculer les statistiques de base
+    // ✅ CORRECTION : Calculer les statistiques en incluant les commandes corporate
     const [
       totalOrders,
       totalRevenue,
@@ -37,16 +37,26 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       Order.countDocuments(),
       Order.aggregate([
-        { $match: { paymentStatus: 'paid' } },
+        { $match: { 
+          $or: [
+            { paymentStatus: 'paid' },
+            { paymentStatus: 'pending_monthly' } // ✅ INCLURE CORPORATE
+          ]
+        }},
         { $group: { _id: null, total: { $sum: '$totalAmount' } } }
       ]),
       Product.countDocuments({ isActive: true }),
       User.countDocuments({ role: 'client' }),
       Order.countDocuments({ status: { $in: ['en_creation', 'confirmed'] } }),
-      Order.countDocuments({ paymentStatus: 'paid' })
+      Order.countDocuments({ 
+        $or: [
+          { paymentStatus: 'paid' },
+          { paymentStatus: 'pending_monthly' } // ✅ INCLURE CORPORATE
+        ]
+      })
     ]);
 
-    // Statistiques des 30 derniers jours
+    // ✅ CORRECTION : Statistiques des 30 derniers jours avec corporate
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -61,7 +71,10 @@ export async function GET(request: NextRequest) {
       Order.aggregate([
         { 
           $match: { 
-            paymentStatus: 'paid',
+            $or: [
+              { paymentStatus: 'paid' },
+              { paymentStatus: 'pending_monthly' } // ✅ INCLURE CORPORATE
+            ],
             createdAt: { $gte: thirtyDaysAgo }
           } 
         },
@@ -81,7 +94,10 @@ export async function GET(request: NextRequest) {
       Order.aggregate([
         { 
           $match: { 
-            paymentStatus: 'paid',
+            $or: [
+              { paymentStatus: 'paid' },
+              { paymentStatus: 'pending_monthly' } // ✅ INCLURE CORPORATE
+            ],
             createdAt: { 
               $gte: new Date(thirtyDaysAgo.getTime() - 30 * 24 * 60 * 60 * 1000),
               $lt: thirtyDaysAgo
@@ -101,9 +117,14 @@ export async function GET(request: NextRequest) {
       ? (((revenueLast30Days[0]?.total || 0) - (revenueLast60Days[0]?.total || 0)) / (revenueLast60Days[0]?.total || 1) * 100)
       : (revenueLast30Days[0]?.total || 0) > 0 ? 100 : 0;
 
-    // Top produits avec vraies statistiques de ventes
+    // ✅ CORRECTION : Top produits avec commandes corporate incluses
     const topProducts = await Order.aggregate([
-      { $match: { paymentStatus: 'paid' } },
+      { $match: { 
+        $or: [
+          { paymentStatus: 'paid' },
+          { paymentStatus: 'pending_monthly' } // ✅ INCLURE CORPORATE
+        ]
+      }},
       { $unwind: '$items' },
       {
         $group: {
@@ -138,7 +159,7 @@ export async function GET(request: NextRequest) {
       }
     ]);
 
-    // Statistiques par jour (7 derniers jours)
+    // ✅ CORRECTION : Statistiques par jour avec commandes corporate
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -146,7 +167,10 @@ export async function GET(request: NextRequest) {
       {
         $match: {
           createdAt: { $gte: sevenDaysAgo },
-          paymentStatus: 'paid'
+          $or: [
+            { paymentStatus: 'paid' },
+            { paymentStatus: 'pending_monthly' } // ✅ INCLURE CORPORATE
+          ]
         }
       },
       {
@@ -163,9 +187,14 @@ export async function GET(request: NextRequest) {
       { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
     ]);
 
-    // Statistiques par catégorie
+    // ✅ CORRECTION : Statistiques par catégorie avec commandes corporate
     const categoryStats = await Order.aggregate([
-      { $match: { paymentStatus: 'paid' } },
+      { $match: { 
+        $or: [
+          { paymentStatus: 'paid' },
+          { paymentStatus: 'pending_monthly' } // ✅ INCLURE CORPORATE
+        ]
+      }},
       { $unwind: '$items' },
       {
         $lookup: {

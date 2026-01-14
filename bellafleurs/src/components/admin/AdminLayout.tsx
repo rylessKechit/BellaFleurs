@@ -15,7 +15,8 @@ import {
   X,
   Home,
   Bell,
-  Search
+  Search,
+  Building2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,6 +118,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       name: 'Clients',
       href: '/admin/clients',
       icon: Users,
+      current: false,
+    },
+    {
+      name: 'Corporate B2B',
+      href: '/admin/corporate',
+      icon: Building2,
       current: false,
     },
     {

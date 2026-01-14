@@ -11,9 +11,14 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('🎯 WEBHOOK STRIPE REÇU !');
+
     const body = await req.text();
     const headersList = headers();
     const signature = headersList.get('stripe-signature');
+
+    console.log('📨 Body length:', body.length);
+    console.log('🔑 Signature présente:', !!signature);
 
     if (!signature) {
       console.error('❌ Signature Stripe manquante');
@@ -30,6 +35,7 @@ export async function POST(req: NextRequest) {
 
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      console.log('✅ Event Stripe validé:', event.type);
     } catch (error: any) {
       console.error('❌ Erreur de signature webhook:', {
         message: error.message,
@@ -37,16 +43,22 @@ export async function POST(req: NextRequest) {
         webhookSecretLength: webhookSecret?.length,
         signatureLength: signature?.length
       });
-      return NextResponse.json({ 
-        error: `Erreur de signature: ${error.message}` 
+      return NextResponse.json({
+        error: `Erreur de signature: ${error.message}`
       }, { status: 400 });
     }
 
     await connectDB();
 
     try {
+      console.log('🔍 Type d\'événement reçu:', event.type);
+
       if (event.type === 'payment_intent.succeeded') {
+        console.log('💳 Traitement payment_intent.succeeded...');
         await handlePaymentIntentSucceeded(event.data.object);
+        console.log('✅ payment_intent.succeeded traité avec succès');
+      } else {
+        console.log('ℹ️ Type d\'événement ignoré:', event.type);
       }
       return NextResponse.json({ received: true });
     } catch (error: any) {
@@ -68,52 +80,59 @@ export async function POST(req: NextRequest) {
 
 async function handlePaymentIntentSucceeded(paymentIntent: any) {
   try {
+    console.log('🔍 PaymentIntent reçu:', {
+      id: paymentIntent.id,
+      amount: paymentIntent.amount,
+      metadata: paymentIntent.metadata
+    });
+
     const metadata = paymentIntent.metadata;
-    
+
     // Récupérer l'ID de commande depuis les métadonnées
     const orderId = metadata.order_id;
-    
+
     if (!orderId) {
       console.error('❌ Order ID manquant dans les métadonnées:', metadata);
       return;
     }
 
+    console.log('🔍 Recherche de la commande:', orderId);
+
     // Rechercher la commande existante
     const existingOrder = await Order.findById(orderId);
-    
+
     if (!existingOrder) {
       console.error('❌ Commande introuvable:', orderId);
       return;
     }
 
-    // CHANGEMENT : On enlève le return qui empêchait l'envoi des emails
+    console.log('✅ Commande trouvée:', {
+      orderNumber: existingOrder.orderNumber,
+      paymentStatus: existingOrder.paymentStatus
+    });
+
+    // ✅ CORRECTION : Vérifier si déjà traité pour éviter les doublons d'emails
     if (existingOrder.paymentStatus === 'paid') {
-      // Pas de return ici !
+      console.log('ℹ️ Commande déjà marquée comme payée, webhook déjà traité - skip');
+      return;
     }
 
-    // MISE À JOUR : Confirmer le paiement seulement si pas encore fait
-    let updatedOrder;
-    
-    if (existingOrder.paymentStatus !== 'paid') {
-      updatedOrder = await Order.findByIdAndUpdate(
-        orderId,
-        {
-          paymentStatus: 'paid',
-          stripePaymentIntentId: paymentIntent.id,
-          $push: {
-            timeline: {
-              status: 'payée',
-              date: new Date(),
-              note: 'Paiement confirmé via webhook Stripe'
-            }
+    // MISE À JOUR : Confirmer le paiement
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        paymentStatus: 'paid',
+        stripePaymentIntentId: paymentIntent.id,
+        $push: {
+          timeline: {
+            status: 'payée',
+            date: new Date(),
+            note: 'Paiement confirmé via webhook Stripe'
           }
-        },
-        { new: true }
-      ).populate('items.product', 'name images');
-    } else {
-      // Si déjà payé, on récupère juste la commande avec populate
-      updatedOrder = await Order.findById(orderId).populate('items.product', 'name images');
-    }
+        }
+      },
+      { new: true }
+    ).populate('items.product', 'name images');
 
     if (!updatedOrder) {
       console.error('❌ Erreur mise à jour commande');
@@ -131,16 +150,22 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 
     // ENVOI DES EMAILS
     try {
+      console.log('📧 Préparation envoi des emails...');
+
       // 1. Email de confirmation au client
+      console.log('📧 Envoi email de confirmation client à:', updatedOrder.customerInfo.email);
       const confirmationSent = await sendOrderConfirmation(updatedOrder);
       if (confirmationSent) {
+        console.log('✅ Email de confirmation client envoyé avec succès');
       } else {
         console.error('❌ Échec envoi email de confirmation');
       }
 
       // 2. Notification à l'admin
+      console.log('📧 Envoi notification admin...');
       const adminNotificationSent = await sendNewOrderNotification(updatedOrder);
       if (adminNotificationSent) {
+        console.log('✅ Notification admin envoyée avec succès');
       } else {
         console.error('❌ Échec notification admin');
       }

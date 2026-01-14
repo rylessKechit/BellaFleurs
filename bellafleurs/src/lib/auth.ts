@@ -1,4 +1,4 @@
-// src/lib/auth.ts
+// src/lib/auth.ts - Version étendue pour les comptes corporate
 import { NextAuthOptions } from 'next-auth';
 import { MongoDBAdapter } from '@next-auth/mongodb-adapter';
 import { MongoClient } from 'mongodb';
@@ -9,13 +9,27 @@ import User from '@/models/User';
 import { loginSchema } from '@/lib/validations';
 import mongoose from 'mongoose';
 
-// Interface pour le user avec les méthodes
-interface AuthUser {
-  _id: mongoose.Types.ObjectId | string;
-  email: string;
+// Interface pour l'utilisateur d'authentification
+interface AuthUser extends Document {
+  _id: mongoose.Types.ObjectId;
   name: string;
+  email: string;
   role: 'client' | 'admin';
-  image?: string;
+  // ✨ NOUVEAU : Champs corporate
+  accountType?: 'individual' | 'corporate';
+  company?: {
+    name: string;
+    siret?: string;
+    vatNumber?: string;
+    industry?: string;
+    contactPerson: string;
+  };
+  corporateSettings?: {
+    monthlyLimit?: number;
+    paymentTerm: 'immediate' | 'monthly';
+    approvalRequired: boolean;
+    pendingActivation?: boolean;
+  };
   password?: string;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
@@ -102,41 +116,73 @@ export const authOptions: NextAuthOptions = {
           // Connexion à la DB
           await connectDB();
 
-          // Recherche de l'utilisateur avec le mot de passe
+          // ✅ DEBUG : Log de la tentative de connexion
+          console.log('🔍 Tentative de connexion:', email);
+
+          // ✅ MODIFICATION : Recherche incluant les comptes corporate
           const user = await User.findOne({ email }).select('+password') as AuthUser | null;
           
+          // ✅ DEBUG : Utilisateur trouvé ou non
           if (!user) {
+            console.log('❌ Utilisateur non trouvé pour:', email);
+            return null;
+          }
+          
+          console.log('✅ Utilisateur trouvé:', {
+            email: user.email,
+            accountType: user.accountType,
+            pendingActivation: user.corporateSettings?.pendingActivation
+          });
+
+          // ✅ VÉRIFICATION : Compte corporate activé
+          if (user.accountType === 'corporate' && user.corporateSettings?.pendingActivation) {
+            console.log('❌ Compte corporate non activé:', user.email);
             return null;
           }
 
           // Vérification du mot de passe
           const isPasswordValid = await user.comparePassword(password);
           
+          // ✅ DEBUG : Résultat vérification mot de passe
+          console.log('🔐 Vérification mot de passe:', isPasswordValid);
+          
           if (!isPasswordValid) {
+            console.log('❌ Mot de passe incorrect pour:', email);
             return null;
           }
           
           // Conversion sécurisée de l'ID
           const userId = user._id instanceof mongoose.Types.ObjectId 
             ? user._id.toString() 
-            : String(user._id);
-          
+            : user._id;
+
+          console.log('✅ Connexion réussie:', {
+            email: user.email,
+            role: user.role,
+            accountType: user.accountType || 'individual',
+            company: user.company?.name
+          });
+
+          // ✅ EXTENSION : Retour des données corporate
           return {
             id: userId,
-            email: user.email,
             name: user.name,
+            email: user.email,
             role: user.role,
-            image: user.image,
+            accountType: user.accountType || 'individual',
+            company: user.company,
+            corporateSettings: user.corporateSettings
           };
+          
         } catch (error) {
-          console.error('❌ Auth error:', error);
+          console.error('❌ Erreur lors de l\'authentification:', error);
           return null;
         }
       }
     }),
 
-    // Authentification Google (optionnel)
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET 
+    // Google OAuth (si configuré)
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [GoogleProvider({
           clientId: process.env.GOOGLE_CLIENT_ID,
           clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -153,6 +199,11 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role;
         token.id = user.id;
+        
+        // ✨ NOUVEAU : Données corporate dans le JWT
+        token.accountType = (user as any).accountType || 'individual';
+        token.company = (user as any).company;
+        token.corporateSettings = (user as any).corporateSettings;
       }
 
       // Mise à jour du profil
@@ -169,6 +220,11 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         (session.user as any).id = token.id as string;
         (session.user as any).role = token.role as 'client' | 'admin';
+        
+        // ✨ NOUVEAU : Données corporate dans la session
+        (session.user as any).accountType = token.accountType as 'individual' | 'corporate';
+        (session.user as any).company = token.company;
+        (session.user as any).corporateSettings = token.corporateSettings;
       }
 
       return session;
@@ -190,11 +246,12 @@ export const authOptions: NextAuthOptions = {
           const existingUser = await User.findOne({ email: profile.email });
           
           if (!existingUser) {
-            // Créer un nouvel utilisateur
+            // ✅ CRÉER : Seulement des comptes individuels via Google
             await User.create({
               name: profile.name,
               email: profile.email,
               role: 'client',
+              accountType: 'individual', // Par défaut individual pour Google
               image: (profile as any).picture,
               emailVerified: new Date(),
             });
@@ -221,7 +278,7 @@ export const authOptions: NextAuthOptions = {
 // Fonction helper pour obtenir la session côté serveur
 export { getServerSession } from 'next-auth';
 
-// Fonctions helper pour vérifier les rôles
+// ✅ EXTENSION : Fonctions helper pour les comptes corporate
 export function hasRole(session: any, role: 'client' | 'admin'): boolean {
   return session?.user?.role === role;
 }
@@ -232,4 +289,46 @@ export function isAdmin(session: any): boolean {
 
 export function isClient(session: any): boolean {
   return hasRole(session, 'client');
+}
+
+// ✨ NOUVELLES : Fonctions helper corporate
+export function isCorporateAccount(session: any): boolean {
+  return session?.user?.accountType === 'corporate';
+}
+
+export function isIndividualAccount(session: any): boolean {
+  return session?.user?.accountType === 'individual' || !session?.user?.accountType;
+}
+
+export function getCorporateInfo(session: any) {
+  if (!isCorporateAccount(session)) return null;
+  
+  return {
+    company: session.user.company,
+    settings: session.user.corporateSettings
+  };
+}
+
+export function canPlaceOrder(session: any): boolean {
+  if (!session?.user) return false;
+  
+  // Admin peut toujours commander (pour tester)
+  if (session.user.role === 'admin') return true;
+  
+  // Client individual peut toujours commander
+  if (isIndividualAccount(session)) return true;
+  
+  // Client corporate : vérifier l'activation et l'approbation si nécessaire
+  if (isCorporateAccount(session)) {
+    const settings = session.user.corporateSettings;
+    
+    // Compte non activé
+    if (settings?.pendingActivation) return false;
+    
+    // Pour l'instant, on autorise toutes les commandes corporate activées
+    // Plus tard on ajoutera la logique d'approbation et de limite
+    return true;
+  }
+  
+  return false;
 }

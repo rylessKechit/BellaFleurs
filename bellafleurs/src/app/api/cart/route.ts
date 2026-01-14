@@ -44,8 +44,6 @@ export async function GET(request: NextRequest) {
       select: 'freeDelivery category'
     });
 
-    console.log('✅ Cart fetched:', cart);
-
     // ✅ AJOUT : Enrichir les items avec freeDelivery
     if (cart.items) {
       cart.items = cart.items.map((item: any) => ({
@@ -256,8 +254,6 @@ export async function POST(request: NextRequest) {
         freeDelivery: item.product?.freeDelivery || false
       }));
     }
-
-    console.log('✅ Cart after addition:', cart);
 
     // ✅ Préparer la réponse avec cartItemsCount
     const response = NextResponse.json({
