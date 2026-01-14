@@ -53,11 +53,11 @@ export default function CartPage() {
   }, []);
 
   // ✅ NOUVELLE FONCTION : Extraire l'ID du produit de manière sécurisée
-  const getProductId = (product: string | { _id: string }): string => {
+  const getProductId = (product: string | { _id: any }): string => {
     if (typeof product === 'string') {
       return product;
     } else if (product && typeof product === 'object' && product._id) {
-      return product._id;
+      return product._id.toString();
     } else {
       console.error('❌ Invalid product format:', product);
       return '';
@@ -88,7 +88,7 @@ export default function CartPage() {
     }
   };
 
-  const updateQuantity = async (productItem: string | { _id: string }, newQuantity: number, variantId?: string) => {
+  const updateQuantity = async (productItem: string | { _id: any }, newQuantity: number, variantId?: string) => {
     // ✅ CORRECTION : Extraire l'ID du produit
     const productId = getProductId(productItem);
     const itemKey = variantId ? `${productId}_${variantId}` : productId;
@@ -136,7 +136,7 @@ export default function CartPage() {
     }
   };
 
-  const removeItem = async (productItem: string | { _id: string }, variantId?: string) => {
+  const removeItem = async (productItem: string | { _id: any }, variantId?: string) => {
     // ✅ CORRECTION : Extraire l'ID du produit
     const productId = getProductId(productItem);
     const itemKey = variantId ? `${productId}_${variantId}` : productId;

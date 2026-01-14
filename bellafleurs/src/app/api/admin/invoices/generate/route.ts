@@ -93,8 +93,8 @@ export async function POST(req: NextRequest) {
         // Créer la facture mensuelle
         const invoice = await CorporateInvoice.createMonthlyInvoice(
           corporateUser._id.toString(),
-          periodStart,
-          periodEnd
+          month,
+          year
         );
 
         if (!invoice) {
@@ -109,7 +109,19 @@ export async function POST(req: NextRequest) {
 
         // Envoyer l'email de facture
         try {
-          await sendMonthlyInvoiceEmail(invoice);
+          const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                              'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+          await sendMonthlyInvoiceEmail({
+            email: corporateUser.email,
+            companyName: corporateUser.company?.name || 'Entreprise',
+            invoiceNumber: invoice.invoiceNumber,
+            totalAmount: invoice.totalAmount,
+            dueDate: invoice.dueDate || new Date(),
+            month: monthNames[month - 1],
+            year: year,
+            invoiceUrl: `${process.env.NEXTAUTH_URL}/corporate/invoices/${invoice._id}`
+          });
           console.log(`✅ Facture créée et envoyée pour ${corporateUser.email}`);
         } catch (emailError) {
           console.error(`⚠️ Erreur envoi email pour ${corporateUser.email}:`, emailError);
@@ -120,7 +132,7 @@ export async function POST(req: NextRequest) {
           email: corporateUser.email,
           invoiceId: invoice._id,
           invoiceNumber: invoice.invoiceNumber,
-          total: invoice.calculateTotal().totalTTC
+          total: invoice.totalAmount
         });
 
       } catch (error: any) {

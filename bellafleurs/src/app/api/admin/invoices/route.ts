@@ -66,15 +66,13 @@ export async function GET(req: NextRequest) {
       CorporateInvoice.countDocuments(query)
     ]);
 
-    // Calcul des totaux
-    const invoicesWithTotals = invoices.map(invoice => {
-      const doc = new CorporateInvoice(invoice);
-      return {
-        ...invoice,
-        totalHT: doc.calculateTotal().totalHT,
-        totalTTC: doc.calculateTotal().totalTTC
-      };
-    });
+    // Les totaux sont déjà calculés dans le modèle
+    const invoicesWithTotals = invoices.map(invoice => ({
+      ...invoice,
+      subtotal: invoice.subtotal,
+      vatAmount: invoice.vatAmount,
+      totalAmount: invoice.totalAmount
+    }));
 
     return NextResponse.json({
       success: true,

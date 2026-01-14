@@ -52,7 +52,7 @@ export async function GET(
     }
 
     // Vérifier que l'utilisateur a accès à cette facture
-    if (invoice.user._id.toString() !== session.user.id) {
+    if (invoice.corporateUser.toString() !== session.user.id) {
       return NextResponse.json({
         success: false,
         error: {
@@ -62,18 +62,15 @@ export async function GET(
       }, { status: 403 });
     }
 
-    // Calculer les totaux
-    const doc = new CorporateInvoice(invoice);
-    const totals = doc.calculateTotal();
-
+    // Les totaux sont déjà calculés dans le modèle
     return NextResponse.json({
       success: true,
       data: {
         invoice: {
           ...invoice,
-          totalHT: totals.totalHT,
-          totalTVA: totals.totalTVA,
-          totalTTC: totals.totalTTC
+          subtotal: invoice.subtotal,
+          vatAmount: invoice.vatAmount,
+          totalAmount: invoice.totalAmount
         }
       }
     });

@@ -70,15 +70,13 @@ export async function GET(req: NextRequest) {
       CorporateInvoice.countDocuments(query)
     ]);
 
-    // Calcul des totaux avec la méthode calculateTotal
-    const invoicesWithTotals = invoices.map(invoice => {
-      const doc = new CorporateInvoice(invoice);
-      return {
-        ...invoice,
-        totalHT: doc.calculateTotal().totalHT,
-        totalTTC: doc.calculateTotal().totalTTC
-      };
-    });
+    // Les totaux sont déjà calculés dans le modèle
+    const invoicesWithTotals = invoices.map(invoice => ({
+      ...invoice,
+      subtotal: invoice.subtotal,
+      vatAmount: invoice.vatAmount,
+      totalAmount: invoice.totalAmount
+    }));
 
     // Statistiques
     const allInvoices = await CorporateInvoice.find({ user: session.user.id }).lean();
@@ -88,22 +86,13 @@ export async function GET(req: NextRequest) {
       sent: allInvoices.filter(i => i.status === 'sent').length,
       paid: allInvoices.filter(i => i.status === 'paid').length,
       overdue: allInvoices.filter(i => i.status === 'overdue').length,
-      totalAmount: allInvoices.reduce((sum, inv) => {
-        const doc = new CorporateInvoice(inv);
-        return sum + doc.calculateTotal().totalTTC;
-      }, 0),
+      totalAmount: allInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0),
       totalPaid: allInvoices
         .filter(i => i.status === 'paid')
-        .reduce((sum, inv) => {
-          const doc = new CorporateInvoice(inv);
-          return sum + doc.calculateTotal().totalTTC;
-        }, 0),
+        .reduce((sum, inv) => sum + inv.totalAmount, 0),
       totalPending: allInvoices
         .filter(i => ['sent', 'overdue'].includes(i.status))
-        .reduce((sum, inv) => {
-          const doc = new CorporateInvoice(inv);
-          return sum + doc.calculateTotal().totalTTC;
-        }, 0)
+        .reduce((sum, inv) => sum + inv.totalAmount, 0)
     };
 
     return NextResponse.json({

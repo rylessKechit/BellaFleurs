@@ -54,9 +54,13 @@ export async function PATCH(
 
     // Mettre à jour le statut
     if (status === 'paid') {
-      invoice.markAsPaid(paidDate ? new Date(paidDate) : new Date());
+      await invoice.markAsPaid();
     } else if (status) {
       invoice.status = status;
+    }
+
+    if (paidDate && status === 'paid') {
+      invoice.paidAt = new Date(paidDate);
     }
 
     if (notes) {

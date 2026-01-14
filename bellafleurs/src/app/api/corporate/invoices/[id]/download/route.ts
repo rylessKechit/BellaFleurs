@@ -53,7 +53,7 @@ export async function GET(
     }
 
     // Vérifier que l'utilisateur a accès à cette facture
-    if (invoice.user._id.toString() !== session.user.id) {
+    if (invoice.corporateUser.toString() !== session.user.id) {
       return NextResponse.json({
         success: false,
         error: {

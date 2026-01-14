@@ -4,7 +4,6 @@ import { Document, Model } from 'mongoose';
 
 // Type de base pour tous les documents MongoDB
 export interface BaseDocument extends Document {
-  _id: string;
   createdAt: Date;
   updatedAt: Date;
 }
