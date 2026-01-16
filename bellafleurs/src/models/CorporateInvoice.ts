@@ -15,6 +15,7 @@ export interface ICorporateInvoiceMethods {
   markAsOverdue(): Promise<ICorporateInvoice>;
   addOrder(orderId: string, orderNumber: string, amount: number, description: string): Promise<ICorporateInvoice>;
   canBeEdited(): boolean;
+  createStripePaymentIntent(): Promise<any>;
 }
 
 export interface ICorporateInvoice extends Document, ICorporateInvoiceMethods {
@@ -228,9 +229,16 @@ CorporateInvoiceSchema.pre('save', function(this: ICorporateInvoice) {
 
 // Méthodes d'instance
 CorporateInvoiceSchema.methods.calculateTotal = function(this: ICorporateInvoice) {
-  this.subtotal = this.items.reduce((total, item) => total + item.amount, 0);
-  this.vatAmount = Math.round(this.subtotal * (this.vatRate / 100) * 100) / 100;
-  this.totalAmount = Math.round((this.subtotal + this.vatAmount) * 100) / 100;
+  // Les montants des items contiennent déjà la TVA (TTC)
+  const totalTTC = this.items.reduce((total, item) => total + item.amount, 0);
+
+  // Calculer le HT et la TVA à partir du TTC
+  // Formule: HT = TTC / (1 + taux_tva/100)
+  // Exemple: Si TTC = 48€ et TVA = 20%, alors HT = 48 / 1.20 = 40€ et TVA = 8€
+  this.subtotal = Math.round((totalTTC / (1 + this.vatRate / 100)) * 100) / 100;
+  this.vatAmount = Math.round((totalTTC - this.subtotal) * 100) / 100;
+  this.totalAmount = Math.round(totalTTC * 100) / 100;
+
   return this.totalAmount;
 };
 
@@ -238,6 +246,34 @@ CorporateInvoiceSchema.methods.markAsPaid = async function(this: ICorporateInvoi
   this.status = 'paid';
   this.paidAt = new Date();
   return await this.save();
+};
+
+CorporateInvoiceSchema.methods.createStripePaymentIntent = async function(this: ICorporateInvoice) {
+  const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(this.totalAmount * 100), // Stripe utilise les centimes
+      currency: 'eur',
+      description: `Facture ${this.invoiceNumber} - ${this.companyName}`,
+      metadata: {
+        invoiceId: this._id.toString(),
+        invoiceNumber: this.invoiceNumber,
+        companyName: this.companyName
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    this.stripePaymentIntentId = paymentIntent.id;
+    await this.save();
+
+    return paymentIntent;
+  } catch (error) {
+    console.error('❌ Erreur création Payment Intent:', error);
+    throw error;
+  }
 };
 
 CorporateInvoiceSchema.methods.markAsOverdue = async function(this: ICorporateInvoice) {
@@ -322,25 +358,55 @@ CorporateInvoiceSchema.statics.createMonthlyInvoice = async function(
     'billingPeriod.month': month,
     'billingPeriod.year': year
   });
-  
+
   if (existingInvoice) {
     throw new Error('Invoice already exists for this period');
   }
-  
+
   // Calculer les dates de la période
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0, 23, 59, 59);
-  
+
   // Récupérer l'utilisateur corporate
   const User = mongoose.model('User');
   const user = await User.findById(userId);
   if (!user || user.accountType !== 'corporate') {
     throw new Error('User is not a corporate account');
   }
-  
+
+  // Récupérer les commandes du mois pour cet utilisateur
+  const Order = mongoose.model('Order');
+  const orders = await Order.find({
+    user: userId,
+    status: { $in: ['payée', 'en_creation', 'prête', 'en_livraison', 'livrée'] },
+    createdAt: { $gte: startDate, $lte: endDate }
+  }).sort({ createdAt: 1 });
+
+  console.log('🔍 Recherche commandes corporate:', {
+    userId,
+    startDate,
+    endDate,
+    ordersFound: orders.length,
+    orders: orders.map(o => ({ orderNumber: o.orderNumber, totalAmount: o.totalAmount, createdAt: o.createdAt }))
+  });
+
+  // Si pas de commandes, retourner null
+  if (orders.length === 0) {
+    return null;
+  }
+
   // Générer le numéro de facture
   const invoiceNumber = await this.generateInvoiceNumber();
-  
+
+  // Créer les items de facture à partir des commandes
+  const items = orders.map(order => ({
+    orderId: order._id,
+    orderNumber: order.orderNumber,
+    orderDate: order.createdAt,
+    amount: order.totalAmount,
+    description: `Commande ${order.orderNumber} - ${order.items.length} article(s)`
+  }));
+
   // Créer la facture
   const invoice = new this({
     invoiceNumber,
@@ -352,10 +418,13 @@ CorporateInvoiceSchema.statics.createMonthlyInvoice = async function(
       month,
       year
     },
-    items: [],
-    vatRate: 20
+    items,
+    vatRate: 20,
+    status: 'sent',
+    issuedAt: new Date(),
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 jours
   });
-  
+
   return await invoice.save();
 };
 

@@ -76,7 +76,7 @@ function NewYearHeaderNotice() {
             </div>
             
             <a 
-              href="/produits?category=Fête%20nouvel%20an"
+              href="/produits"
               className="
                 px-4 py-2 
                 bg-white bg-opacity-15 hover:bg-opacity-25 

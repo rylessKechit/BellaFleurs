@@ -10,11 +10,6 @@ export default function GallerySection() {
   // 7 catégories de services avec mapping vers les catégories API
   const items = [
     { 
-      name: 'Fête nouvel an', 
-      image: '/images/noel.webp',
-      category: 'Fête nouvel an'
-    },
-    { 
       name: 'Incontournable', 
       image: '/images/incontournables.webp',
       category: 'Incontournable'
@@ -114,7 +109,7 @@ export default function GallerySection() {
             
             {/* Première ligne : 4 photos */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
-              {items.slice(0, 4).map((item, index) => (
+              {items.slice(0, 3).map((item, index) => (
                 <div
                   key={index}
                   className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
@@ -150,9 +145,9 @@ export default function GallerySection() {
 
             {/* Deuxième ligne : 3 photos centrées */}
             <div className="grid grid-cols-3 gap-4 lg:gap-8 max-w-4xl lg:max-w-5xl mx-auto">
-              {items.slice(4, 7).map((item, index) => (
+              {items.slice(3, 7).map((item, index) => (
                 <div
-                  key={index + 4}
+                  key={index + 3}
                   className="relative group cursor-pointer overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                   onClick={() => handleCategoryClick(item.category)}
                 >

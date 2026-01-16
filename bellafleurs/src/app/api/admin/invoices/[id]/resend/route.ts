@@ -65,6 +65,16 @@ export async function POST(
       }, { status: 404 });
     }
 
+    // Créer le Payment Intent Stripe si nécessaire
+    if (!invoice.stripePaymentIntentId && invoice.status !== 'paid') {
+      try {
+        await invoice.createStripePaymentIntent();
+        console.log('💳 Payment Intent créé');
+      } catch (stripeError) {
+        console.error('⚠️ Erreur création Payment Intent:', stripeError);
+      }
+    }
+
     // Envoyer l'email
     const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                         'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -77,7 +87,9 @@ export async function POST(
       dueDate: invoice.dueDate || new Date(),
       month: monthNames[invoice.billingPeriod.month - 1],
       year: invoice.billingPeriod.year,
-      invoiceUrl: `${process.env.NEXTAUTH_URL}/corporate/invoices/${invoice._id}`
+      invoiceUrl: `${process.env.NEXTAUTH_URL}/corporate/invoices/${invoice._id}`,
+      invoiceId: params.id,
+      paymentUrl: invoice.stripePaymentIntentId ? `${process.env.NEXTAUTH_URL}/corporate/invoices/${invoice._id}/pay` : undefined
     });
 
     console.log('✅ Facture renvoyée:', {

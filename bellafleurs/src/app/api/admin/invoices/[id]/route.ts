@@ -1,11 +1,10 @@
-// src/app/api/admin/invoices/[id]/route.ts - Gestion d'une facture (admin)
+// src/app/api/admin/invoices/[id]/route.ts - API pour marquer une facture comme payée
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/mongodb';
 import CorporateInvoice from '@/models/CorporateInvoice';
 
-// PATCH - Modifier le statut d'une facture (admin)
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -23,7 +22,7 @@ export async function PATCH(
       }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est admin
+    // Vérifier que c'est un admin
     const user = session.user as any;
     if (user.role !== 'admin') {
       return NextResponse.json({
@@ -37,9 +36,11 @@ export async function PATCH(
 
     await connectDB();
 
+    // Récupérer les données de la requête
     const body = await req.json();
-    const { status, paidDate, notes } = body;
+    const { status, paidDate } = body;
 
+    // Récupérer la facture
     const invoice = await CorporateInvoice.findById(params.id);
 
     if (!invoice) {
@@ -52,33 +53,18 @@ export async function PATCH(
       }, { status: 404 });
     }
 
-    // Mettre à jour le statut
+    // Marquer comme payée
     if (status === 'paid') {
       await invoice.markAsPaid();
-    } else if (status) {
-      invoice.status = status;
+      console.log('✅ Facture marquée comme payée manuellement par admin:', {
+        invoiceId: invoice._id,
+        invoiceNumber: invoice.invoiceNumber
+      });
     }
-
-    if (paidDate && status === 'paid') {
-      invoice.paidAt = new Date(paidDate);
-    }
-
-    if (notes) {
-      invoice.notes = notes;
-    }
-
-    await invoice.save();
-
-    console.log('✅ Facture mise à jour:', {
-      invoiceId: invoice._id,
-      invoiceNumber: invoice.invoiceNumber,
-      status: invoice.status
-    });
 
     return NextResponse.json({
       success: true,
-      data: { invoice },
-      message: 'Facture mise à jour avec succès'
+      data: invoice
     });
 
   } catch (error: any) {

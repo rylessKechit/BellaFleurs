@@ -13,11 +13,6 @@ export default function HeroSection() {
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center max-w-4xl space-y-8">
 
-            <div className="inline-flex items-center px-6 py-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg mb-6">
-              <MapPin className="w-5 h-5 text-green-700 mr-2" />
-              <span className="text-green-800 font-semibold">Fleuriste à Brétigny-sur-Orge</span>
-            </div>
-            
             {/* H1 OPTIMISÉ SEO LOCAL */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight drop-shadow-2xl">
               Bella Fleurs
@@ -28,11 +23,11 @@ export default function HeroSection() {
               Bouquets sur mesure, compositions florales, livraison 24h en Essonne
             </h2>
             
-            <div className="pt-6">
-              <Button size="lg" className="...">
-                <Link href="/produits">
+            <div className="pt-8">
+              <Button size="lg" className="px-8 py-4 sm:px-12 sm:py-6 lg:px-16 lg:py-8 text-base sm:text-lg lg:text-xl bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg sm:rounded-xl shadow-2xl hover:shadow-green-500/50 transition-all transform hover:scale-105">
+                <Link href="/produits" className="flex items-center">
                   Découvrir mes créations
-                  <ArrowRight className="ml-3 w-6 h-6" />
+                  <ArrowRight className="ml-2 w-5 h-5 sm:ml-3 sm:w-6 sm:h-6 lg:ml-4 lg:w-7 lg:h-7" />
                 </Link>
               </Button>
             </div>

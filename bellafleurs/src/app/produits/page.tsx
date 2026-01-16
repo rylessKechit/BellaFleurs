@@ -68,7 +68,6 @@ interface ApiResponse {
 }
 
 const CATEGORIES = [
-  'Fête nouvel an',
   'Incontournable',
   'Bouquets',
   'Roses',

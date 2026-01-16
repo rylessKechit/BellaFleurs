@@ -170,11 +170,6 @@ export default function Footer() {
               <h5 className="font-medium text-gray-900 mb-3">Nos Créations</h5>
               <ul className="space-y-2 text-sm">
                 <li>
-                  <Link href="/produits?category=Fleurs%20de%20saisons" className="text-gray-600 hover:text-primary-600 transition-colors">
-                    Fête nouvel an
-                  </Link>
-                </li>
-                <li>
                   <Link href="/produits?category=Incontournable" className="text-gray-600 hover:text-primary-600 transition-colors">
                     Incontournables
                   </Link>

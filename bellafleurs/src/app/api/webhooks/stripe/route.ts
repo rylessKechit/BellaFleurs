@@ -5,6 +5,7 @@ import { stripe } from '@/lib/stripe';
 import connectDB from '@/lib/mongodb';
 import Order from '@/models/Order';
 import Cart from '@/models/Cart';
+import CorporateInvoice from '@/models/CorporateInvoice';
 import { sendOrderConfirmation, sendNewOrderNotification } from '@/lib/email';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -88,11 +89,40 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 
     const metadata = paymentIntent.metadata;
 
-    // Récupérer l'ID de commande depuis les métadonnées
+    // 🆕 Vérifier si c'est un paiement de facture corporate
+    if (metadata.invoiceId) {
+      console.log('📄 Traitement paiement de facture corporate:', metadata.invoiceId);
+
+      const invoice = await CorporateInvoice.findById(metadata.invoiceId);
+
+      if (!invoice) {
+        console.error('❌ Facture corporate introuvable:', metadata.invoiceId);
+        return;
+      }
+
+      // Vérifier si déjà payée
+      if (invoice.status === 'paid') {
+        console.log('ℹ️ Facture déjà marquée comme payée, webhook déjà traité - skip');
+        return;
+      }
+
+      // Marquer la facture comme payée
+      await invoice.markAsPaid();
+
+      console.log('✅ Facture corporate marquée comme payée:', {
+        invoiceNumber: invoice.invoiceNumber,
+        companyName: invoice.companyName,
+        amount: invoice.totalAmount
+      });
+
+      return;
+    }
+
+    // 📦 Sinon, c'est un paiement de commande normale
     const orderId = metadata.order_id;
 
     if (!orderId) {
-      console.error('❌ Order ID manquant dans les métadonnées:', metadata);
+      console.error('❌ Order ID ou Invoice ID manquant dans les métadonnées:', metadata);
       return;
     }
 

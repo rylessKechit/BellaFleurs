@@ -10,35 +10,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Authentification requise',
-          code: 'AUTH_REQUIRED'
-        }
-      }, { status: 401 });
-    }
-
-    // Vérifier que c'est un compte corporate
-    const user = session.user as any;
-    if (user.accountType !== 'corporate') {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Accès réservé aux comptes corporate',
-          code: 'FORBIDDEN'
-        }
-      }, { status: 403 });
-    }
-
     await connectDB();
 
-    // Récupérer la facture
+    // Récupérer la facture (pas besoin d'auth pour consulter une facture via le lien)
     const invoice = await CorporateInvoice.findById(params.id)
-      .populate('user', 'name email company')
+      .populate('corporateUser', 'name email company')
       .lean();
 
     if (!invoice) {
@@ -51,27 +27,14 @@ export async function GET(
       }, { status: 404 });
     }
 
-    // Vérifier que l'utilisateur a accès à cette facture
-    if (invoice.corporateUser.toString() !== session.user.id) {
-      return NextResponse.json({
-        success: false,
-        error: {
-          message: 'Accès non autorisé à cette facture',
-          code: 'UNAUTHORIZED_ACCESS'
-        }
-      }, { status: 403 });
-    }
-
     // Les totaux sont déjà calculés dans le modèle
     return NextResponse.json({
       success: true,
       data: {
-        invoice: {
-          ...invoice,
-          subtotal: invoice.subtotal,
-          vatAmount: invoice.vatAmount,
-          totalAmount: invoice.totalAmount
-        }
+        ...invoice,
+        subtotal: invoice.subtotal,
+        vatAmount: invoice.vatAmount,
+        totalAmount: invoice.totalAmount
       }
     });
 

@@ -74,40 +74,53 @@ export async function POST(req: NextRequest) {
       try {
         // Vérifier si une facture existe déjà pour cette période
         const existingInvoice = await CorporateInvoice.findOne({
-          user: corporateUser._id,
-          'period.start': periodStart,
-          'period.end': periodEnd
+          corporateUser: corporateUser._id,
+          'billingPeriod.month': month,
+          'billingPeriod.year': year
         });
 
-        if (existingInvoice) {
-          console.log(`⏭️ Facture déjà existante pour ${corporateUser.email}`);
-          results.skipped.push({
-            userId: corporateUser._id,
-            email: corporateUser.email,
-            reason: 'Facture déjà existante',
-            invoiceId: existingInvoice._id
-          });
-          continue;
+        // Si une facture existe et qu'elle est vide, la supprimer
+        if (existingInvoice && (!existingInvoice.items || existingInvoice.items.length === 0)) {
+          console.log(`🗑️ Suppression de la facture vide existante pour ${corporateUser.email}`);
+          await CorporateInvoice.findByIdAndDelete(existingInvoice._id);
         }
 
-        // Créer la facture mensuelle
-        const invoice = await CorporateInvoice.createMonthlyInvoice(
-          corporateUser._id.toString(),
-          month,
-          year
-        );
+        // Créer ou récupérer la facture mensuelle
+        let invoice: any = (existingInvoice && existingInvoice.items && existingInvoice.items.length > 0) ? existingInvoice : null;
+        let isNewInvoice = false;
 
         if (!invoice) {
-          console.log(`⏭️ Aucune commande pour ${corporateUser.email}`);
-          results.skipped.push({
-            userId: corporateUser._id,
-            email: corporateUser.email,
-            reason: 'Aucune commande pour cette période'
-          });
-          continue;
+          invoice = await CorporateInvoice.createMonthlyInvoice(
+            corporateUser._id.toString(),
+            month,
+            year
+          );
+          isNewInvoice = true;
+
+          if (!invoice) {
+            console.log(`⏭️ Aucune commande pour ${corporateUser.email}`);
+            results.skipped.push({
+              userId: corporateUser._id,
+              email: corporateUser.email,
+              reason: 'Aucune commande pour cette période'
+            });
+            continue;
+          }
+        } else {
+          console.log(`📧 Renvoi de la facture existante pour ${corporateUser.email}`);
         }
 
-        // Envoyer l'email de facture
+        // Créer le Payment Intent Stripe si ce n'est pas déjà fait
+        if (!invoice.stripePaymentIntentId && invoice.status !== 'paid') {
+          try {
+            await invoice.createStripePaymentIntent();
+            console.log(`💳 Payment Intent créé pour ${corporateUser.email}`);
+          } catch (stripeError) {
+            console.error(`⚠️ Erreur création Payment Intent pour ${corporateUser.email}:`, stripeError);
+          }
+        }
+
+        // Envoyer l'email de facture (création ou renvoi)
         try {
           const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -120,9 +133,11 @@ export async function POST(req: NextRequest) {
             dueDate: invoice.dueDate || new Date(),
             month: monthNames[month - 1],
             year: year,
-            invoiceUrl: `${process.env.NEXTAUTH_URL}/corporate/invoices/${invoice._id}`
+            invoiceUrl: `${process.env.NEXTAUTH_URL}/corporate/invoices/${invoice._id}`,
+            invoiceId: invoice._id.toString(),
+            paymentUrl: invoice.stripePaymentIntentId ? `${process.env.NEXTAUTH_URL}/corporate/invoices/${invoice._id}/pay` : undefined
           });
-          console.log(`✅ Facture créée et envoyée pour ${corporateUser.email}`);
+          console.log(`✅ Facture ${isNewInvoice ? 'créée et envoyée' : 'renvoyée'} pour ${corporateUser.email}`);
         } catch (emailError) {
           console.error(`⚠️ Erreur envoi email pour ${corporateUser.email}:`, emailError);
         }
@@ -160,7 +175,7 @@ export async function POST(req: NextRequest) {
         },
         details: results
       },
-      message: `Génération terminée: ${results.success.length} factures créées, ${results.skipped.length} ignorées, ${results.errors.length} erreurs`
+      message: `Génération terminée: ${results.success.length} factures envoyées (créées ou renvoyées), ${results.skipped.length} ignorées, ${results.errors.length} erreurs`
     });
 
   } catch (error: any) {

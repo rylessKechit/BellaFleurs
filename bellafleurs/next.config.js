@@ -47,6 +47,12 @@ const nextConfig = {
       '@': path.resolve(__dirname, 'src'),
     };
 
+    // Ignorer les warnings de handlebars
+    config.ignoreWarnings = [
+      { module: /node_modules\/handlebars\/lib\/index\.js/ },
+      (warning) => warning.message.includes('require.extensions is not supported'),
+    ];
+
     return config;
   },
 
