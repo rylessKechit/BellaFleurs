@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { MapPin } from 'lucide-react';
 
 // src/components/home/HeroSection.tsx
 export default function HeroSection() {
@@ -16,11 +15,14 @@ export default function HeroSection() {
             {/* H1 OPTIMISÉ SEO LOCAL */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight drop-shadow-2xl">
               Bella Fleurs
+              <span className="block text-2xl sm:text-3xl lg:text-4xl mt-2 font-semibold">
+                Fleuriste à Brétigny-sur-Orge
+              </span>
             </h1>
-            
+
             {/* H2 pour compléter le SEO */}
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white leading-tight drop-shadow-2xl">
-              Bouquets sur mesure, compositions florales, livraison 24h en Essonne
+            <h2 className="text-lg sm:text-xl lg:text-2xl text-white/90 leading-relaxed drop-shadow-xl max-w-2xl mx-auto">
+              Bouquets sur mesure, compositions florales et livraison express 24h en Essonne
             </h2>
             
             <div className="pt-8">

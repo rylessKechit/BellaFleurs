@@ -17,7 +17,7 @@ export default function AboutSection() {
               </div>
               
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-800 mb-4 sm:mb-6 leading-tight">
-                L'art floral au cœur de Paris
+                Votre fleuriste artisan à Brétigny-sur-Orge
               </h2>
               
               <div className="p-4 sm:p-6 md:p-8">

@@ -11,63 +11,60 @@ import ProductOfWeekPopup from '@/components/ProductOfWeekPopup';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: {
-    default: 'Bella Fleurs - Fleuriste Brétigny-sur-Orge | Livraison 24h Essonne',
-    template: '%s | Bella Fleurs - Fleuriste Brétigny-sur-Orge'
-  },
-  description: 'Fleuriste passionnée à Brétigny-sur-Orge depuis 20 ans. Bouquets sur mesure, compositions florales, livraison 24h en Essonne. Commande en ligne.',
+  title: 'Bella Fleurs | Fleuriste Brétigny-sur-Orge (91220) - Livraison Fleurs 24h Essonne',
+  description: 'Bella Fleurs, votre fleuriste artisan à Brétigny-sur-Orge depuis 20 ans. Bouquets sur mesure, compositions florales, fleurs mariage & deuil. Livraison express 24h Essonne (Arpajon, Sainte-Geneviève-des-Bois, Longjumeau). Commandez en ligne !',
   keywords: [
+    // Requêtes principales ciblées
     'fleuriste brétigny sur orge',
     'fleuriste brétigny',
-    'bouquet brétigny sur orge', 
+    'fleuriste bretigny sur orge',
+    'fleuriste 91220',
+    'bouquet brétigny sur orge',
     'livraison fleurs brétigny',
-    'composition florale brétigny',
-    'fleurs brétigny sur orge',
-    'artisan fleuriste essonne',
-    'livraison fleurs 91',
-    'bella fleurs',
-    'fleuriste en ligne brétigny',
-    'bouquet mariage brétigny sur orge',
+    // Services
+    'fleurs mariage brétigny',
+    'fleurs deuil essonne',
+    'bouquet anniversaire brétigny',
+    'composition florale 91',
+    // Villes Essonne
     'fleuriste sainte geneviève des bois',
-    'livraison fleurs arpajon',
-    'fleurs essonne 91220'
+    'fleuriste arpajon',
+    'fleuriste fleury mérogis',
+    'fleuriste longjumeau',
+    'fleuriste massy',
+    'fleuriste évry',
+    'livraison fleurs essonne',
+    'livraison fleurs 91',
+    // Marque
+    'bella fleurs',
+    'bella fleurs brétigny',
+    'bellafleurs'
   ],
-  authors: [{ name: 'Bella Fleurs - Aurélie, Fleuriste Brétigny-sur-Orge' }],
-  creator: 'Bella Fleurs',
-  publisher: 'Bella Fleurs',
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
+  alternates: {
+    canonical: 'https://bella-fleurs.fr',
   },
   openGraph: {
     type: 'website',
     locale: 'fr_FR',
     url: 'https://bella-fleurs.fr',
-    title: 'Bella Fleurs - Fleuriste Brétigny-sur-Orge depuis 20 ans',
-    description: 'Artisan fleuriste à Brétigny-sur-Orge. Bouquets sur mesure, compositions florales, livraison 24h Essonnes.',
-    siteName: 'Bella Fleurs',
+    title: 'Bella Fleurs - Fleuriste Brétigny-sur-Orge | Bouquets sur mesure & Livraison 24h',
+    description: 'Artisan fleuriste à Brétigny-sur-Orge depuis 20 ans. Bouquets personnalisés, compositions florales, livraison express en Essonne. Commandez en ligne !',
+    siteName: 'Bella Fleurs - Fleuriste Brétigny-sur-Orge',
     images: [
       {
-        url: '/images/incontournables.webp',
+        url: '/images/og-image.webp',
         width: 1200,
         height: 630,
-        alt: 'Bella Fleurs - Fleuriste Brétigny-sur-Orge',
+        alt: 'Bella Fleurs - Fleuriste artisan à Brétigny-sur-Orge - Bouquets et compositions florales',
       },
     ],
   },
-  other: {
-    'geo.region': 'FR-91',
-    'geo.placename': 'Brétigny-sur-Orge',
-    'geo.position': '48.608684;2.302011',
-    'ICBM': '48.608684, 2.302011'
-  }
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Bella Fleurs - Fleuriste Brétigny-sur-Orge',
+    description: 'Bouquets sur mesure, livraison 24h en Essonne. Votre fleuriste artisan depuis 20 ans.',
+    images: ['/images/og-image.webp'],
+  },
 };
 
 export default function Home() {
@@ -77,7 +74,7 @@ export default function Home() {
       <div className="fixed inset-0 z-0">
         <Image
           src="/images/hero-background.webp"
-          alt="Bella Fleurs - Background"
+          alt="Bella Fleurs - Fleuriste Brétigny-sur-Orge - Bouquets et compositions florales artisanales en Essonne"
           fill
           className="object-cover"
           priority
