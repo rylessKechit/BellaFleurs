@@ -1,27 +1,24 @@
+# Robots.txt for Bella Fleurs - Fleuriste Brétigny-sur-Orge
+# https://bella-fleurs.fr
+
 User-agent: *
 Allow: /
-
-# Sitemaps
-Sitemap: https://bella-fleurs.fr/sitemap.xml
-
-# Pages importantes pour le SEO local
-Allow: /zone-livraison
-Allow: /produits
-Allow: /a-propos
-Allow: /savoir-faire
-
-# Bloquer pages admin et API
-Disallow: /admin/
 Disallow: /api/
-Disallow: /auth/
-
-# Bloquer fichiers système
-Disallow: /*.json
+Disallow: /admin/
+Disallow: /compte/
+Disallow: /panier/
+Disallow: /checkout/
+Disallow: /corporate/
 Disallow: /_next/
-Disallow: /manifest.json
+Disallow: /static/
 
-# Permettre indexation images
-Allow: /images/
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /compte/
+Disallow: /checkout/
+Disallow: /corporate/
 
-# Crawl-delay pour éviter surcharge
-Crawl-delay: 1
+Sitemap: https://bella-fleurs.fr/sitemap.xml
+Host: https://bella-fleurs.fr
