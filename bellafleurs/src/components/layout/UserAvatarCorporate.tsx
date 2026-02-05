@@ -67,13 +67,11 @@ export default function UserAvatarCorporate({ isMobile = false }: UserAvatarProp
     return (
       <Button
         variant="ghost"
-        size={isMobile ? "sm" : "icon"}
+        size="icon"
         asChild
-        className={isMobile ? "justify-start w-full" : ""}
       >
         <Link href="/auth/signin" className="flex items-center">
           <User className="w-4 h-4" />
-          {isMobile && <span className="ml-2">Connexion</span>}
         </Link>
       </Button>
     );
