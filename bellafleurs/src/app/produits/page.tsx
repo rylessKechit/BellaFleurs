@@ -265,12 +265,12 @@ export default function ProductsPage() {
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Image */}
               <Link href={getProductUrl()} className="flex-shrink-0 w-full sm:w-32 md:w-48">
-                <div className="aspect-square relative overflow-hidden rounded-lg">
+                <div className="aspect-square relative overflow-hidden rounded-lg bg-white">
                   <Image
                     src={product.images?.[0] || '/api/placeholder/300/300'}
                     alt={product.name}
                     fill
-                    className="object-cover transition-transform duration-300 hover:scale-105"
+                    className="object-contain transition-transform duration-300 hover:scale-105"
                     sizes="(max-width: 640px) 100vw, (max-width: 768px) 128px, 192px"
                     quality={100}
                   />
@@ -396,12 +396,12 @@ export default function ProductsPage() {
         <Link href={getProductUrl()}>
           <div className="relative overflow-hidden">
             {/* Image principale */}
-            <div className="aspect-square bg-gray-100 relative">
+            <div className="aspect-square bg-white relative">
               <Image
                 src={product.images?.[0] || '/api/placeholder/300/300'}
                 alt={product.name}
                 fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                className="object-contain transition-transform duration-300 group-hover:scale-105"
                 sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
                 quality={100}
               />

@@ -366,14 +366,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Galerie d'images */}
           <div className="space-y-4">
-            <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+            <div className="relative aspect-square rounded-lg overflow-hidden bg-white">
               {product.images && product.images.length > 0 ? (
                 <>
                   <Image
                     src={product.images[currentImageIndex]}
                     alt={product.name}
                     fill
-                    className="object-cover"
+                    className="object-contain"
                     priority
                   />
                   
